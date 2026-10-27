@@ -7,25 +7,33 @@ service cloud.firestore {
       return request.auth != null;
     }
     
+    function hasUserData() {
+      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
     function getUserData() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
     
+    function hasSchoolData(schoolId) {
+      return exists(/databases/$(database)/documents/schools/$(schoolId));
+    }
+
     function getSchoolData(schoolId) {
       return get(/databases/$(database)/documents/schools/$(schoolId)).data;
     }
     
     function isSuperAdmin() {
-      return isSignedIn() && getUserData().role == 'superadmin' && getUserData().status_akun == 'aktif';
+      return hasUserData() && getUserData().role == 'superadmin' && getUserData().status_akun == 'aktif';
     }
     
     // Memastikan user aktif DAN sekolah tempatnya bernaung memiliki langganan aktif
     function isActiveTenantUser() {
-      let user = getUserData();
-      return isSignedIn() 
-        && user.status_akun == 'aktif' 
-        && user.school_id != null
-        && getSchoolData(user.school_id).status_langganan == 'aktif';
+      return hasUserData() 
+        && getUserData().status_akun == 'aktif' 
+        && getUserData().school_id != null
+        && hasSchoolData(getUserData().school_id)
+        && getSchoolData(getUserData().school_id).status_langganan == 'aktif';
     }
     
     function isSameSchool(schoolId) {
@@ -38,7 +46,7 @@ service cloud.firestore {
 
     // --- 1. KOLEKSI SCHOOLS (DATA TENANT) ---
     match /schools/{schoolId} {
-      allow read: if isSuperAdmin() || (isSignedIn() && getUserData().school_id == schoolId);
+      allow read: if isSuperAdmin() || (hasUserData() && getUserData().school_id == schoolId);
       allow create, delete: if isSuperAdmin();
       allow update: if isSuperAdmin() || isSchoolKepsek(schoolId);
     }
