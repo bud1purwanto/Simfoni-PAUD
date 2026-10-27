@@ -94,12 +94,15 @@ export default function KelolaAkunKepsek() {
   };
 
   const handleOpenAddModal = () => {
-    setFormNama('');
     setFormEmail('');
     setFormPassword('Kepsek1234!');
     setFormError('');
     if (schools.length > 0) {
-      setFormSchoolId(schools[0].id);
+      const firstSchool = schools[0];
+      setFormSchoolId(firstSchool.id);
+      setFormNama(firstSchool.nama_kepsek_resmi || '');
+    } else {
+      setFormNama('');
     }
     setAddModalOpen(true);
   };
@@ -139,6 +142,14 @@ export default function KelolaAkunKepsek() {
         namaSekolah
       );
 
+      // Sinkronkan nama_kepsek_resmi di dokumen sekolah jika sekolah belum memiliki atau berbeda
+      if (selectedSchool && selectedSchool.nama_kepsek_resmi !== formNama.trim()) {
+        await updateDoc(doc(db, 'schools', formSchoolId), {
+          nama_kepsek_resmi: formNama.trim(),
+          updated_at: serverTimestamp(),
+        });
+      }
+
       await logActivity(formSchoolId, userData.uid, userData.nama, 'create_kepsek', {
         kepsekUid: newUid,
         email: formEmail,
@@ -170,6 +181,14 @@ export default function KelolaAkunKepsek() {
         nama: editNama.trim(),
         updated_at: serverTimestamp(),
       });
+
+      // Sinkronkan ke profil sekolah penandatangan resmi
+      if (selectedKepsek.school_id) {
+        await updateDoc(doc(db, 'schools', selectedKepsek.school_id), {
+          nama_kepsek_resmi: editNama.trim(),
+          updated_at: serverTimestamp(),
+        });
+      }
 
       await logActivity(selectedKepsek.school_id, userData.uid, userData.nama, 'update_kepsek', {
         kepsekUid: selectedKepsek.id,
@@ -480,7 +499,14 @@ export default function KelolaAkunKepsek() {
                 ) : (
                   <select
                     value={formSchoolId}
-                    onChange={(e) => setFormSchoolId(e.target.value)}
+                    onChange={(e) => {
+                      const selectedId = e.target.value;
+                      setFormSchoolId(selectedId);
+                      const targetSchool = schools.find((s) => s.id === selectedId);
+                      if (targetSchool?.nama_kepsek_resmi) {
+                        setFormNama(targetSchool.nama_kepsek_resmi);
+                      }
+                    }}
                     className="w-full px-3 py-2 text-xs font-bold rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
                   >
                     {schools.map((s) => (

@@ -190,7 +190,8 @@ export const AuthProvider = ({ children }) => {
         if (schoolDocSnap.exists()) {
           const sData = schoolDocSnap.data();
           setSchoolData(sData);
-          setIsSuspended(sData.status_langganan === 'nonaktif');
+          const isExpired = sData.berlaku_hingga && new Date(sData.berlaku_hingga).setHours(23, 59, 59, 999) < Date.now();
+          setIsSuspended(sData.status_langganan === 'nonaktif' || isExpired);
         }
       }
     }
@@ -219,7 +220,8 @@ export const AuthProvider = ({ children }) => {
                 if (schoolDocSnap.exists()) {
                   const sData = schoolDocSnap.data();
                   setSchoolData(sData);
-                  setIsSuspended(sData.status_langganan === 'nonaktif');
+                  const isExpired = sData.berlaku_hingga && new Date(sData.berlaku_hingga).setHours(23, 59, 59, 999) < Date.now();
+                  setIsSuspended(sData.status_langganan === 'nonaktif' || isExpired);
                 }
               }
             }
