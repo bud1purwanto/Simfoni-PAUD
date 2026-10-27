@@ -118,19 +118,57 @@ Seluruh rancangan spesifikasi teknis telah dipecah secara modular ke dalam direk
 
 Saat diminta membangun atau menyempurnakan fitur, ikuti urutan langkah terstruktur ini:
 
-- [ ] **Fase 1: Setup Lingkungan & Dual Environment**  
-  Inisialisasi Vite + React + Tailwind + Lucide Icons. Siapkan `.gitignore` (proteksi `.env.*`), `.env.example`, `public/_redirects`, dan `public/manifest.json`.
-- [ ] **Fase 2: Konfigurasi Firebase Modular & Layanan Inti**  
-  Bangun `src/config/firebase.js` (Primary & Secondary App), `imageCompressor.js`, `useSpeechToText.js`, `pdfExporter.js` (kop & stempel dinamis), `excelExporter.js` (rekap honor), `kbmTemplates.js`, dan `auditLogger.js`.
-- [ ] **Fase 3: Autentikasi, Context Multi-Tenant & Pilot Seeder**  
-  Bangun `AuthContext.jsx` (memuat profil user + `schoolData`), `Login.jsx` (pintu masuk tunggal), dan fitur cerdas *Initial Seeding SaaS (Setup Superadmin & Sekolah Pilot Pertama)* jika database masih kosong.
-- [ ] **Fase 4: Shell Layout Adaptif & Dynamic Branding**  
-  Bangun `AppLayout.jsx` dengan identitas dinamis (logo & nama sekolah), *Bottom Navigation* untuk HP, *Sidebar* untuk laptop, `NetworkStatusBanner.jsx`, dan badge `DEV ENVIRONMENT`.
-- [ ] **Fase 5: Modul Guru (`/guru/*`)**  
-  Bangun Dashboard Guru, Presensi Cepat Dual Timestamp (Anti-Trap Offline), Jurnal Mengajar (Form, Draf, Voice-to-Text, Kompresi Foto, Duplikasi, Bank Template KBM, WA Share), dan Laporan Tambahan/Kendala.
-- [ ] **Fase 6: Modul Kepala Sekolah (`/kepsek/*`)**  
-  Bangun Dashboard Monitoring Live (dengan deteksi lupa absen pulang), Manajemen Akun Guru (validasi `kuota_guru` & tombol reset password default), Validasi Jurnal (dengan fitur *Bulk Approval*), serta Rekapitulasi & Cetak PDF/Excel dinamis (dengan stempel cap digital & WA Share).
-- [ ] **Fase 7: Modul Superadmin (`/superadmin/*`)**  
-  Bangun Dashboard Metrik SaaS Global, Kelola Sekolah Mitra (CRUD, kuota, logo & stempel cap, suspend langganan), Kelola Akun Kepala Sekolah, dan Panel Manajemen Log (purge manual & job retensi periodik).
-- [ ] **Fase 8: Verifikasi & Sinkronisasi Dokumen Akhir**  
-  Uji alur multi-tenant secara menyeluruh di branch `dev` dan pastikan seluruh dokumen di `docs/*.md` selalu selaras dengan kode akhir.
+- [ ] **Fase 1: Setup Lingkungan, Dependensi & Dual Environment**
+  - [ ] Scaffold React 18+ dengan Vite & Tailwind CSS.
+  - [ ] Pasang dependensi inti: `firebase`, `browser-image-compression`, `jspdf`, `jspdf-autotable`, `xlsx`, `date-fns`, `lucide-react`, `react-router-dom`.
+  - [ ] Konfigurasi `.gitignore` (proteksi `.env.*`), `.env.example`, `public/_redirects` (`/* /index.html 200`), dan `public/manifest.json`.
+
+- [ ] **Fase 2: Konfigurasi Firebase Modular & Layanan Inti**
+  - [ ] Bangun `src/config/firebase.js` (*Primary App* untuk sesi aktif + *Secondary App* untuk pendaftaran user bertingkat tanpa ter-*logout*).
+  - [ ] Bangun `src/utils/imageCompressor.js` (kompresi foto HP menjadi < 300 KB, resolusi maks 1280px).
+  - [ ] Bangun `src/hooks/useSpeechToText.js` (Voice-to-Text bahasa Indonesia `id-ID`).
+  - [ ] Bangun `src/utils/pdfExporter.js` (PDF dinamis dengan Kop Surat sekolah, tanda tangan Kepsek, dan stempel digital transparan).
+  - [ ] Bangun `src/utils/excelExporter.js` (ekspor rekapitulasi kehadiran `.xlsx` untuk honor/transport guru).
+  - [ ] Bangun `src/utils/kbmTemplates.js` (bank template kegiatan KBM Kurikulum Merdeka).
+  - [ ] Bangun `src/utils/auditLogger.js` (helper pencatatan audit log per `school_id`).
+  - [ ] Terapkan berkas aturan keamanan `firestore.rules` dan `storage.rules`.
+
+- [ ] **Fase 3: Autentikasi, Context Multi-Tenant & Pilot Seeder**
+  - [ ] Bangun `src/context/AuthContext.jsx` (manajemen sesi, pemuatan `schoolData`, penanganan suspensi sekolah, flag ganti password).
+  - [ ] Bangun `src/pages/auth/Login.jsx` (pintu masuk tunggal *stealth*, auto-redirect sesuai role tanpa dropdown peran).
+  - [ ] Bangun fitur cerdas *Initial SaaS Seeder* di halaman login jika koleksi `users` masih kosong (buat Superadmin & Sekolah Pilot TK DWP 8).
+  - [ ] Bangun `src/components/ui/ModalGantiPassword.jsx` (modal wajib bagi user yang baru di-reset oleh Kepsek/Admin).
+  - [ ] Bangun `src/pages/auth/SuspendedSchool.jsx` (layanan diblokir jika status langganan nonaktif).
+
+- [ ] **Fase 4: Shell Layout Adaptif, Dynamic Branding & Network Awareness**
+  - [ ] Bangun `src/components/layout/AppLayout.jsx` dengan identitas dinamis (logo & nama sekolah dari context).
+  - [ ] Bangun navigasi adaptif: *Bottom Navigation* untuk HP (`< 768px`) & *Sidebar* untuk laptop (`>= 768px`).
+  - [ ] Bangun `src/components/layout/NetworkStatusBanner.jsx` (indikator visual status jaringan Online / Offline).
+  - [ ] Bangun `src/components/layout/DevBadge.jsx` (floating badge indikator lingkungan pengujian).
+  - [ ] Bangun `src/components/layout/ProtectedRoute.jsx` (pengamanan rute 3-tier: Superadmin, Kepsek, Guru).
+
+- [ ] **Fase 5: Modul Guru PAUD (`/guru/*`)**
+  - [ ] `DashboardGuru.jsx`: Absen datang/pulang instan, status kelengkapan jurnal hari ini, dan jadwal KBM aktif.
+  - [ ] `PresensiGuru.jsx`: Dual Timestamp (`jam_datang_device` vs `jam_datang_server`), riwayat presensi, form pengajuan koreksi, deteksi lupa absen pulang (> 18:00).
+  - [ ] `JurnalGuru.jsx`: Form KBM Kurikulum Merdeka, Bank Template KBM (`kbmTemplates.js`), Voice-to-Text (`id-ID`), kompresi foto kamera, salin jurnal kemarin, simpan draf vs kirim, dan tombol *Share to WhatsApp* (`wa.me`).
+  - [ ] `JadwalGuru.jsx`: Tampilan jadwal mingguan kelas.
+  - [ ] `LaporanLainGuru.jsx`: Pelaporan tugas tambahan (rapat/lomba), administrasi guru, dan laporan kendala sarpras.
+
+- [ ] **Fase 6: Modul Kepala Sekolah (`/kepsek/*`)**
+  - [ ] `DashboardKepsek.jsx`: Monitoring live kehadiran guru hari ini, antrean review jurnal KBM, notifikasi kendala.
+  - [ ] `KelolaGuru.jsx`: Daftar guru, validasi batas `kuota_guru`, tombol reset password default `Guru1234!` (tanpa email), edit profil, dan soft-delete.
+  - [ ] `ValidasiLaporan.jsx`: Review jurnal dengan catatan revisi terperinci, fitur "Setujui Sekaligus / *Bulk Approval*", dan verifikasi koreksi absen.
+  - [ ] `KelolaJadwal.jsx`: Penataan jadwal KBM kelas TK A & TK B.
+  - [ ] `RekapDanPdf.jsx`: Unduh PDF Ringkas ramah HP, PDF Lengkap Portofolio, ekspor Excel honor `.xlsx`, dan *Share to WA*.
+
+- [ ] **Fase 7: Modul Superadmin (`/superadmin/*`)**
+  - [ ] `DashboardSuperadmin.jsx`: Metrik SaaS global, sekolah aktif vs expired, meteran estimasi pemakaian storage Firebase.
+  - [ ] `KelolaSekolah.jsx`: CRUD sekolah mitra, atur kuota guru, paket langganan, upload logo & stempel cap resmi, toggle suspend sekolah.
+  - [ ] `KelolaAkunKepsek.jsx`: Pembuatan akun Kepsek via *Secondary Auth* tanpa me-logout Superadmin, reset password Kepsek.
+  - [ ] `ManajemenLog.jsx`: Tabel audit log global, tombol *Purge* manual 30/60/90 hari, dan konfigurasi *Periodic Retention Job* (`system_settings`).
+
+- [ ] **Fase 8: Pengujian Menyeluruh, Optimasi & Verifikasi CI/CD**
+  - [ ] Uji isolasi data antar sekolah mitra di branch `dev` (Firestore Rules verification).
+  - [ ] Uji kompresi foto dan keandalan mode offline persistence.
+  - [ ] Uji hasil cetak PDF (dengan kop & stempel transparan) dan ekspor Excel di HP dan laptop.
+  - [ ] Verifikasi dan sinkronisasi seluruh dokumen di `docs/*.md` agar selalu selaras dengan kode akhir.
