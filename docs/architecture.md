@@ -194,8 +194,9 @@ simfoni-paud/
 │   │   └── useFirestore.js      # Scoped Firestore listener dengan filter school_id otomatis
 │   ├── utils/
 │   │   ├── imageCompressor.js   # Kompresi gambar client-side (<300KB)
-│   │   ├── pdfExporter.js       # Generator PDF Dinamis (Kop Surat & Nama Kepsek dari schoolData)
+│   │   ├── pdfExporter.js       # Generator PDF Dinamis (Kop Surat, Stempel Cap & Nama Kepsek dari schoolData)
 │   │   ├── excelExporter.js     # Ekspor rekapitulasi kehadiran ke Excel (.xlsx) untuk honor guru
+│   │   ├── kbmTemplates.js      # Bank template kegiatan KBM Kurikulum Merdeka siap pakai
 │   │   ├── auditLogger.js       # Helper logging aktivitas penting per school_id
 │   │   └── formatters.js        # Format tanggal WIB & string utilities
 │   ├── components/
@@ -205,6 +206,7 @@ simfoni-paud/
 │   │   │   ├── BottomNav.jsx    # Bottom navigation mobile
 │   │   │   ├── Sidebar.jsx      # Sidebar desktop dengan navigasi per role
 │   │   │   ├── DevBadge.jsx     # Floating badge DEV ENVIRONMENT jika bukan mode production
+│   │   │   ├── NetworkStatusBanner.jsx # Banner visual status koneksi Online / Offline
 │   │   │   └── ProtectedRoute.jsx # Pelindung rute berdasarkan role (superadmin, kepsek, guru)
 │   │   └── ui/                  # Komponen UI (Modal, Button, Badge, Alert, Card)
 │   ├── pages/

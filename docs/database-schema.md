@@ -38,6 +38,7 @@ Menyimpan informasi tenant, kuota paket, dan data kop surat resmi.
   "kota": "string (Kabupaten/Kota)",
   "telepon": "string (Nomor kontak resmi)",
   "logo_url": "string | null (URL logo di Cloud Storage)",
+  "stempel_url": "string | null (URL cap/stempel resmi sekolah PNG transparan untuk PDF)",
   "nama_kepsek_resmi": "string (Nama lengkap Kepsek untuk tanda tangan PDF)",
   "nip_kepsek": "string | null (NIP/NUPTK jika ada)",
   "paket_langganan": "trial | basic | pro",

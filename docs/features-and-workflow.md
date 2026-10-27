@@ -80,7 +80,7 @@ Masing-masing peran memiliki dashboard eksklusif yang dirancang spesifik sesuai 
 ### 3.2. Kelola Sekolah / Tenant (`/superadmin/sekolah`)
 * **Tabel & Kartu Sekolah Mitra:** Menampilkan Nama Sekolah, Kota, Paket Langganan (`trial`, `basic`, `pro`), Pemakaian Kuota Guru (contoh: `4 / 5 Guru`), Masa Berlaku, dan Status Akun.
 * **Modal Tambah / Edit Sekolah:**
-  * Input field: Nama Sekolah, NPSN, Alamat Lengkap, Kota, Telepon, Nama Kepala Sekolah Resmi (untuk penandatangan dokumen PDF), NIP/NUPTK, Paket Langganan, Kuota Maksimum Guru, Tanggal Akhir Masa Berlaku, dan Unggah Logo Sekolah.
+  * Input field: Nama Sekolah, NPSN, Alamat Lengkap, Kota, Telepon, Nama Kepala Sekolah Resmi (untuk penandatangan dokumen PDF), NIP/NUPTK, Paket Langganan, Kuota Maksimum Guru, Tanggal Akhir Masa Berlaku, Unggah Logo Sekolah, dan **Unggah Stempel/Cap Digital Sekolah (PNG Transparan)**.
 * **Fitur Suspend / Nonaktifkan Sekolah:**
   * Superadmin dapat menonaktifkan status langganan sekolah (`status_langganan: "nonaktif"`). Seluruh staf (Kepsek dan Guru) sekolah tersebut otomatis tidak dapat mengakses sistem dan diarahkan ke layar penangguhan layanan.
 
@@ -130,11 +130,13 @@ Mengingat keterbatasan kuota penyimpanan dan pembacaan/penulisan Firestore, Supe
 
 ### 4.4. Rekapitulasi Laporan Multi-Format (PDF Ringkas, Portofolio & Excel)
 * **1. Cetak Rekap PDF Ringkas (Format Administrasi/Dinas):**  
-  Menghasilkan PDF tabel presensi dan ringkasan topik KBM dengan Kop Surat resmi dan tanda tangan. Ringan (< 500 KB), render instan, dan 100% aman dibuka di HP tanpa risiko browser *crash*.
+  Menghasilkan PDF tabel presensi dan ringkasan topik KBM dengan Kop Surat resmi, tanda tangan, dan **stempel/cap digital sekolah otomatis**. Ringan (< 500 KB), render instan, dan 100% aman dibuka di HP tanpa risiko browser *crash*.
 * **2. Cetak Rekap PDF Lengkap (Portofolio Foto):**  
   Menghasilkan dokumen lengkap beserta lampiran foto dokumentasi pembelajaran resolusi tinggi untuk arsip akreditasi BAN-PDM (direkomendasikan diunduh via laptop).
 * **3. Ekspor Data Excel (`.xlsx`):**  
   Ekspor rekapitulasi presensi (total kehadiran, menit keterlambatan, izin, sakit) ke format Spreadsheet Excel untuk keperluan **perhitungan gaji / uang transport / honorarium guru** oleh Kepala Sekolah dan Bendahara.
+* **4. Fitur "Bagikan Rekap ke WhatsApp" (*One-Click WA Share*):**  
+  Tombol cepat untuk membuat pesan terformat rapi dan langsung membuka WhatsApp Web / Aplikasi WA HP untuk mengirimkan rekap bulanan ke Yayasan atau Pengawas Sekolah.
 
 ---
 
@@ -147,10 +149,14 @@ Mengingat keterbatasan kuota penyimpanan dan pembacaan/penulisan Firestore, Supe
 3. **Modal Wajib Ganti Password:**  
    Jika akun guru baru saja direset oleh Kepsek (`wajib_ganti_password: true`), sistem langsung memunculkan modal pembuatan kata sandi baru saat login pertama berhasil.
 4. **Jurnal KBM Harian:** Form terstruktur mencakup Topik, Capaian Pembelajaran Kurikulum Merdeka, Kegiatan Pembuka-Inti-Penutup, Refleksi, dan Kendala.
-5. **Voice-to-Text (`id-ID`):** Menggunakan Web Speech API agar guru PAUD dapat mendiktekan narasi kegiatan langsung menggunakan mikrofon smartphone.
-6. **Kompresi Foto Klien (< 300 KB):** Foto dari kamera smartphone otomatis dikompresi di browser sebelum proses unggah untuk menghemat kuota guru.
-7. **Tagging Kurikulum Merdeka & Salin Jurnal:** Checkbox cepat Capaian Pembelajaran dan tombol duplikasi jurnal dari hari sebelumnya.
-8. **Laporan Tugas Tambahan & Kendala:** Form pelaporan rapat gugus, lomba anak, administrasi RPPH, dan sarana yang rusak.
+5. **Bank Template Kegiatan KBM Kurikulum Merdeka:**  
+   Pilihan template cepat sekali klik (*Upacara & Pembiasaan Pagi*, *Motorik Kasar & Senam*, *Sentra Sains Eksperimen*, *Sentra Seni & Kreativitas*, *Literasi Awal*) yang otomatis mengisi isian kegiatan sehingga guru cukup mengedit sedikit narasi (hemat waktu hingga 90%).
+6. **Voice-to-Text (`id-ID`):** Menggunakan Web Speech API agar guru PAUD dapat mendiktekan narasi kegiatan langsung menggunakan mikrofon smartphone.
+7. **Kompresi Foto Klien (< 300 KB):** Foto dari kamera smartphone otomatis dikompresi di browser sebelum proses unggah untuk menghemat kuota guru.
+8. **Tagging Kurikulum Merdeka & Salin Jurnal:** Checkbox cepat Capaian Pembelajaran dan tombol duplikasi jurnal dari hari sebelumnya.
+9. **Fitur "Bagikan Jurnal ke WhatsApp":**  
+   Tombol sekali sentuh untuk membagikan ringkasan KBM hari ini (topik, kegiatan, nama guru, status disetujui) ke grup WhatsApp Paguyuban Orang Tua Murid / Yayasan.
+10. **Laporan Tugas Tambahan & Kendala:** Form pelaporan rapat gugus, lomba anak, administrasi RPPH, dan sarana yang rusak.
 
 ---
 
@@ -201,9 +207,9 @@ sequenceDiagram
 
 ---
 
-## 6. Fitur Penunjang & Keandalan Operasional
+## 7. Fitur Penunjang & Keandalan Operasional
 
-### 6.1. Inisialisasi Sistem SaaS Pertama (Pilot Seeder)
+### 7.1. Inisialisasi Sistem SaaS Pertama (Pilot Seeder)
 Pada saat sistem baru pertama kali dipasang dan koleksi `users` di database masih kosong:
 * Halaman `Login.jsx` mendeteksi status kosong dan memunculkan tombol:  
   **"Inisialisasi Sistem SaaS (Setup Superadmin & Sekolah Pertama)"**.
@@ -211,6 +217,12 @@ Pada saat sistem baru pertama kali dipasang dan koleksi `users` di database masi
   1. Akun `superadmin` pertama untuk Project Owner.
   2. Mitra sekolah pilot pertama di koleksi `schools` yaitu **"TK Dharma Wanita Persatuan 8"** dengan status `aktif` dan kuota `5 Guru`.
 
-### 6.2. Indikator Lingkungan (DEV Environment Badge)
+### 7.2. Indikator Lingkungan (DEV Environment Badge)
 * Komponen `DevBadge.jsx` akan merender label mengambang berwarna oranye/kuning bertuliskan **`DEV ENVIRONMENT`** di sudut kanan atas layar saat `import.meta.env.VITE_APP_ENV !== 'production'`.
 * Ini mencegah Project Owner atau tester salah mengira lingkungan pengujian sebagai lingkungan produksi sekolah sungguhan.
+
+### 7.3. Banner Indikator Jaringan Visual (`NetworkStatusBanner.jsx`)
+* Memantau konektivitas internet perangkat (`navigator.onLine`) secara *real-time*:
+  * 🟢 **Mode Online:** Sistem tersinkronisasi penuh dengan Firebase Cloud.
+  * 🟠 **Mode Offline:** Tampil banner peringatan ramah di bagian atas: *"Sinyal terputus. Jangan khawatir, draf Anda tersimpan aman di HP dan otomatis terkirim saat internet kembali."*
+* Mencegah guru panik atau melakukan penekanan tombol berulang kali (*spam click*) saat berada di area sekolah bersinyal lemah.
