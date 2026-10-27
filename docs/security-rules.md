@@ -58,6 +58,8 @@ classDiagram
 | **Ubah Kuota Guru & Paket Langganan**| ❌ Dilarang | ❌ Dilarang | ✅ Ya |
 | **Suspend / Nonaktifkan Sekolah** | ❌ Dilarang | ❌ Dilarang | ✅ Ya |
 | **Buat Akun Kepala Sekolah** | ❌ Dilarang | ❌ Dilarang | ✅ Ya (Secondary Auth) |
+| **Melihat Audit Trail (`audit_logs`)** | ❌ Dilarang | ✅ Ya (sekolah sendiri) | ✅ Ya (global) |
+| **Pembersihan Log Audit (Purge/Retention)**| ❌ Dilarang | ❌ Dilarang | ✅ Ya (Manual & Periodik) |
 | **Akses Lintas Tenant (`school_id` lain)**| ❌ **DIBLOKIR** | ❌ **DIBLOKIR** | ✅ **Global Access** |
 
 ---
@@ -176,7 +178,14 @@ service cloud.firestore {
     match /audit_logs/{logId} {
       allow read: if isSuperAdmin() || isSchoolKepsek(resource.data.school_id);
       allow create: if isSignedIn();
-      allow update, delete: if false; // Immutable
+      allow update: if false; // Riwayat log tidak boleh diubah
+      allow delete: if isSuperAdmin(); // Superadmin diizinkan membersihkan log lama untuk hemat kuota
+    }
+
+    // --- 8. KOLEKSI SYSTEM SETTINGS (KONFIGURASI SAAS & RETENSI LOG) ---
+    match /system_settings/{settingId} {
+      allow read: if isSignedIn();
+      allow write: if isSuperAdmin();
     }
   }
 }

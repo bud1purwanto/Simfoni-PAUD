@@ -214,7 +214,8 @@ simfoni-paud/
 │   │   ├── superadmin/
 │   │   │   ├── DashboardSuperadmin.jsx # Ringkasan metrik SaaS global & statistik sekolah
 │   │   │   ├── KelolaSekolah.jsx       # CRUD Sekolah Mitra, atur kuota guru & paket langganan
-│   │   │   └── KelolaAkunKepsek.jsx    # Pembuatan & manajemen akun Kepala Sekolah
+│   │   │   ├── KelolaAkunKepsek.jsx    # Pembuatan & manajemen akun Kepala Sekolah
+│   │   │   └── ManajemenLog.jsx        # Pemantauan audit log, purge manual & job retensi berkala
 │   │   ├── guru/
 │   │   │   ├── DashboardGuru.jsx       # Absen datang/pulang cepat & status jurnal hari ini
 │   │   │   ├── PresensiGuru.jsx        # Riwayat presensi & form koreksi

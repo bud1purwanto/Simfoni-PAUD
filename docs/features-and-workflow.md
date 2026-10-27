@@ -89,6 +89,21 @@ Masing-masing peran memiliki dashboard eksklusif yang dirancang spesifik sesuai 
 * Form pendaftaran: Pilih Sekolah Mitra (`school_id`), Nama Lengkap Kepala Sekolah, Email Login, dan Password Default.
 * **Fitur Reset Password Kepala Sekolah:** Tombol reset instan password Kepala Sekolah ke default (`Kepsek1234!`) tanpa perlu buka email.
 
+### 3.4. Manajemen Log & Pembersihan Data Berkala (`/superadmin/logs`)
+Mengingat keterbatasan kuota penyimpanan dan pembacaan/penulisan Firestore, Superadmin memiliki modul pemeliharaan log:
+* **Tabel Pemantauan Audit Global:** Melihat log seluruh aktivitas penting (penambahan sekolah, pembuatan user, perubahan status, persetujuan jurnal) dengan filter sekolah, aktor, dan tanggal.
+* **Fitur Pembersihan Log Manual (*Manual Purge*):**
+  * Tombol **"Bersihkan Log Lama"** dengan modal opsi:
+    * *Hapus log lebih lama dari 30 hari*
+    * *Hapus log lebih lama dari 60 hari*
+    * *Hapus log lebih lama dari 90 hari*
+    * *Rentang tanggal kustom*
+  * Menampilkan hitungan jumlah log yang akan dihapus sebelum eksekusi konfirmasi.
+* **Fitur Pembersihan Otomatis Periodik (*Periodic Retention Job*):**
+  * Superadmin dapat mengatur durasi retensi otomatis (misal: simpan 60 hari terakhir).
+  * Sistem secara periodik menjalankan pembersihan data usang (*background cleanup batch*) yang kedaluwarsa, lalu memperbarui status eksekusi terakhir di `system_settings.last_cleanup_timestamp`.
+  * Menjamin basis data tetap ramping, cepat di-load, dan tidak melebihi batas kuota gratis/berbayar Firestore.
+
 ---
 
 ## 4. Rincian Modul Kepala Sekolah (`/kepsek/*`)

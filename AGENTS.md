@@ -107,6 +107,8 @@ Seluruh rancangan spesifikasi teknis telah dipecah secara modular ke dalam direk
    Kepsek memiliki tombol "Reset Password ke Default" (`Guru1234!`) di panel guru dengan flag `wajib_ganti_password: true`.
 10. **Multi-Format Export & Bulk Approval:**  
     Sediakan PDF Ringkas (ramah HP), PDF Lengkap Portofolio, Ekspor Excel (`.xlsx`) untuk rekap honor/transport guru, serta tombol "Setujui Sekaligus" (*Bulk Approval*) pada dashboard Kepsek.
+11. **Pembersihan Log & Job Retensi Berkala:**  
+    Untuk menghemat kuota Firestore, Superadmin memiliki kontrol pembersihan `audit_logs` baik manual (rentang 30/60/90 hari) maupun otomatis melalui background job retensi periodik (`system_settings`).
 
 ---
 
@@ -127,6 +129,6 @@ Saat diminta membangun atau menyempurnakan fitur, ikuti urutan langkah terstrukt
 - [ ] **Fase 6: Modul Kepala Sekolah (`/kepsek/*`)**  
   Bangun Dashboard Monitoring Live (dengan deteksi lupa absen pulang), Manajemen Akun Guru (validasi `kuota_guru` & tombol reset password default), Validasi Jurnal (dengan fitur *Bulk Approval*), serta Rekapitulasi & Cetak PDF/Excel dinamis.
 - [ ] **Fase 7: Modul Superadmin (`/superadmin/*`)**  
-  Bangun Dashboard Metrik SaaS Global, Kelola Sekolah Mitra (CRUD, kuota, suspend langganan), dan Kelola Akun Kepala Sekolah.
+  Bangun Dashboard Metrik SaaS Global, Kelola Sekolah Mitra (CRUD, kuota, suspend langganan), Kelola Akun Kepala Sekolah, dan Panel Manajemen Log (purge manual & job retensi periodik).
 - [ ] **Fase 8: Verifikasi & Sinkronisasi Dokumen Akhir**  
   Uji alur multi-tenant secara menyeluruh di branch `dev` dan pastikan seluruh dokumen di `docs/*.md` selalu selaras dengan kode akhir.

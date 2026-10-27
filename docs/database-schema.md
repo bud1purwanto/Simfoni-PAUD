@@ -6,7 +6,7 @@ Dokumen ini mendefinisikan seluruh struktur koleksi, model dokumen, relasi, stra
 
 ## 1. Ikhtisar Koleksi Multi-Tenant
 
-Sistem menggunakan 7 koleksi di mana seluruh dokumen operasional diisolasi menggunakan atribut **`school_id`**:
+Sistem menggunakan 8 koleksi di mana seluruh dokumen operasional diisolasi menggunakan atribut **`school_id`**:
 
 | Koleksi | Penamaan Doc ID | Deskripsi Utama |
 | :--- | :--- | :--- |
@@ -16,7 +16,8 @@ Sistem menggunakan 7 koleksi di mana seluruh dokumen operasional diisolasi mengg
 | `journals` | Auto-generated ID | Jurnal mengajar KBM harian, tagging Kurikulum Merdeka, dan dokumentasi foto. |
 | `schedules` | Auto-generated ID | Jadwal KBM mingguan kelas TK A, TK B, atau kelompok bermain per sekolah. |
 | `tasks_and_issues`| Auto-generated ID | Laporan kegiatan kedinasan, administrasi guru, dan pelaporan kendala sarpras. |
-| `audit_logs` | Auto-generated ID | Rekam jejak audit operasional sistem berlabel `school_id`. |
+| `audit_logs` | Auto-generated ID | Rekam jejak audit operasional sistem (dapat dibersihkan berkala oleh Superadmin). |
+| `system_settings` | `general_config` | **[Baru]** Konfigurasi global platform SaaS, durasi retensi log, & jadwal auto-cleanup. |
 
 ---
 
@@ -212,17 +213,35 @@ Pelaporan kegiatan non-KBM dan sarana prasarana sekolah.
 Mencatat aksi kritis per sekolah.
 
 * **Document ID:** Auto-generated ID Firestore
-* **Karakteristik:** *Immutable* (Hanya bisa dibuat, tidak bisa diedit atau dihapus).
+* **Karakteristik & Kebijakan:** Data riwayat bersifat *read-only* bagi pengguna umum, namun **Superadmin memiliki hak pembersihan berkala (*log retention purge*)** baik secara manual maupun otomatis berdasarkan rentang waktu untuk menghemat kuota Firestore.
 
 ```json
 {
   "school_id": "string | null (null jika aksi global oleh superadmin)",
   "actor_id": "string (UID pelaksana)",
   "actor_nama": "string",
-  "action": "ADD_SCHOOL | SUSPEND_SCHOOL | ADD_KEPSEK | ADD_GURU | EDIT_GURU | TOGGLE_STATUS_GURU | APPROVE_JOURNAL | REVISION_JOURNAL | APPROVE_CORRECTION",
-  "record_type": "schools | users | attendance | journals | tasks_and_issues",
+  "action": "ADD_SCHOOL | SUSPEND_SCHOOL | ADD_KEPSEK | ADD_GURU | EDIT_GURU | TOGGLE_STATUS_GURU | APPROVE_JOURNAL | REVISION_JOURNAL | APPROVE_CORRECTION | PURGE_LOGS",
+  "record_type": "schools | users | attendance | journals | tasks_and_issues | audit_logs",
   "record_id": "string",
   "timestamp": "Timestamp"
+}
+```
+
+---
+
+### 2.8. Koleksi `system_settings` (Konfigurasi Global & Retensi Log)
+Menyimpan pengaturan tingkat platform SaaS yang hanya dapat dibaca/ditulis oleh `superadmin`.
+
+* **Document ID:** `general_config`
+
+```json
+{
+  "platform_name": "SIMFONI PAUD SaaS",
+  "log_retention_days": "number (30 | 60 | 90 | 180 - Default: 60)",
+  "auto_cleanup_enabled": "boolean (Default: true)",
+  "last_cleanup_timestamp": "Timestamp | null",
+  "last_cleanup_deleted_count": "number (Jumlah dokumen log yang terhapus pada siklus terakhir)",
+  "updated_at": "Timestamp"
 }
 ```
 
