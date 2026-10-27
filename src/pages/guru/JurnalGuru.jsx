@@ -88,11 +88,12 @@ export default function JurnalGuru() {
       const q = query(
         collection(db, 'journals'),
         where('school_id', '==', userData.school_id),
-        where('user_id', '==', userData.uid),
-        orderBy('tanggal', 'desc')
+        where('user_id', '==', userData.uid)
       );
       const snap = await getDocs(q);
-      setJournals(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      list.sort((a, b) => (b.tanggal || '').localeCompare(a.tanggal || ''));
+      setJournals(list);
     } catch (err) {
       console.error('Error fetching journals:', err);
     } finally {
@@ -244,16 +245,19 @@ export default function JurnalGuru() {
       kendala: kendala.trim(),
       fotos,
       status: targetStatus,
-      review_note: editingId ? undefined : '',
-      reviewed_at: null,
       updated_at: serverTimestamp(),
     };
+
+    if (!editingId) {
+      payload.review_note = '';
+      payload.reviewed_at = null;
+      payload.created_at = serverTimestamp();
+    }
 
     try {
       if (editingId) {
         await updateDoc(doc(db, 'journals', editingId), payload);
       } else {
-        payload.created_at = serverTimestamp();
         await addDoc(collection(db, 'journals'), payload);
       }
 

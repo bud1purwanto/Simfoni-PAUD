@@ -20,8 +20,17 @@ export const formatTanggalIndo = (dateOrString) => {
 export const formatJamMenit = (timestampOrDate) => {
   if (!timestampOrDate) return "-";
   try {
+    // Jika format string jam langsung dari device (misal '07:30' atau '07:30:15')
+    if (typeof timestampOrDate === "string") {
+      if (/^\d{2}:\d{2}(:\d{2})?$/.test(timestampOrDate.trim())) {
+        return `${timestampOrDate.trim().slice(0, 5)} WIB`;
+      }
+    }
     // Firestore Timestamp object memiliki method toDate()
     const d = timestampOrDate?.toDate ? timestampOrDate.toDate() : new Date(timestampOrDate);
+    if (isNaN(d.getTime())) {
+      return String(timestampOrDate);
+    }
     return `${format(d, "HH:mm")} WIB`;
   } catch {
     return "-";

@@ -19,7 +19,7 @@ import { useAuth } from '../../context/AuthContext';
 const HARI_LIST = ['Semua Hari', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
 
 export default function JadwalGuru() {
-  const { currentUser, schoolData } = useAuth();
+  const { userData, schoolData } = useAuth();
   const navigate = useNavigate();
 
   // Dapatkan hari ini dalam bahasa Indonesia
@@ -33,14 +33,14 @@ export default function JadwalGuru() {
 
   // Ambil jadwal mingguan dari koleksi `schedules`
   useEffect(() => {
-    if (!currentUser?.school_id) {
+    if (!userData?.school_id) {
       setLoading(false);
       return;
     }
 
     setLoading(true);
     const schedulesRef = collection(db, 'schedules');
-    const q = query(schedulesRef, where('school_id', '==', currentUser.school_id));
+    const q = query(schedulesRef, where('school_id', '==', userData.school_id));
 
     const unsubscribe = onSnapshot(
       q,
@@ -72,9 +72,9 @@ export default function JadwalGuru() {
     }
     // Filter jadwal saya
     if (filterSaya) {
-      const isMySchedule = item.pic_guru_id === currentUser?.uid || 
+      const isMySchedule = item.pic_guru_id === userData?.uid || 
                            item.pic_guru_id === 'all' || 
-                           (item.pic_nama && item.pic_nama.toLowerCase().includes((currentUser?.nama_lengkap || '').toLowerCase()));
+                           (item.pic_nama && item.pic_nama.toLowerCase().includes((userData?.nama || '').toLowerCase()));
       if (!isMySchedule) return false;
     }
     return true;
@@ -214,9 +214,9 @@ export default function JadwalGuru() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {filteredSchedules.map((item) => {
             const isToday = item.hari === hariIni;
-            const isMyDuty = item.pic_guru_id === currentUser?.uid || 
+            const isMyDuty = item.pic_guru_id === userData?.uid || 
                              item.pic_guru_id === 'all' ||
-                             (item.pic_nama && item.pic_nama.toLowerCase().includes((currentUser?.nama_lengkap || '').toLowerCase()));
+                             (item.pic_nama && item.pic_nama.toLowerCase().includes((userData?.nama || '').toLowerCase()));
 
             return (
               <div

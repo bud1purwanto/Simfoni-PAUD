@@ -52,11 +52,13 @@ export default function PresensiGuru() {
       const q = query(
         collection(db, 'attendance'),
         where('school_id', '==', userData.school_id),
-        where('user_id', '==', userData.uid),
-        orderBy('tanggal', 'desc')
+        where('user_id', '==', userData.uid)
       );
       const snap = await getDocs(q);
       const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+      // Urutkan tanggal terbaru di memori (bebas dari kebutuhan composite index Firestore)
+      list.sort((a, b) => (b.tanggal || '').localeCompare(a.tanggal || ''));
 
       // Filter per bulan di sisi klien
       const filtered = list.filter(item => item.tanggal?.startsWith(selectedMonth));

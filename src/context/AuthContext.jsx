@@ -114,7 +114,25 @@ export const AuthProvider = ({ children }) => {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const superadminUid = userCredential.user.uid;
 
-    // 2. Buat Sekolah Pilot Pertama di koleksi 'schools'
+    // 2. Simpan data akun Superadmin di koleksi 'users' TERLEBIH DAHULU
+    // agar Firestore Security Rules segera mengenali peran superadmin untuk penulisan berikutnya
+    const superadminDocRef = doc(db, 'users', superadminUid);
+    const superadminUserData = {
+      uid: superadminUid,
+      nama: nama || 'Super Admin SIMFONI',
+      email: email,
+      role: 'superadmin',
+      school_id: null,
+      nama_sekolah: 'SIMFONI SaaS Platform',
+      kelompok_kelas: null,
+      status_akun: 'aktif',
+      wajib_ganti_password: false,
+      created_at: serverTimestamp(),
+      updated_at: serverTimestamp(),
+    };
+    await setDoc(superadminDocRef, superadminUserData);
+
+    // 3. Buat Sekolah Pilot Pertama di koleksi 'schools'
     const pilotSchoolId = 'sch_tkdwp8';
     const pilotSchoolRef = doc(db, 'schools', pilotSchoolId);
     const schoolInitialData = {
@@ -139,23 +157,6 @@ export const AuthProvider = ({ children }) => {
       updated_at: serverTimestamp(),
     };
     await setDoc(pilotSchoolRef, schoolInitialData);
-
-    // 3. Simpan data akun Superadmin di koleksi 'users'
-    const superadminDocRef = doc(db, 'users', superadminUid);
-    const superadminUserData = {
-      uid: superadminUid,
-      nama: nama || 'Super Admin SIMFONI',
-      email: email,
-      role: 'superadmin',
-      school_id: null,
-      nama_sekolah: 'SIMFONI SaaS Platform',
-      kelompok_kelas: null,
-      status_akun: 'aktif',
-      wajib_ganti_password: false,
-      created_at: serverTimestamp(),
-      updated_at: serverTimestamp(),
-    };
-    await setDoc(superadminDocRef, superadminUserData);
 
     // 4. Inisialisasi System Settings untuk Log Retention & Cleanup
     const systemSettingsRef = doc(db, 'system_settings', 'general_config');

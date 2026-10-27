@@ -67,7 +67,7 @@ const KATEGORI_OPTIONS = [
 ];
 
 export default function LaporanLainGuru() {
-  const { currentUser, schoolData } = useAuth();
+  const { userData, schoolData } = useAuth();
 
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -104,7 +104,7 @@ export default function LaporanLainGuru() {
 
   // Listener data laporan
   useEffect(() => {
-    if (!currentUser?.school_id) {
+    if (!userData?.school_id || !userData?.uid) {
       setLoading(false);
       return;
     }
@@ -113,21 +113,19 @@ export default function LaporanLainGuru() {
     const reportsRef = collection(db, 'tasks_and_issues');
     const q = query(
       reportsRef,
-      where('school_id', '==', currentUser.school_id)
+      where('school_id', '==', userData.school_id),
+      where('user_id', '==', userData.uid)
     );
 
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
-        const list = snapshot.docs
-          .map((docSnap) => ({
-            id: docSnap.id,
-            ...docSnap.data(),
-          }))
-          // Filter hanya laporan guru ini
-          .filter((item) => item.user_id === currentUser.uid);
+        const list = snapshot.docs.map((docSnap) => ({
+          id: docSnap.id,
+          ...docSnap.data(),
+        }));
 
-        // Urutkan tanggal terbaru
+        // Urutkan tanggal terbaru di memori
         list.sort((a, b) => (b.tanggal || '').localeCompare(a.tanggal || ''));
         setReports(list);
         setLoading(false);
@@ -139,7 +137,7 @@ export default function LaporanLainGuru() {
     );
 
     return () => unsubscribe();
-  }, [currentUser?.school_id, currentUser?.uid]);
+  }, [userData?.school_id, userData?.uid]);
 
   // Handle upload foto preview
   const handlePhotoChange = (e) => {
@@ -199,17 +197,17 @@ export default function LaporanLainGuru() {
       if (photoFile) {
         const uploadResult = await uploadCompressedImage(
           photoFile,
-          currentUser.school_id,
-          currentUser.uid,
+          userData.school_id,
+          userData.uid,
           'tasks'
         );
         fotoUrl = uploadResult.url;
       }
 
       const docRef = await addDoc(collection(db, 'tasks_and_issues'), {
-        school_id: currentUser.school_id,
-        user_id: currentUser.uid,
-        nama_guru: currentUser.nama_lengkap || 'Guru PAUD',
+        school_id: userData.school_id,
+        user_id: userData.uid,
+        nama_guru: userData.nama || 'Guru PAUD',
         tanggal: tanggal,
         kategori: kategori,
         judul: judul.trim(),
@@ -223,9 +221,9 @@ export default function LaporanLainGuru() {
 
       // Audit Log
       await logActivity({
-        schoolId: currentUser.school_id,
-        actorId: currentUser.uid,
-        actorNama: currentUser.nama_lengkap || 'Guru',
+        schoolId: userData.school_id,
+        actorId: userData.uid,
+        actorNama: userData.nama || 'Guru',
         action: 'ADD_TASK_OR_ISSUE',
         recordType: 'tasks_and_issues',
         recordId: docRef.id,
