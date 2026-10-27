@@ -123,15 +123,15 @@ Saat diminta membangun atau menyempurnakan fitur, ikuti urutan langkah terstrukt
   - [x] Pasang dependensi inti: `firebase`, `browser-image-compression`, `jspdf`, `jspdf-autotable`, `xlsx`, `date-fns`, `lucide-react`, `react-router-dom`.
   - [x] Konfigurasi `.gitignore` (proteksi `.env.*`), `.env.example`, `public/_redirects` (`/* /index.html 200`), dan `public/manifest.json`.
 
-- [ ] **Fase 2: Konfigurasi Firebase Modular & Layanan Inti**
-  - [ ] Bangun `src/config/firebase.js` (*Primary App* untuk sesi aktif + *Secondary App* untuk pendaftaran user bertingkat tanpa ter-*logout*).
-  - [ ] Bangun `src/utils/imageCompressor.js` (kompresi foto HP menjadi < 300 KB, resolusi maks 1280px).
-  - [ ] Bangun `src/hooks/useSpeechToText.js` (Voice-to-Text bahasa Indonesia `id-ID`).
-  - [ ] Bangun `src/utils/pdfExporter.js` (PDF dinamis dengan Kop Surat sekolah, tanda tangan Kepsek, dan stempel digital transparan).
-  - [ ] Bangun `src/utils/excelExporter.js` (ekspor rekapitulasi kehadiran `.xlsx` untuk honor/transport guru).
-  - [ ] Bangun `src/utils/kbmTemplates.js` (bank template kegiatan KBM Kurikulum Merdeka).
-  - [ ] Bangun `src/utils/auditLogger.js` (helper pencatatan audit log per `school_id`).
-  - [ ] Terapkan berkas aturan keamanan `firestore.rules` dan `storage.rules`.
+- [x] **Fase 2: Konfigurasi Firebase Modular & Layanan Inti**
+  - [x] Bangun `src/config/firebase.js` (*Primary App* untuk sesi aktif + *Secondary App* untuk pendaftaran user bertingkat tanpa ter-*logout*).
+  - [x] Bangun `src/utils/imageCompressor.js` (kompresi foto HP menjadi < 300 KB, resolusi maks 1280px).
+  - [x] Bangun `src/hooks/useSpeechToText.js` (Voice-to-Text bahasa Indonesia `id-ID`).
+  - [x] Bangun `src/utils/pdfExporter.js` (PDF dinamis dengan Kop Surat sekolah, tanda tangan Kepsek, dan stempel digital transparan).
+  - [x] Bangun `src/utils/excelExporter.js` (ekspor rekapitulasi kehadiran `.xlsx` untuk honor/transport guru).
+  - [x] Bangun `src/utils/kbmTemplates.js` (bank template kegiatan KBM Kurikulum Merdeka).
+  - [x] Bangun `src/utils/auditLogger.js` (helper pencatatan audit log per `school_id`).
+  - [x] Terapkan berkas aturan keamanan `firestore.rules` dan `storage.rules`.
 
 - [ ] **Fase 3: Autentikasi, Context Multi-Tenant & Pilot Seeder**
   - [ ] Bangun `src/context/AuthContext.jsx` (manajemen sesi, pemuatan `schoolData`, penanganan suspensi sekolah, flag ganti password).

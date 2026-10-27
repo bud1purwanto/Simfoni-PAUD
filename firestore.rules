@@ -1,0 +1,121 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // --- FUNGSI HELPER KEAMANAN MULTI-TENANT ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    
+    function getSchoolData(schoolId) {
+      return get(/databases/$(database)/documents/schools/$(schoolId)).data;
+    }
+    
+    function isSuperAdmin() {
+      return isSignedIn() && getUserData().role == 'superadmin' && getUserData().status_akun == 'aktif';
+    }
+    
+    // Memastikan user aktif DAN sekolah tempatnya bernaung memiliki langganan aktif
+    function isActiveTenantUser() {
+      let user = getUserData();
+      return isSignedIn() 
+        && user.status_akun == 'aktif' 
+        && user.school_id != null
+        && getSchoolData(user.school_id).status_langganan == 'aktif';
+    }
+    
+    function isSameSchool(schoolId) {
+      return isActiveTenantUser() && getUserData().school_id == schoolId;
+    }
+    
+    function isSchoolKepsek(schoolId) {
+      return isSameSchool(schoolId) && getUserData().role == 'kepsek';
+    }
+
+    // --- 1. KOLEKSI SCHOOLS (DATA TENANT) ---
+    match /schools/{schoolId} {
+      allow read: if isSuperAdmin() || (isSignedIn() && getUserData().school_id == schoolId);
+      allow create, delete: if isSuperAdmin();
+      allow update: if isSuperAdmin() || isSchoolKepsek(schoolId);
+    }
+
+    // --- 2. KOLEKSI USERS ---
+    match /users/{userId} {
+      allow read: if isSuperAdmin() 
+                  || (isSignedIn() && request.auth.uid == userId) 
+                  || (isActiveTenantUser() && getUserData().school_id == resource.data.school_id);
+      
+      // Izinkan setup awal superadmin pertama, atau pembuatan akun oleh Superadmin,
+      // atau pembuatan akun guru oleh Kepsek di sekolah yang sama
+      allow create: if isSignedIn() && (
+        request.auth.uid == userId 
+        || isSuperAdmin() 
+        || (isSchoolKepsek(request.resource.data.school_id) && request.resource.data.role == 'guru')
+      );
+      
+      allow update: if isSuperAdmin() 
+                    || (isSchoolKepsek(resource.data.school_id) && resource.data.role == 'guru')
+                    || (isActiveTenantUser() && request.auth.uid == userId && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'status_akun', 'school_id']));
+      
+      allow delete: if isSuperAdmin();
+    }
+
+    // --- 3. KOLEKSI ATTENDANCE (PRESENSI) ---
+    match /attendance/{docId} {
+      allow read: if isSuperAdmin() 
+                  || isSchoolKepsek(resource.data.school_id) 
+                  || (isSameSchool(resource.data.school_id) && resource.data.user_id == request.auth.uid);
+      allow create: if isSameSchool(request.resource.data.school_id) && request.resource.data.user_id == request.auth.uid;
+      allow update: if isSchoolKepsek(resource.data.school_id) 
+                    || (isSameSchool(resource.data.school_id) && resource.data.user_id == request.auth.uid);
+      allow delete: if false; // Presensi tidak boleh dihapus fisik
+    }
+
+    // --- 4. KOLEKSI JOURNALS (JURNAL KBM & DOKUMENTASI) ---
+    match /journals/{journalId} {
+      allow read: if isSuperAdmin() 
+                  || isSchoolKepsek(resource.data.school_id) 
+                  || (isSameSchool(resource.data.school_id) && resource.data.user_id == request.auth.uid);
+      allow create: if isSameSchool(request.resource.data.school_id) && request.resource.data.user_id == request.auth.uid;
+      allow update: if isSchoolKepsek(resource.data.school_id) 
+                    || (isSameSchool(resource.data.school_id) && resource.data.user_id == request.auth.uid);
+      allow delete: if isSameSchool(resource.data.school_id) && resource.data.user_id == request.auth.uid && resource.data.status == 'draf';
+    }
+
+    // --- 5. KOLEKSI SCHEDULES ---
+    match /schedules/{scheduleId} {
+      allow read: if isSuperAdmin() || isSameSchool(resource.data.school_id);
+      allow write: if isSuperAdmin() || isSchoolKepsek(request.resource.data.school_id);
+    }
+
+    // --- 6. KOLEKSI TASKS & ISSUES ---
+    match /tasks_and_issues/{itemId} {
+      allow read: if isSuperAdmin() 
+                  || isSchoolKepsek(resource.data.school_id) 
+                  || (isSameSchool(resource.data.school_id) && resource.data.user_id == request.auth.uid);
+      allow create: if isSameSchool(request.resource.data.school_id) && request.resource.data.user_id == request.auth.uid;
+      allow update: if isSchoolKepsek(resource.data.school_id) 
+                    || (isSameSchool(resource.data.school_id) && resource.data.user_id == request.auth.uid);
+      allow delete: if isSchoolKepsek(resource.data.school_id);
+    }
+
+    // --- 7. KOLEKSI AUDIT LOGS ---
+    match /audit_logs/{logId} {
+      allow read: if isSuperAdmin() || isSchoolKepsek(resource.data.school_id);
+      allow create: if isSignedIn();
+      allow update: if false; // Log tidak boleh dimanipulasi
+      allow delete: if isSuperAdmin(); // Superadmin diizinkan membersihkan log lama untuk hemat kuota
+    }
+
+    // --- 8. KOLEKSI SYSTEM SETTINGS (KONFIGURASI SAAS & RETENSI LOG) ---
+    match /system_settings/{settingId} {
+      allow read: if isSignedIn();
+      allow write: if isSuperAdmin();
+    }
+  }
+}
+
