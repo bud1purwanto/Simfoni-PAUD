@@ -368,7 +368,7 @@ export default function RekapDanPdf() {
         </div>
 
         <div className="bg-white rounded-3xl p-4 md:p-5 border border-slate-200/80 shadow-sm flex items-center space-x-3.5">
-          <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-purple-100 text-purple-700 flex items-center justify-center font-bold flex-shrink-0">
+          <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold flex-shrink-0">
             <Users className="w-5 h-5 md:w-6 md:h-6" />
           </div>
           <div>
@@ -412,12 +412,12 @@ export default function RekapDanPdf() {
         </div>
 
         {/* 2. PDF Portofolio Foto BAN-PDM */}
-        <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm flex flex-col justify-between hover:border-indigo-300 transition group">
+        <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm flex flex-col justify-between hover:border-teal-300 transition group">
           <div>
-            <div className="w-12 h-12 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center mb-4 group-hover:scale-105 transition">
+            <div className="w-12 h-12 rounded-2xl bg-teal-100 text-teal-700 flex items-center justify-center mb-4 group-hover:scale-105 transition">
               <ImageIcon className="w-6 h-6 stroke-[2.5]" />
             </div>
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-indigo-100 text-indigo-700">
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-teal-100 text-teal-800">
               Standar Akreditasi
             </span>
             <h3 className="text-lg font-extrabold text-slate-800 font-brand mt-2">
@@ -431,7 +431,7 @@ export default function RekapDanPdf() {
           <button
             onClick={handleExportPortofolioPdf}
             disabled={exportingType === 'portofolio' || filteredData.monthJournals.length === 0}
-            className="mt-6 w-full py-3 px-4 rounded-2xl font-extrabold text-xs text-white bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 active:scale-95 shadow-md shadow-indigo-500/20 transition flex items-center justify-center space-x-2 font-brand disabled:opacity-50"
+            className="mt-6 w-full py-3 px-4 rounded-2xl font-extrabold text-xs text-white bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 active:scale-95 shadow-md shadow-teal-500/20 transition flex items-center justify-center space-x-2 font-brand disabled:opacity-50"
           >
             <Download className="w-4 h-4 stroke-[2.5]" />
             <span>{exportingType === 'portofolio' ? 'Menyusun Portofolio...' : 'Unduh Portofolio BAN-PDM'}</span>

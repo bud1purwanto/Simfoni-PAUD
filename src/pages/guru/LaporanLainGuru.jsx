@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   FileText, 
   Plus, 
@@ -45,7 +46,7 @@ const KATEGORI_OPTIONS = [
     label: 'Tugas Tambahan & Rapat', 
     shortLabel: 'Tugas Tambahan',
     icon: Briefcase, 
-    color: 'text-indigo-600 bg-indigo-50 border-indigo-200',
+    color: 'text-amber-700 bg-amber-50 border-amber-200/80',
     description: 'Rapat Gugus/IGTKI, Pelatihan, Pendampingan Lomba, Parenting, dll.' 
   },
   { 
@@ -477,8 +478,8 @@ export default function LaporanLainGuru() {
       )}
 
       {/* MODAL: Buat Laporan Baru */}
-      {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+      {modalOpen && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
           <div className="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200 flex flex-col">
             {/* Modal Header */}
             <div className="sticky top-0 bg-white px-6 py-4 border-b border-slate-200 flex items-center justify-between z-10">
@@ -722,12 +723,13 @@ export default function LaporanLainGuru() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* MODAL: Detail Laporan */}
-      {selectedDetail && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+      {selectedDetail && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
           <div className="bg-white rounded-3xl w-full max-w-xl max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200 flex flex-col p-6 space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div>
@@ -802,7 +804,8 @@ export default function LaporanLainGuru() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

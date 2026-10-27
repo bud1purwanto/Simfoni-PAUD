@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   Users, 
   UserPlus, 
@@ -452,8 +453,8 @@ export default function KelolaGuru() {
       </div>
 
       {/* MODAL 1: Tambah Guru Baru via Secondary Auth */}
-      {addModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
+      {addModalOpen && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl w-full max-w-md p-6 shadow-2xl border border-orange-200/80 space-y-4">
             <div className="flex items-center justify-between border-b border-orange-100 pb-3">
               <div className="flex items-center space-x-2.5">
@@ -561,12 +562,13 @@ export default function KelolaGuru() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* MODAL 2: Peringatan Kuota Guru Penuh */}
-      {quotaExceededModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
+      {quotaExceededModalOpen && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl w-full max-w-md p-6 shadow-2xl border border-rose-200 text-center space-y-4">
             <div className="w-14 h-14 rounded-3xl bg-rose-100 text-rose-700 flex items-center justify-center text-2xl mx-auto shadow-xs">
               ⚠️
@@ -594,12 +596,13 @@ export default function KelolaGuru() {
               Mengerti & Tutup
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* MODAL 3: Edit Profil Guru */}
-      {editModalOpen && selectedTeacher && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
+      {editModalOpen && selectedTeacher && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl w-full max-w-md p-6 shadow-2xl border border-orange-200/80 space-y-4">
             <div className="flex items-center justify-between border-b border-orange-100 pb-3">
               <h3 className="text-base font-extrabold text-slate-900 font-brand">
@@ -657,7 +660,8 @@ export default function KelolaGuru() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
     </div>

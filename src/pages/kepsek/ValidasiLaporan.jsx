@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   CheckSquare, 
   Clock, 
@@ -628,8 +629,8 @@ export default function ValidasiLaporan() {
       )}
 
       {/* MODAL: Rincian Jurnal & Catatan Revisi */}
-      {reviewModalOpen && selectedJournal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
+      {reviewModalOpen && selectedJournal && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
           <div className="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 shadow-2xl border border-orange-200/80 space-y-4 flex flex-col">
             <div className="flex items-center justify-between border-b border-orange-100 pb-3">
               <div>
@@ -739,12 +740,13 @@ export default function ValidasiLaporan() {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* MODAL: Verifikasi Koreksi Jam Presensi */}
-      {correctionModalOpen && selectedCorrection && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
+      {correctionModalOpen && selectedCorrection && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
           <div className="bg-white rounded-3xl w-full max-w-md p-6 shadow-2xl border border-orange-200/80 space-y-4">
             <div className="flex items-center justify-between border-b border-orange-100 pb-3">
               <h3 className="text-base font-extrabold text-slate-900 font-brand">
@@ -799,7 +801,8 @@ export default function ValidasiLaporan() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
     </div>

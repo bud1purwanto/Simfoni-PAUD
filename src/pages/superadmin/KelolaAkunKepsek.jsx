@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   Users, 
   UserPlus, 
@@ -255,25 +256,25 @@ export default function KelolaAkunKepsek() {
   return (
     <div className="space-y-6 pb-20 md:pb-6">
       {/* Header Banner */}
-      <div className="bg-gradient-to-r from-purple-800 via-indigo-800 to-purple-900 rounded-3xl p-6 md:p-8 text-white shadow-xl shadow-purple-900/20 relative overflow-hidden">
+      <div className="bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 rounded-3xl p-6 md:p-8 text-white shadow-lg shadow-orange-500/20 relative overflow-hidden">
         <div className="absolute right-0 top-0 translate-x-12 -translate-y-12 w-64 h-64 bg-white/10 rounded-full blur-3xl pointer-events-none" />
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <div className="inline-flex items-center space-x-2 px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-bold text-purple-200 mb-3">
+            <div className="inline-flex items-center space-x-2 px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-bold text-amber-100 mb-3">
               <Building2 className="w-3.5 h-3.5" />
               <span>School Administrators Gateway</span>
             </div>
             <h1 className="text-2xl md:text-3xl font-extrabold font-brand tracking-tight">
               Kelola Akun Kepala Sekolah
             </h1>
-            <p className="text-purple-200 text-sm mt-1 max-w-xl font-medium">
+            <p className="text-amber-100 text-sm mt-1 max-w-xl font-medium">
               Pendaftaran akun pimpinan PAUD mitra via Secondary Auth (tanpa me-logout sesi aktif), reset password cepat, dan kontrol hak akses.
             </p>
           </div>
 
           <button
             onClick={handleOpenAddModal}
-            className="self-start md:self-auto px-5 py-3 bg-white text-purple-900 hover:bg-purple-50 active:scale-95 font-extrabold text-xs rounded-2xl shadow-sm transition flex items-center space-x-2 font-brand"
+            className="self-start md:self-auto px-5 py-3 bg-white text-orange-600 hover:bg-orange-50 active:scale-95 font-extrabold text-xs rounded-2xl shadow-sm transition flex items-center space-x-2 font-brand"
           >
             <UserPlus className="w-4 h-4 stroke-[3]" />
             <span>Buat Akun Kepsek Baru</span>
@@ -310,7 +311,7 @@ export default function KelolaAkunKepsek() {
             placeholder="Cari nama, email, atau sekolah..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 text-xs font-medium rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+            className="w-full pl-10 pr-4 py-2 text-xs font-medium rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
           />
         </div>
 
@@ -353,7 +354,7 @@ export default function KelolaAkunKepsek() {
                     <tr key={k.id} className="hover:bg-slate-50/80 transition">
                       <td className="py-3.5 px-4">
                         <div className="flex items-center space-x-3">
-                          <div className="w-9 h-9 rounded-2xl bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-xs flex-shrink-0">
+                          <div className="w-9 h-9 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center font-bold text-xs flex-shrink-0">
                             {k.nama ? k.nama.charAt(0).toUpperCase() : 'K'}
                           </div>
                           <div>
@@ -365,7 +366,7 @@ export default function KelolaAkunKepsek() {
 
                       <td className="py-3.5 px-4 text-slate-700 font-bold">
                         <div className="flex items-center space-x-1.5">
-                          <School className="w-3.5 h-3.5 text-purple-600" />
+                          <School className="w-3.5 h-3.5 text-amber-600" />
                           <span>{k.nama_sekolah || k.school_id || '-'}</span>
                         </div>
                       </td>
@@ -406,7 +407,7 @@ export default function KelolaAkunKepsek() {
                           <button
                             onClick={() => handleOpenEditModal(k)}
                             title="Edit Profil"
-                            className="p-1.5 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition"
+                            className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition"
                           >
                             <Edit className="w-4 h-4" />
                           </button>
@@ -434,12 +435,12 @@ export default function KelolaAkunKepsek() {
       </div>
 
       {/* MODAL BUAT AKUN KEPALA SEKOLAH */}
-      {addModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+      {addModalOpen && createPortal(
+        <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100">
             <div className="flex items-center justify-between pb-4 border-b border-slate-100">
               <div className="flex items-center space-x-2">
-                <div className="w-9 h-9 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center">
+                <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center">
                   <UserPlus className="w-5 h-5" />
                 </div>
                 <div>
@@ -480,7 +481,7 @@ export default function KelolaAkunKepsek() {
                   <select
                     value={formSchoolId}
                     onChange={(e) => setFormSchoolId(e.target.value)}
-                    className="w-full px-3 py-2 text-xs font-bold rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+                    className="w-full px-3 py-2 text-xs font-bold rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
                   >
                     {schools.map((s) => (
                       <option key={s.id} value={s.id}>
@@ -502,7 +503,7 @@ export default function KelolaAkunKepsek() {
                   placeholder="Contoh: Hj. Siti Nurjanah, S.Pd"
                   value={formNama}
                   onChange={(e) => setFormNama(e.target.value)}
-                  className="w-full px-3 py-2 text-xs font-medium rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+                  className="w-full px-3 py-2 text-xs font-medium rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
                 />
               </div>
 
@@ -517,7 +518,7 @@ export default function KelolaAkunKepsek() {
                   placeholder="kepsek.dwp8@gmail.com"
                   value={formEmail}
                   onChange={(e) => setFormEmail(e.target.value)}
-                  className="w-full px-3 py-2 text-xs font-medium rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+                  className="w-full px-3 py-2 text-xs font-medium rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
                 />
               </div>
 
@@ -531,7 +532,7 @@ export default function KelolaAkunKepsek() {
                   required
                   value={formPassword}
                   onChange={(e) => setFormPassword(e.target.value)}
-                  className="w-full px-3 py-2 text-xs font-mono font-bold rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 bg-slate-50"
+                  className="w-full px-3 py-2 text-xs font-mono font-bold rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-slate-50"
                 />
                 <span className="text-[10px] text-slate-400 mt-1 block">
                   Kepsek wajib mengganti sandi ini saat pertama kali berhasil login.
@@ -549,19 +550,20 @@ export default function KelolaAkunKepsek() {
                 <button
                   type="submit"
                   disabled={isSubmitting || schools.length === 0}
-                  className="px-5 py-2 text-xs font-extrabold text-white bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-800 hover:to-indigo-800 rounded-xl shadow-md shadow-purple-700/20 active:scale-95 transition disabled:opacity-50"
+                  className="px-5 py-2 text-xs font-extrabold text-white bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 rounded-xl shadow-md shadow-orange-500/20 active:scale-95 transition disabled:opacity-50"
                 >
                   {isSubmitting ? 'Memproses Akun...' : 'Daftarkan Kepsek'}
                 </button>
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* MODAL EDIT PROFIL KEPSEK */}
-      {editModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+      {editModalOpen && createPortal(
+        <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-100">
             <div className="flex items-center justify-between pb-4 border-b border-slate-100">
               <h2 className="text-base font-extrabold text-slate-800 font-brand">
@@ -585,7 +587,7 @@ export default function KelolaAkunKepsek() {
                   required
                   value={editNama}
                   onChange={(e) => setEditNama(e.target.value)}
-                  className="w-full px-3 py-2 text-xs font-medium rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+                  className="w-full px-3 py-2 text-xs font-medium rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
                 />
               </div>
 
@@ -599,14 +601,15 @@ export default function KelolaAkunKepsek() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-xs font-extrabold text-white bg-purple-600 hover:bg-purple-700 rounded-xl transition"
+                  className="px-4 py-2 text-xs font-extrabold text-white bg-orange-600 hover:bg-orange-700 rounded-xl transition"
                 >
                   Simpan
                 </button>
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

@@ -226,3 +226,17 @@ Pada saat sistem baru pertama kali dipasang dan koleksi `users` di database masi
   * 🟢 **Mode Online:** Sistem tersinkronisasi penuh dengan Firebase Cloud.
   * 🟠 **Mode Offline:** Tampil banner peringatan ramah di bagian atas: *"Sinyal terputus. Jangan khawatir, draf Anda tersimpan aman di HP dan otomatis terkirim saat internet kembali."*
 * Mencegah guru panik atau melakukan penekanan tombol berulang kali (*spam click*) saat berada di area sekolah bersinyal lemah.
+
+---
+
+## 8. Standar Desain Antarmuka Human-Centered & Acuan Mockup UI
+
+Aplikasi SIMFONI PAUD secara ketat menerapkan estetika **Anti-AI Slop** yang dirancang khusus untuk memenuhi kebutuhan psikologis dan ergonomis guru anak usia dini:
+* 📄 **Prototipe Acuan Visual Interaktif:** [`docs/mockup-ui-paud-guru.html`](mockup-ui-paud-guru.html) (atau via browser dev: `http://localhost:3000/mockup-ui-paud-guru.html`).
+* 📘 **Pedoman Desain Lengkap:** [`docs/ui-design-guidelines.md`](ui-design-guidelines.md).
+* **Fitur Utama Estetika:**
+  1. **Palet Warm Honey & Sage Green:** Latar hangat bebas silau, aksen ceria terakota dan madu, serta aksen hijau sage yang menenangkan.
+  2. **Font Pairing Ramah:** `Nunito` (`font-brand`) untuk judul ceria yang bersahabat dan `Plus Jakarta Sans` untuk kejelasan teks formulir.
+  3. **Ergonomi Ramah Jempol (*Thumb-Zone*):** Tombol aksi utama berukuran 44px+ dengan radius membulat empuk (`rounded-2xl` / `rounded-3xl`).
+  4. **Navigasi Bawah Melayang (*Floating Bottom Nav Pill*):** Kapsul navigasi melayang semi-transparan dengan efek blur kaca (*backdrop blur*) yang nyaman dijangkau jempol satu tangan.
+

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   School, 
   Plus, 
@@ -294,25 +295,25 @@ export default function KelolaSekolah() {
   return (
     <div className="space-y-6 pb-20 md:pb-6">
       {/* Header Banner */}
-      <div className="bg-gradient-to-r from-purple-800 via-indigo-800 to-purple-900 rounded-3xl p-6 md:p-8 text-white shadow-xl shadow-purple-900/20 relative overflow-hidden">
+      <div className="bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 rounded-3xl p-6 md:p-8 text-white shadow-lg shadow-orange-500/20 relative overflow-hidden">
         <div className="absolute right-0 top-0 translate-x-12 -translate-y-12 w-64 h-64 bg-white/10 rounded-full blur-3xl pointer-events-none" />
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <div className="inline-flex items-center space-x-2 px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-bold text-purple-200 mb-3">
+            <div className="inline-flex items-center space-x-2 px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-bold text-amber-100 mb-3">
               <School className="w-3.5 h-3.5" />
               <span>Multi-Tenant Governance</span>
             </div>
             <h1 className="text-2xl md:text-3xl font-extrabold font-brand tracking-tight">
               Kelola Sekolah Mitra (Tenants)
             </h1>
-            <p className="text-purple-200 text-sm mt-1 max-w-xl font-medium">
+            <p className="text-amber-100 text-sm mt-1 max-w-xl font-medium">
               Atur entitas PAUD/TK, alokasi kuota akun guru, masa aktif paket, serta unggah logo dan stempel resmi transparan.
             </p>
           </div>
 
           <button
             onClick={handleOpenAddModal}
-            className="self-start md:self-auto px-5 py-3 bg-white text-purple-900 hover:bg-purple-50 active:scale-95 font-extrabold text-xs rounded-2xl shadow-sm transition flex items-center space-x-2 font-brand"
+            className="self-start md:self-auto px-5 py-3 bg-white text-orange-600 hover:bg-orange-50 active:scale-95 font-extrabold text-xs rounded-2xl shadow-sm transition flex items-center space-x-2 font-brand"
           >
             <Plus className="w-4 h-4 stroke-[3]" />
             <span>Daftarkan Sekolah Baru</span>
@@ -349,7 +350,7 @@ export default function KelolaSekolah() {
             placeholder="Cari nama sekolah, NPSN, atau kota..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 text-xs font-medium rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+            className="w-full pl-10 pr-4 py-2 text-xs font-medium rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
           />
         </div>
 
@@ -364,7 +365,7 @@ export default function KelolaSekolah() {
               onClick={() => setStatusFilter(tab.id)}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
                 statusFilter === tab.id
-                  ? 'bg-purple-100 text-purple-800 border border-purple-300'
+                  ? 'bg-amber-100 text-amber-800 border border-amber-300'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-transparent'
               }`}
             >
@@ -377,12 +378,12 @@ export default function KelolaSekolah() {
       {/* GRID KARTU SEKOLAH MITRA */}
       {loading ? (
         <div className="p-12 text-center text-slate-400 font-medium">
-          <div className="inline-block animate-spin w-6 h-6 border-2 border-purple-600 border-t-transparent rounded-full mb-2" />
+          <div className="inline-block animate-spin w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full mb-2" />
           <p className="text-xs">Memuat daftar sekolah mitra...</p>
         </div>
       ) : filteredSchools.length === 0 ? (
         <div className="bg-white rounded-3xl p-12 text-center border border-dashed border-slate-300 shadow-sm">
-          <School className="w-12 h-12 text-purple-300 mx-auto mb-3" />
+          <School className="w-12 h-12 text-amber-300 mx-auto mb-3" />
           <h3 className="text-base font-extrabold text-slate-700 font-brand">
             Tidak Ada Sekolah Ditemukan
           </h3>
@@ -410,7 +411,7 @@ export default function KelolaSekolah() {
                 className={`bg-white rounded-3xl p-5 border shadow-sm transition flex flex-col justify-between relative group ${
                   isSuspended
                     ? 'border-rose-200 bg-rose-50/10'
-                    : 'border-slate-200/80 hover:shadow-md hover:border-purple-200'
+                    : 'border-slate-200/80 hover:shadow-md hover:border-amber-200'
                 }`}
               >
                 <div>
@@ -424,12 +425,12 @@ export default function KelolaSekolah() {
                           className="w-11 h-11 rounded-2xl object-contain border border-slate-200 p-1 bg-white shadow-xs"
                         />
                       ) : (
-                        <div className="w-11 h-11 rounded-2xl bg-purple-100 text-purple-700 flex items-center justify-center font-black text-base shadow-xs">
+                        <div className="w-11 h-11 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center font-black text-base shadow-xs">
                           {s.nama_sekolah?.charAt(0) || 'P'}
                         </div>
                       )}
                       <div>
-                        <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase bg-purple-50 text-purple-700 border border-purple-200/60">
+                        <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase bg-amber-50 text-amber-800 border border-amber-200/60">
                           {s.paket_langganan || 'trial'}
                         </span>
                         <h3 className="font-extrabold text-slate-800 text-sm leading-tight font-brand mt-1 line-clamp-1">
@@ -445,7 +446,7 @@ export default function KelolaSekolah() {
                       <button
                         onClick={() => handleOpenEditModal(s)}
                         title="Edit Profil Sekolah"
-                        className="p-1.5 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition"
+                        className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition"
                       >
                         <Edit className="w-4 h-4" />
                       </button>
@@ -548,12 +549,12 @@ export default function KelolaSekolah() {
       )}
 
       {/* MODAL TAMBAH / EDIT SEKOLAH MITRA */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+      {isModalOpen && createPortal(
+        <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl border border-slate-100 my-8">
             <div className="flex items-center justify-between pb-4 border-b border-slate-100">
               <div className="flex items-center space-x-2">
-                <div className="w-9 h-9 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center">
+                <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center">
                   <School className="w-5 h-5" />
                 </div>
                 <div>
@@ -587,7 +588,7 @@ export default function KelolaSekolah() {
                     value={formId}
                     onChange={(e) => setFormId(e.target.value)}
                     placeholder="Contoh: sch_tkdwp8_sby"
-                    className="w-full px-3 py-2 text-xs font-mono font-bold rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 disabled:bg-slate-100"
+                    className="w-full px-3 py-2 text-xs font-mono font-bold rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 disabled:bg-slate-100"
                   />
                   <span className="text-[10px] text-slate-400">ID unik permanen tenant.</span>
                 </div>
@@ -602,7 +603,7 @@ export default function KelolaSekolah() {
                     value={formNama}
                     onChange={(e) => setFormNama(e.target.value)}
                     placeholder="Contoh: TK Dharma Wanita Persatuan 8"
-                    className="w-full px-3 py-2 text-xs font-bold rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+                    className="w-full px-3 py-2 text-xs font-bold rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
                   />
                 </div>
               </div>
@@ -616,7 +617,7 @@ export default function KelolaSekolah() {
                     value={formNpsn}
                     onChange={(e) => setFormNpsn(e.target.value)}
                     placeholder="Contoh: 20539123"
-                    className="w-full px-3 py-2 text-xs font-medium rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+                    className="w-full px-3 py-2 text-xs font-medium rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
                   />
                 </div>
 
@@ -627,7 +628,7 @@ export default function KelolaSekolah() {
                     value={formKota}
                     onChange={(e) => setFormKota(e.target.value)}
                     placeholder="Contoh: Surabaya"
-                    className="w-full px-3 py-2 text-xs font-medium rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+                    className="w-full px-3 py-2 text-xs font-medium rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
                   />
                 </div>
               </div>
@@ -641,7 +642,7 @@ export default function KelolaSekolah() {
                     value={formAlamat}
                     onChange={(e) => setFormAlamat(e.target.value)}
                     placeholder="Jl. Pagesangan Asri No. 12"
-                    className="w-full px-3 py-2 text-xs font-medium rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+                    className="w-full px-3 py-2 text-xs font-medium rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
                   />
                 </div>
 
@@ -652,13 +653,13 @@ export default function KelolaSekolah() {
                     value={formTelepon}
                     onChange={(e) => setFormTelepon(e.target.value)}
                     placeholder="08123456789"
-                    className="w-full px-3 py-2 text-xs font-medium rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+                    className="w-full px-3 py-2 text-xs font-medium rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
                   />
                 </div>
               </div>
 
               {/* Penandatangan PDF: Nama Kepsek & NIP */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-3 bg-purple-50/50 rounded-2xl border border-purple-100">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-3 bg-amber-50/50 rounded-2xl border border-amber-200/60">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
                     Nama Kepala Sekolah (Tanda Tangan PDF)
@@ -668,7 +669,7 @@ export default function KelolaSekolah() {
                     value={formNamaKepsek}
                     onChange={(e) => setFormNamaKepsek(e.target.value)}
                     placeholder="Contoh: Hj. Siti Nurjanah, S.Pd"
-                    className="w-full px-3 py-2 text-xs font-medium rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 bg-white"
+                    className="w-full px-3 py-2 text-xs font-medium rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-white"
                   />
                 </div>
 
@@ -681,7 +682,7 @@ export default function KelolaSekolah() {
                     value={formNipKepsek}
                     onChange={(e) => setFormNipKepsek(e.target.value)}
                     placeholder="Contoh: 19780512 200501 2 004"
-                    className="w-full px-3 py-2 text-xs font-medium rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 bg-white"
+                    className="w-full px-3 py-2 text-xs font-medium rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-white"
                   />
                 </div>
               </div>
@@ -693,7 +694,7 @@ export default function KelolaSekolah() {
                   <select
                     value={formPaket}
                     onChange={(e) => setFormPaket(e.target.value)}
-                    className="w-full px-3 py-2 text-xs font-bold rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+                    className="w-full px-3 py-2 text-xs font-bold rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
                   >
                     <option value="trial">Trial (Uji Coba)</option>
                     <option value="basic">Basic (Standard)</option>
@@ -710,7 +711,7 @@ export default function KelolaSekolah() {
                     required
                     value={formKuotaGuru}
                     onChange={(e) => setFormKuotaGuru(e.target.value)}
-                    className="w-full px-3 py-2 text-xs font-bold rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+                    className="w-full px-3 py-2 text-xs font-bold rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
                   />
                 </div>
 
@@ -721,7 +722,7 @@ export default function KelolaSekolah() {
                     required
                     value={formBerlakuHingga}
                     onChange={(e) => setFormBerlakuHingga(e.target.value)}
-                    className="w-full px-3 py-2 text-xs font-bold rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+                    className="w-full px-3 py-2 text-xs font-bold rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
                   />
                 </div>
               </div>
@@ -747,7 +748,7 @@ export default function KelolaSekolah() {
                       type="file"
                       accept="image/*"
                       onChange={handleLogoChange}
-                      className="text-xs text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[11px] file:font-bold file:bg-purple-100 file:text-purple-700 hover:file:bg-purple-200"
+                      className="text-xs text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[11px] file:font-bold file:bg-orange-100 file:text-orange-700 hover:file:bg-orange-200"
                     />
                   </div>
                 </div>
@@ -773,7 +774,7 @@ export default function KelolaSekolah() {
                       type="file"
                       accept="image/png"
                       onChange={handleStempelChange}
-                      className="text-xs text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[11px] file:font-bold file:bg-indigo-100 file:text-indigo-700 hover:file:bg-indigo-200"
+                      className="text-xs text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[11px] file:font-bold file:bg-amber-100 file:text-amber-700 hover:file:bg-amber-200"
                     />
                   </div>
                   <span className="text-[10px] text-slate-400 block mt-1">
@@ -794,19 +795,20 @@ export default function KelolaSekolah() {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-5 py-2 text-xs font-extrabold text-white bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-800 hover:to-indigo-800 rounded-xl shadow-md shadow-purple-700/20 active:scale-95 transition disabled:opacity-50"
+                  className="px-5 py-2 text-xs font-extrabold text-white bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 rounded-xl shadow-md shadow-orange-500/20 active:scale-95 transition disabled:opacity-50"
                 >
                   {submitting ? 'Menyimpan...' : editingSchoolId ? 'Simpan Perubahan' : 'Daftarkan Sekolah'}
                 </button>
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* MODAL KONFIRMASI HAPUS SEKOLAH */}
-      {deleteConfirmSchool && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+      {deleteConfirmSchool && createPortal(
+        <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-100 text-center">
             <div className="w-12 h-12 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center mx-auto mb-3">
               <Trash2 className="w-6 h-6" />
@@ -833,7 +835,8 @@ export default function KelolaSekolah() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

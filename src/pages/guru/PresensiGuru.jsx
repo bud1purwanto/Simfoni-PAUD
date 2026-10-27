@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Clock,
   Calendar,
@@ -266,15 +267,15 @@ export default function PresensiGuru() {
       </div>
 
       {/* Modal Pengajuan Koreksi Presensi */}
-      {koreksiModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-white w-full max-w-md rounded-3xl shadow-xl border border-slate-100 p-6">
+      {koreksiModalOpen && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white w-full max-w-md rounded-3xl shadow-xl border border-orange-200/80 p-6">
             <div className="flex items-center space-x-3 mb-4">
               <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
                 <Clock className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-base font-bold text-slate-900">Form Koreksi Presensi</h3>
+                <h3 className="text-base font-bold text-slate-900 font-brand">Form Koreksi Presensi</h3>
                 <p className="text-xs text-slate-500">
                   {selectedRecord ? formatTanggalIndo(selectedRecord.tanggal) : ''}
                 </p>
@@ -292,7 +293,7 @@ export default function PresensiGuru() {
                     required
                     value={jamDatangAjuan}
                     onChange={(e) => setJamDatangAjuan(e.target.value)}
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
                   />
                 </div>
 
@@ -305,7 +306,7 @@ export default function PresensiGuru() {
                     required
                     value={jamPulangAjuan}
                     onChange={(e) => setJamPulangAjuan(e.target.value)}
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
                   />
                 </div>
               </div>
@@ -320,11 +321,11 @@ export default function PresensiGuru() {
                   value={alasanKoreksi}
                   onChange={(e) => setAlasanKoreksi(e.target.value)}
                   placeholder="Contoh: Lupa menekan tombol absen pulang karena mengantar anak didik, atau internet sekolah gangguan."
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
                 />
               </div>
 
-              <div className="p-3 bg-slate-50 rounded-xl text-[11px] text-slate-500 border border-slate-200">
+              <div className="p-3 bg-amber-50/50 rounded-xl text-[11px] text-slate-600 border border-amber-200/60">
                 Pengajuan koreksi ini akan diteruskan ke Kepala Sekolah untuk diperiksa dan disetujui.
               </div>
 
@@ -332,14 +333,14 @@ export default function PresensiGuru() {
                 <button
                   type="button"
                   onClick={() => setKoreksiModalOpen(false)}
-                  className="w-1/2 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-medium text-xs hover:bg-slate-50 transition"
+                  className="w-1/2 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-50 transition"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={submittingKoreksi}
-                  className="w-1/2 py-2.5 rounded-xl font-medium text-xs text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm transition flex items-center justify-center space-x-1"
+                  className="w-1/2 py-2.5 rounded-xl font-bold text-xs text-white bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 shadow-md shadow-orange-500/20 transition flex items-center justify-center space-x-1"
                 >
                   <Send className="w-3.5 h-3.5" />
                   <span>{submittingKoreksi ? 'Mengirim...' : 'Kirim Pengajuan'}</span>
@@ -347,7 +348,8 @@ export default function PresensiGuru() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

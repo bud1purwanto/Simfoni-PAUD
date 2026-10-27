@@ -364,7 +364,7 @@ export default function JurnalGuru() {
                       <span className="text-xs font-bold text-slate-800">
                         {formatTanggalIndo(j.tanggal)}
                       </span>
-                      <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-50 text-indigo-700">
+                      <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200/60">
                         {j.kelompok}
                       </span>
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
@@ -450,9 +450,9 @@ export default function JurnalGuru() {
         <div className="bg-white rounded-3xl p-6 md:p-8 border border-slate-200/80 shadow-sm space-y-6">
           
           {/* Fitur Cepat: Bank Template & Salin Jurnal */}
-          <div className="p-4 rounded-2xl bg-indigo-50/70 border border-indigo-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center space-x-2 text-indigo-900 text-xs font-semibold">
-              <Sparkles className="w-4 h-4 text-indigo-600" />
+          <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center space-x-2 text-amber-900 text-xs font-semibold">
+              <Sparkles className="w-4 h-4 text-amber-600" />
               <span>Bantuan Pengisian Cepat:</span>
             </div>
 
@@ -462,7 +462,7 @@ export default function JurnalGuru() {
                   if (e.target.value) handleApplyTemplate(e.target.value);
                 }}
                 defaultValue=""
-                className="px-3 py-1.5 rounded-xl border border-indigo-200 text-xs font-medium text-indigo-900 bg-white focus:outline-none"
+                className="px-3 py-1.5 rounded-xl border border-amber-200 text-xs font-medium text-amber-900 bg-white focus:outline-none"
               >
                 <option value="" disabled>Pilih dari Bank Template KBM...</option>
                 {getKbmTemplates().map(t => (
@@ -473,7 +473,7 @@ export default function JurnalGuru() {
               <button
                 type="button"
                 onClick={handleCopyYesterdayJournal}
-                className="px-3 py-1.5 rounded-xl border border-indigo-200 bg-white hover:bg-indigo-50 text-indigo-700 text-xs font-semibold flex items-center space-x-1.5 transition"
+                className="px-3 py-1.5 rounded-xl border border-amber-200 bg-white hover:bg-amber-100/50 text-amber-800 text-xs font-semibold flex items-center space-x-1.5 transition"
               >
                 <Copy className="w-3.5 h-3.5" />
                 <span>Salin Jurnal Kemarin</span>
@@ -491,7 +491,7 @@ export default function JurnalGuru() {
                 required
                 value={tanggal}
                 onChange={(e) => setTanggal(e.target.value)}
-                className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
+                className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
               />
             </div>
 
@@ -502,7 +502,7 @@ export default function JurnalGuru() {
               <select
                 value={kelompok}
                 onChange={(e) => setKelompok(e.target.value)}
-                className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 bg-white"
+                className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 bg-white"
               >
                 <option value="TK A">Kelompok TK A</option>
                 <option value="TK B">Kelompok TK B</option>
@@ -521,7 +521,7 @@ export default function JurnalGuru() {
               value={topik}
               onChange={(e) => setTopik(e.target.value)}
               placeholder="Contoh: Eksplorasi Tanaman Obat di Halaman Sekolah"
-              className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-semibold"
+              className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 font-semibold"
             />
           </div>
 
@@ -539,7 +539,7 @@ export default function JurnalGuru() {
                     onClick={() => toggleCapaian(item)}
                     className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition ${
                       checked
-                        ? 'bg-indigo-600 text-white border-indigo-600'
+                        ? 'bg-amber-500 text-white border-amber-500 shadow-sm shadow-amber-500/20'
                         : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
                     }`}
                   >
@@ -559,7 +559,7 @@ export default function JurnalGuru() {
               value={tujuan}
               onChange={(e) => setTujuan(e.target.value)}
               placeholder="Contoh: Anak dapat menyebutkan nama-nama daun dan bersyukur atas tanaman ciptaan Tuhan."
-              className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
+              className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
             />
           </div>
 
@@ -578,7 +578,7 @@ export default function JurnalGuru() {
                 value={kegiatanPembuka}
                 onChange={(e) => setKegiatanPembuka(e.target.value)}
                 placeholder="Penyambutan, doa pembuka, bernyanyi bersama, apersepsi topik..."
-                className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
+                className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
               />
             </div>
 
@@ -594,7 +594,7 @@ export default function JurnalGuru() {
                     className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold flex items-center space-x-1 transition ${
                       isListening && activeVoiceField === 'inti'
                         ? 'bg-rose-100 text-rose-700 animate-pulse'
-                        : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100'
+                        : 'bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200/60'
                     }`}
                   >
                     {isListening && activeVoiceField === 'inti' ? (
@@ -616,7 +616,7 @@ export default function JurnalGuru() {
                 value={kegiatanInti}
                 onChange={(e) => setKegiatanInti(e.target.value)}
                 placeholder="Uraian langkah aktivitas utama anak, eksperimen, observasi, atau unjuk karya..."
-                className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
+                className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
               />
             </div>
 
@@ -629,7 +629,7 @@ export default function JurnalGuru() {
                 value={kegiatanPenutup}
                 onChange={(e) => setKegiatanPenutup(e.target.value)}
                 placeholder="Merapikan alat main, refleksi perasaan, doa penutup, pesan moral..."
-                className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
+                className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
               />
             </div>
           </div>
@@ -652,7 +652,7 @@ export default function JurnalGuru() {
                     className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold flex items-center space-x-1 transition ${
                       isListening && activeVoiceField === 'refleksi'
                         ? 'bg-rose-100 text-rose-700 animate-pulse'
-                        : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100'
+                        : 'bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200/60'
                     }`}
                   >
                     {isListening && activeVoiceField === 'refleksi' ? (
@@ -674,7 +674,7 @@ export default function JurnalGuru() {
                 value={refleksi}
                 onChange={(e) => setRefleksi(e.target.value)}
                 placeholder="Catatan perkembangan ketercapaian anak, minat anak hari ini..."
-                className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
+                className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
               />
             </div>
 
@@ -687,7 +687,7 @@ export default function JurnalGuru() {
                 value={kendala}
                 onChange={(e) => setKendala(e.target.value)}
                 placeholder="Hambatan alat peraga, anak yang membutuhkan pendampingan ekstra..."
-                className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
+                className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
               />
             </div>
           </div>
@@ -757,7 +757,7 @@ export default function JurnalGuru() {
               type="button"
               disabled={saving}
               onClick={() => handleSaveJournal('dikirim')}
-              className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold text-xs shadow-sm transition flex items-center justify-center space-x-2"
+              className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold text-xs shadow-md shadow-orange-500/20 transition flex items-center justify-center space-x-2"
             >
               <Send className="w-4 h-4" />
               <span>{saving ? 'Mengirim...' : 'Kirim ke Kepala Sekolah'}</span>

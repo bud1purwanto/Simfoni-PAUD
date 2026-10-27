@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { KeyRound, Eye, EyeOff, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -42,8 +43,8 @@ export default function ModalGantiPassword({ isOpen, isMandatory = true, onClose
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
       <div className="bg-white w-full max-w-md rounded-2xl shadow-xl border border-slate-100 p-6 overflow-hidden">
         <div className="flex items-center space-x-3 mb-4">
           <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
@@ -87,7 +88,7 @@ export default function ModalGantiPassword({ isOpen, isMandatory = true, onClose
                 value={passwordBaru}
                 onChange={(e) => setPasswordBaru(e.target.value)}
                 placeholder="Minimal 6 karakter"
-                className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition"
+                className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition"
               />
               <button
                 type="button"
@@ -109,7 +110,7 @@ export default function ModalGantiPassword({ isOpen, isMandatory = true, onClose
               value={konfirmasiPassword}
               onChange={(e) => setKonfirmasiPassword(e.target.value)}
               placeholder="Masukkan kembali sandi"
-              className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition"
+              className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition"
             />
           </div>
 
@@ -126,7 +127,7 @@ export default function ModalGantiPassword({ isOpen, isMandatory = true, onClose
             <button
               type="submit"
               disabled={loading || success}
-              className={`py-2.5 rounded-xl font-medium text-sm text-white bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 shadow-sm transition flex items-center justify-center ${
+              className={`py-2.5 rounded-xl font-bold text-sm text-white bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 shadow-md shadow-orange-500/20 transition flex items-center justify-center ${
                 !isMandatory && onClose ? 'w-1/2' : 'w-full'
               }`}
             >
@@ -135,7 +136,8 @@ export default function ModalGantiPassword({ isOpen, isMandatory = true, onClose
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

@@ -35,6 +35,7 @@ File ini merupakan **Master Blueprint & Global Entrypoint** yang wajib dibaca da
 > | Perubahan arsitektur multi-tenant, struktur folder, dual-app Firebase, atau strategi Dev/Prod | [`docs/architecture.md`](docs/architecture.md) |
 > | Perubahan modul, inovasi UX, kuota guru, siklus status laporan, atau alur kerja | [`docs/features-and-workflow.md`](docs/features-and-workflow.md) |
 > | Perubahan standar kode, penamaan komponen, kueri berfilter `school_id`, atau aturan Git | [`docs/development-rules.md`](docs/development-rules.md) |
+> | Perubahan standar desain antarmuka, warna, tipografi, atau acuan mockup UI PAUD | [`docs/ui-design-guidelines.md`](docs/ui-design-guidelines.md) |
 > | Perubahan proses build, routing `_redirects`, environment variable Dev/Prod, atau Cloudflare Pages | [`docs/deployment.md`](docs/deployment.md) |
 > | Perubahan roadmap eksekusi global atau scope proyek | [`AGENTS.md`](AGENTS.md) (Dokumen Ini) |
 
@@ -67,6 +68,10 @@ Seluruh rancangan spesifikasi teknis telah dipecah secara modular ke dalam direk
 6. **Panduan Deployment & CI/CD Pipeline:**  
    👉 [`docs/deployment.md`](docs/deployment.md)  
    *Membahas: Konfigurasi dual-environment Cloudflare Pages (Preview vs Production), pemisahan project Firebase (`dev` vs `prod`), dan `_redirects` SPA.*
+
+7. **Panduan Desain Antarmuka Human-Centered & Standar Estetika PAUD (Anti-AI Slop):**  
+   👉 [`docs/ui-design-guidelines.md`](docs/ui-design-guidelines.md) & [`docs/mockup-ui-paud-guru.html`](docs/mockup-ui-paud-guru.html)  
+   *Membahas: Filosofi anti-AI slop, palet Warm Honey & Sage Green, tipografi Nunito & Plus Jakarta Sans, tata letak ramah jempol (thumb-zone), dan prototipe interaktif tampilan guru PAUD.*
 
 ---
 

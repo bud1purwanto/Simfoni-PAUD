@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Konsep Desain UI Ramah Guru PAUD - SIMFONI</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+    .font-brand {
+      font-family: 'Nunito', sans-serif;
+    }
+    .shadow-warm {
+      box-shadow: 0 10px 25px -5px rgba(251, 146, 60, 0.15), 0 8px 10px -6px rgba(251, 146, 60, 0.1);
+    }
+    .shadow-soft {
+      box-shadow: 0 12px 30px -4px rgba(16, 185, 129, 0.12), 0 4px 12px -2px rgba(0, 0, 0, 0.04);
+    }
+    .shadow-honey {
+      box-shadow: 0 12px 28px -6px rgba(245, 158, 11, 0.2);
+    }
+  </style>
+</head>
+<body class="bg-amber-50/40 text-slate-800 antialiased p-4 md:p-8 min-h-screen">
+
+  <div class="max-w-5xl mx-auto space-y-8">
+    
+    <!-- Top Header Banner Pengantar Konsep -->
+    <div class="bg-gradient-to-r from-amber-500 via-orange-400 to-rose-400 rounded-3xl p-6 md:p-8 text-white shadow-xl shadow-orange-500/15 relative overflow-hidden">
+      <div class="absolute -right-6 -bottom-8 opacity-15 text-9xl pointer-events-none select-none">🎨</div>
+      <div class="relative z-10 max-w-2xl">
+        <span class="inline-flex items-center space-x-2 px-3.5 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-bold tracking-wide uppercase mb-3">
+          ✨ Eksplorasi Desain Human-Centered
+        </span>
+        <h1 class="text-2xl md:text-4xl font-extrabold tracking-tight font-brand">
+          Konsep UI Hangat & Ceria Khusus Guru TK/PAUD
+        </h1>
+        <p class="text-amber-100 text-sm md:text-base mt-2 leading-relaxed">
+          Menggantikan tampilan <em>"corporate AI slop"</em> yang kaku dengan estetika ramah anak, tipografi empati, tombol jempol berukuran besar, dan palet warna organik yang menenangkan.
+        </p>
+      </div>
+
+      <!-- Controls Tab Preview -->
+      <div class="mt-6 pt-5 border-t border-white/20 flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center space-x-2 bg-black/20 p-1 rounded-2xl backdrop-blur-sm text-xs font-bold">
+          <button id="btnViewMobile" onclick="switchView('mobile')" class="px-4 py-2 rounded-xl bg-white text-orange-600 shadow-sm transition">
+            📱 Tampilan Smartphone Guru
+          </button>
+          <button id="btnViewDesktop" onclick="switchView('desktop')" class="px-4 py-2 rounded-xl text-white/90 hover:text-white transition">
+            💻 Tampilan Layar Lebar
+          </button>
+        </div>
+        <div class="text-xs text-amber-100 font-medium flex items-center space-x-2">
+          <span>🌿 Palet: Warm Honey & Sage Green</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- COMPARISON HIGHLIGHTS (KENAPA TIDAK AI SLOP?) -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="bg-white p-5 rounded-3xl border border-amber-200/60 shadow-sm">
+        <div class="w-10 h-10 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center text-xl mb-3">☀️</div>
+        <h3 class="font-bold text-slate-800 text-sm font-brand">1. Nada Hangat & Bersahabat</h3>
+        <p class="text-xs text-slate-500 mt-1 leading-relaxed">
+          Menghilangkan gradien ungu/indigo korporat dingin. Beralih ke warna madu cerah, terakota hangat, dan hijau daun sage yang menenangkan bagi pengajar anak usia dini.
+        </p>
+      </div>
+      <div class="bg-white p-5 rounded-3xl border border-emerald-200/60 shadow-sm">
+        <div class="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-xl mb-3">👆</div>
+        <h3 class="font-bold text-slate-800 text-sm font-brand">2. Kartu Sentuh Jempol (Thumb-Zone)</h3>
+        <p class="text-xs text-slate-500 mt-1 leading-relaxed">
+          Tombol aksi (absen datang, rekam suara, unggah foto) dirancang bulat, empuk, dan berjarak lega agar mudah ditekan satu tangan saat guru sibuk mengawasi murid di kelas.
+        </p>
+      </div>
+      <div class="bg-white p-5 rounded-3xl border border-rose-200/60 shadow-sm">
+        <div class="w-10 h-10 rounded-2xl bg-rose-100 text-rose-700 flex items-center justify-center text-xl mb-3">🌸</div>
+        <h3 class="font-bold text-slate-800 text-sm font-brand">3. Stempel Digital & Stiker Sentra</h3>
+        <p class="text-xs text-slate-500 mt-1 leading-relaxed">
+          Memberikan elemen emosional seperti lencana hadir berupa stempel bunga ceria, sentra sains dengan ikon permen/alam, dan apresiasi visual yang menyenangkan.
+        </p>
+      </div>
+    </div>
+
+    <!-- INTERACTIVE PREVIEW CONTAINER -->
+    <div id="previewContainer" class="flex justify-center transition-all duration-300">
+      
+      <!-- MOBILE SHELL (DEFAULT VIEW) -->
+      <div id="phoneFrame" class="w-full max-w-[420px] bg-white rounded-[44px] p-4 border-[8px] border-slate-800 shadow-2xl relative overflow-hidden transition-all duration-300">
+        
+        <!-- Speaker & Camera Notch -->
+        <div class="w-32 h-4 bg-slate-800 mx-auto rounded-full mb-3 flex items-center justify-center">
+          <div class="w-2.5 h-2.5 bg-slate-700 rounded-full mr-2"></div>
+          <div class="w-8 h-1 bg-slate-700 rounded-full"></div>
+        </div>
+
+        <!-- APP HEADER INSIDE PHONE -->
+        <div class="space-y-4 pb-20">
+
+          <!-- Top Brand Bar -->
+          <div class="flex items-center justify-between px-2 pt-1">
+            <div class="flex items-center space-x-2.5">
+              <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-400 to-orange-400 text-white flex items-center justify-center text-xl shadow-honey font-black">
+                🎶
+              </div>
+              <div>
+                <h2 class="text-sm font-black text-slate-900 tracking-tight font-brand">TK DWP 8 SURABAYA</h2>
+                <div class="flex items-center space-x-1.5">
+                  <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                  <p class="text-[11px] font-bold text-emerald-700">Online & Sinkron</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Profile Badge -->
+            <div class="w-9 h-9 rounded-full bg-orange-100 border-2 border-orange-300 flex items-center justify-center text-sm font-bold text-orange-800">
+              👩‍🏫
+            </div>
+          </div>
+
+          <!-- KARTU SAMBUTAN HANGAT (WARM GREETING CARD) -->
+          <div class="bg-gradient-to-br from-amber-100/90 via-orange-50 to-rose-50 rounded-3xl p-5 border border-orange-200/70 shadow-warm relative overflow-hidden">
+            <div class="absolute right-2 -bottom-2 text-6xl opacity-20 select-none">🌻</div>
+            <div class="relative z-10">
+              <span class="px-3 py-1 bg-white/80 rounded-full text-[11px] font-extrabold text-orange-700 border border-orange-200/60 inline-flex items-center space-x-1 mb-2">
+                <span>Selasa, 27 Oktober 2026</span>
+                <span>•</span>
+                <span>Cerah 28°C ☀️</span>
+              </span>
+              <h3 class="text-lg font-black text-slate-900 font-brand">
+                Semangat Pagi, Bu Siti! 👋
+              </h3>
+              <p class="text-xs text-slate-600 mt-1 leading-relaxed">
+                Hari ini Anda mendampingi <strong>Kelompok TK B (Bintang Cilik)</strong>. Semoga harinya penuh tawa dan kreasi!
+              </p>
+            </div>
+          </div>
+
+          <!-- KARTU PRESENSI "STEMPEL CERIA" (PRESENCE TACTILE STAMP) -->
+          <div class="bg-white rounded-3xl p-5 border-2 border-emerald-200 shadow-soft space-y-4">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-2">
+                <div class="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-base font-bold">
+                  ⏰
+                </div>
+                <div>
+                  <h4 class="text-xs font-black text-slate-800 uppercase tracking-wider font-brand">Presensi Harian</h4>
+                  <p class="text-[11px] text-slate-400">Anti-Trap Offline (Dual-Timestamp)</p>
+                </div>
+              </div>
+              <span class="px-2.5 py-1 bg-emerald-100 text-emerald-800 font-extrabold text-[11px] rounded-xl flex items-center space-x-1">
+                <span>🌸</span>
+                <span>Tepat Waktu</span>
+              </span>
+            </div>
+
+            <!-- Jam Datang & Pulang Grid -->
+            <div class="grid grid-cols-2 gap-2.5">
+              <div class="bg-emerald-50/70 p-3.5 rounded-2xl border border-emerald-100 text-center">
+                <span class="text-[10px] font-bold text-emerald-700 block uppercase tracking-wider">Jam Datang</span>
+                <span class="text-base font-black text-emerald-900 mt-0.5 block font-brand">07:15 WIB</span>
+                <span class="text-[10px] text-emerald-600 mt-0.5 inline-block">✅ Tercatat</span>
+              </div>
+              <div class="bg-amber-50/70 p-3.5 rounded-2xl border border-amber-200 text-center">
+                <span class="text-[10px] font-bold text-amber-700 block uppercase tracking-wider">Jam Pulang</span>
+                <span class="text-base font-black text-amber-900 mt-0.5 block font-brand">Belum Absen</span>
+                <span class="text-[10px] text-amber-600 mt-0.5 inline-block">⏳ Jadwal 11:30</span>
+              </div>
+            </div>
+
+            <!-- Tombol Aksi Sentuh Ramah Jempol -->
+            <button class="w-full py-3.5 px-4 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 active:scale-98 text-white rounded-2xl font-bold text-xs tracking-wide shadow-lg shadow-emerald-500/25 flex items-center justify-center space-x-2 transition">
+              <span class="text-base">📍</span>
+              <span>Kirim Presensi Pulang Sekarang</span>
+            </button>
+          </div>
+
+          <!-- KARTU JURNAL KBM HARI INI -->
+          <div class="bg-gradient-to-br from-indigo-50/50 via-white to-purple-50/30 rounded-3xl p-5 border border-indigo-100 shadow-sm space-y-3">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-2">
+                <div class="w-8 h-8 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center text-base">
+                  📖
+                </div>
+                <div>
+                  <h4 class="text-xs font-black text-slate-800 uppercase tracking-wider font-brand">Jurnal KBM Merdeka</h4>
+                  <p class="text-[11px] text-slate-400">Pembelajaran Berbasis Sentra</p>
+                </div>
+              </div>
+              <span class="px-2.5 py-0.5 bg-indigo-100 text-indigo-800 font-bold text-[10px] rounded-full">
+                TK B (5-6 Thn)
+              </span>
+            </div>
+
+            <div class="p-3 bg-white rounded-2xl border border-slate-100 shadow-xs">
+              <span class="text-[11px] font-bold text-indigo-600">Topik Pembelajaran:</span>
+              <p class="text-xs font-black text-slate-800 mt-0.5 font-brand">"Mengenal Buah Tropis & Eksperimen Warna"</p>
+              
+              <div class="flex flex-wrap gap-1.5 mt-2">
+                <span class="px-2 py-0.5 bg-amber-50 text-amber-800 text-[10px] font-semibold rounded-lg border border-amber-200">
+                  ✨ Literasi & STEAM
+                </span>
+                <span class="px-2 py-0.5 bg-rose-50 text-rose-800 text-[10px] font-semibold rounded-lg border border-rose-200">
+                  🎨 Jati Diri
+                </span>
+              </div>
+            </div>
+
+            <!-- Tombol Cepat: Dikte Suara & Kamera -->
+            <div class="grid grid-cols-2 gap-2 pt-1">
+              <button class="py-2.5 px-3 bg-amber-500/10 hover:bg-amber-500/20 text-amber-800 border border-amber-300/80 rounded-2xl text-xs font-bold flex items-center justify-center space-x-1.5 transition">
+                <span>🎙️</span>
+                <span>Dikte Suara</span>
+              </button>
+              <button class="py-2.5 px-3 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-800 border border-indigo-200 rounded-2xl text-xs font-bold flex items-center justify-center space-x-1.5 transition">
+                <span>📸</span>
+                <span>Foto (&lt;300KB)</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- KARTU JADWAL SENTRA HARI INI -->
+          <div class="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-sm space-y-3">
+            <div class="flex items-center justify-between">
+              <h4 class="text-xs font-black text-slate-800 uppercase tracking-wider font-brand">Jadwal Kelas Hari Ini</h4>
+              <span class="text-xs text-orange-600 font-bold">2 Sesi</span>
+            </div>
+
+            <div class="space-y-2">
+              <div class="p-3 rounded-2xl bg-amber-50/50 border border-amber-200/60 flex items-center justify-between">
+                <div>
+                  <div class="text-[11px] font-bold text-amber-800">07:30 - 08:30 WIB</div>
+                  <div class="text-xs font-black text-slate-800 mt-0.5 font-brand">Penyambutan & Motorik Kasar</div>
+                </div>
+                <span class="text-xs bg-white px-2.5 py-1 rounded-xl font-bold text-slate-700 shadow-xs border border-amber-100">
+                  Halaman
+                </span>
+              </div>
+
+              <div class="p-3 rounded-2xl bg-teal-50/50 border border-teal-200/60 flex items-center justify-between">
+                <div>
+                  <div class="text-[11px] font-bold text-teal-800">08:30 - 10:00 WIB</div>
+                  <div class="text-xs font-black text-slate-800 mt-0.5 font-brand">Sentra Bahan Alam & Sains</div>
+                </div>
+                <span class="text-xs bg-white px-2.5 py-1 rounded-xl font-bold text-slate-700 shadow-xs border border-teal-100">
+                  Ruang Sentra
+                </span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- BOTTOM NAV BAR MOBILE (RAMAH JEMPOL DENGAN BENTUK PILL GEMAS) -->
+        <div class="absolute bottom-2 left-4 right-4 bg-white/95 backdrop-blur-md border border-slate-200/80 shadow-2xl rounded-3xl px-3 py-2 flex items-center justify-around z-20">
+          <button class="flex flex-col items-center justify-center p-1.5 rounded-2xl bg-orange-100 text-orange-700 font-bold transition">
+            <span class="text-base">🏠</span>
+            <span class="text-[10px] mt-0.5 font-brand">Beranda</span>
+          </button>
+          <button class="flex flex-col items-center justify-center p-1.5 rounded-2xl text-slate-400 hover:text-slate-700 font-semibold transition">
+            <span class="text-base">⏰</span>
+            <span class="text-[10px] mt-0.5 font-brand">Presensi</span>
+          </button>
+          <button class="flex flex-col items-center justify-center p-1.5 rounded-2xl text-slate-400 hover:text-slate-700 font-semibold transition">
+            <span class="text-base">📖</span>
+            <span class="text-[10px] mt-0.5 font-brand">Jurnal</span>
+          </button>
+          <button class="flex flex-col items-center justify-center p-1.5 rounded-2xl text-slate-400 hover:text-slate-700 font-semibold transition">
+            <span class="text-base">📅</span>
+            <span class="text-[10px] mt-0.5 font-brand">Jadwal</span>
+          </button>
+          <button class="flex flex-col items-center justify-center p-1.5 rounded-2xl text-slate-400 hover:text-slate-700 font-semibold transition">
+            <span class="text-base">📋</span>
+            <span class="text-[10px] mt-0.5 font-brand">Laporan</span>
+          </button>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- FITUR DESAIN DETAIL UNTUK EVALUASI PENGGUNA -->
+    <div class="bg-white rounded-3xl p-6 md:p-8 border border-slate-200/80 shadow-sm space-y-4">
+      <h3 class="text-base md:text-lg font-bold text-slate-800 font-brand flex items-center space-x-2">
+        <span>💡</span>
+        <span>Perubahan Nyata yang Membedakannya dari "AI Slop Standar"</span>
+      </h3>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-slate-600">
+        <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+          <div class="font-bold text-slate-800 text-sm">❌ Desain AI Slop Umum (Lama):</div>
+          <ul class="list-disc list-inside space-y-1 text-slate-500">
+            <li>Dominasi warna biru/ungu gelap korporat (seperti dashboard fintech/kripto).</li>
+            <li>Tombol kotak kaku dengan font tipis yang sulit ditekan saat guru bergerak.</li>
+            <li>Status teks teknis yang membosankan ("Record inserted successfully").</li>
+            <li>Kurang mencerminkan suasana TK/PAUD yang ceria, hangat, dan mengayomi.</li>
+          </ul>
+        </div>
+
+        <div class="p-4 rounded-2xl bg-amber-50/60 border border-amber-200 space-y-2">
+          <div class="font-bold text-amber-900 text-sm">✨ Desain Ramah Guru TK (Konsep Baru):</div>
+          <ul class="list-disc list-inside space-y-1 text-amber-800">
+            <li>Warna hangat cerah (Honey Amber, Warm Terracotta, Sage Green).</li>
+            <li>Kartu berlekuk lembut (rounded-3xl) dengan border pastel yang menenangkan.</li>
+            <li>Tombol aksi sentuh jempol berukuran 48px+ ramah layar sentuh HP guru.</li>
+            <li>Mikrofon dikte suara & kompresi foto kamera ditempatkan di posisi paling mudah dijangkau.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    function switchView(mode) {
+      const frame = document.getElementById('phoneFrame');
+      const btnMobile = document.getElementById('btnViewMobile');
+      const btnDesktop = document.getElementById('btnViewDesktop');
+
+      if (mode === 'desktop') {
+        frame.classList.remove('max-w-[420px]', 'rounded-[44px]', 'border-[8px]', 'p-4');
+        frame.classList.add('max-w-4xl', 'rounded-3xl', 'border-2', 'p-6');
+        btnDesktop.classList.add('bg-white', 'text-orange-600', 'shadow-sm');
+        btnDesktop.classList.remove('text-white/90');
+        btnMobile.classList.remove('bg-white', 'text-orange-600', 'shadow-sm');
+        btnMobile.classList.add('text-white/90');
+      } else {
+        frame.classList.add('max-w-[420px]', 'rounded-[44px]', 'border-[8px]', 'p-4');
+        frame.classList.remove('max-w-4xl', 'rounded-3xl', 'border-2', 'p-6');
+        btnMobile.classList.add('bg-white', 'text-orange-600', 'shadow-sm');
+        btnMobile.classList.remove('text-white/90');
+        btnDesktop.classList.remove('bg-white', 'text-orange-600', 'shadow-sm');
+        btnDesktop.classList.add('text-white/90');
+      }
+    }
+  </script>
+</body>
+</html>
+

@@ -8,7 +8,7 @@ export default function ProtectedRoute({ allowedRoles = [] }) {
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
-        <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-xl animate-pulse mb-3">
+        <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-200/60 flex items-center justify-center text-xl animate-pulse mb-3">
           🎶
         </div>
         <p className="text-xs font-semibold text-slate-500 tracking-wider animate-pulse">

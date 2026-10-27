@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   ShieldAlert, 
   Trash2, 
@@ -222,18 +223,18 @@ export default function ManajemenLog() {
   return (
     <div className="space-y-6 pb-20 md:pb-6">
       {/* Header Banner */}
-      <div className="bg-gradient-to-r from-purple-800 via-indigo-800 to-purple-900 rounded-3xl p-6 md:p-8 text-white shadow-xl shadow-purple-900/20 relative overflow-hidden">
+      <div className="bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 rounded-3xl p-6 md:p-8 text-white shadow-lg shadow-orange-500/20 relative overflow-hidden">
         <div className="absolute right-0 top-0 translate-x-12 -translate-y-12 w-64 h-64 bg-white/10 rounded-full blur-3xl pointer-events-none" />
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <div className="inline-flex items-center space-x-2 px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-bold text-purple-200 mb-3">
+            <div className="inline-flex items-center space-x-2 px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-bold text-amber-100 mb-3">
               <ShieldAlert className="w-3.5 h-3.5" />
               <span>Sistem Pengawasan & Kebijakan Retensi Data</span>
             </div>
             <h1 className="text-2xl md:text-3xl font-extrabold font-brand tracking-tight">
               Manajemen Log & Retensi Berkala
             </h1>
-            <p className="text-purple-200 text-sm mt-1 max-w-xl font-medium">
+            <p className="text-amber-100 text-sm mt-1 max-w-xl font-medium">
               Pantau seluruh aktivitas mutasi sistem, jejak rekam audit, serta lakukan pembersihan data berkala untuk menjaga kuota Firestore tetap hemat.
             </p>
           </div>
@@ -272,7 +273,7 @@ export default function ManajemenLog() {
       <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-sm">
         <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
           <div className="flex items-center space-x-2">
-            <Settings className="w-4 h-4 text-purple-600" />
+            <Settings className="w-4 h-4 text-amber-600" />
             <h3 className="text-xs font-extrabold text-slate-700 uppercase tracking-wider">
               Konfigurasi Kebijakan Retensi Otomatis (Periodic Auto-Cleanup)
             </h3>
@@ -295,7 +296,7 @@ export default function ManajemenLog() {
                 onChange={(e) =>
                   setSystemConfig({ ...systemConfig, log_retention_days: Number(e.target.value) })
                 }
-                className="px-3 py-1.5 text-xs font-bold rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 bg-slate-50 text-slate-800"
+                className="px-3 py-1.5 text-xs font-bold rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 bg-slate-50 text-slate-800"
               >
                 <option value={30}>30 Hari Terakhir</option>
                 <option value={60}>60 Hari Terakhir (Rekomendasi)</option>
@@ -312,7 +313,7 @@ export default function ManajemenLog() {
                 onChange={(e) =>
                   setSystemConfig({ ...systemConfig, auto_cleanup_enabled: e.target.checked })
                 }
-                className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500"
+                className="w-4 h-4 rounded text-amber-600 focus:ring-amber-500"
               />
               <label htmlFor="auto_cleanup" className="text-xs font-bold text-slate-700 cursor-pointer">
                 Aktifkan Auto-Cleanup Periodik
@@ -323,7 +324,7 @@ export default function ManajemenLog() {
           <button
             type="submit"
             disabled={savingSettings}
-            className="px-4 py-2 bg-purple-100 hover:bg-purple-200 active:scale-95 text-purple-800 font-extrabold text-xs rounded-xl transition font-brand self-start md:self-auto"
+            className="px-4 py-2 bg-amber-100 hover:bg-amber-200 active:scale-95 text-amber-800 font-extrabold text-xs rounded-xl transition font-brand self-start md:self-auto"
           >
             {savingSettings ? 'Menyimpan...' : 'Perbarui Konfigurasi'}
           </button>
@@ -341,7 +342,7 @@ export default function ManajemenLog() {
             placeholder="Cari nama aktor, aksi, atau jenis data..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 text-xs font-medium rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+            className="w-full pl-10 pr-4 py-2 text-xs font-medium rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
           />
         </div>
 
@@ -352,7 +353,7 @@ export default function ManajemenLog() {
           <select
             value={selectedSchoolFilter}
             onChange={(e) => setSelectedSchoolFilter(e.target.value)}
-            className="px-3 py-2 text-xs font-bold rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 bg-slate-50 text-slate-800 w-full md:w-auto"
+            className="px-3 py-2 text-xs font-bold rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 bg-slate-50 text-slate-800 w-full md:w-auto"
           >
             <option value="all">Semua Tenant ({logs.length} Log)</option>
             <option value="global">Aksi Global Superadmin</option>
@@ -422,11 +423,11 @@ export default function ManajemenLog() {
 
                       <td className="py-3.5 px-4 text-slate-600">
                         {item.school_id ? (
-                          <span className="font-bold text-purple-700">
+                          <span className="font-bold text-amber-800">
                             {schoolName || item.school_id}
                           </span>
                         ) : (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-50 text-purple-700">
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800">
                             Platform Global
                           </span>
                         )}
@@ -451,8 +452,8 @@ export default function ManajemenLog() {
       </div>
 
       {/* MODAL BERSIHKAN LOG (MANUAL PURGE) */}
-      {purgeModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+      {purgeModalOpen && createPortal(
+        <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100">
             <div className="w-12 h-12 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center mx-auto mb-3">
               <Trash2 className="w-6 h-6" />
@@ -516,7 +517,8 @@ export default function ManajemenLog() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
