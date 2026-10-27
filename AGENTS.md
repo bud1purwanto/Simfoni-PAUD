@@ -70,6 +70,23 @@ Seluruh rancangan spesifikasi teknis telah dipecah secara modular ke dalam direk
 
 ---
 
+## 🤖 Subagents & Project Skills (Spesialisasi AI Agent)
+
+Sistem SIMFONI PAUD dilengkapi dengan spesialisasi Subagent dinamis dan Workspace Skills terdaftar di direktori [`.agents/skills/`](.agents/skills/):
+
+### 1. Subagents Dinamis (Invoke-Ready)
+* **`saas-security-auditor`**: Memeriksa isolasi data tenant (`school_id`), validasi kuota guru, pendaftaran via `secondaryAuth`, dan audit trail.
+* **`paud-ux-tester`**: Memastikan kenyamanan UI mobile guru PAUD (< 768px), akurasi Voice-to-Text `id-ID`, kompresi foto HP (< 300 KB), dan logika Dual-Timestamp.
+* **`doc-exporter-specialist`**: Menjaga integritas Kop Surat dinamis, stempel digital transparan, PDF ringkas ramah HP, dan rekap gaji/honor Excel (`.xlsx`).
+
+### 2. Workspace Skills (Modular Runbooks)
+* 👉 [`.agents/skills/multi-tenant-guard/SKILL.md`](.agents/skills/multi-tenant-guard/SKILL.md): Prosedur wajib kueri berfilter `school_id`, mutasi bertingkat, dan limit kuota sekolah.
+* 👉 [`.agents/skills/paud-kbm-workflow/SKILL.md`](.agents/skills/paud-kbm-workflow/SKILL.md): Standar alur presensi anti-trap offline, Capaian Pembelajaran Kurikulum Merdeka, dan kompresi kamera.
+* 👉 [`.agents/skills/doc-export-engine/SKILL.md`](.agents/skills/doc-export-engine/SKILL.md): Standar ekspor PDF Ringkas, PDF Portofolio BAN-PDM, dan Spreadsheet Excel honorarium.
+* 👉 [`.agents/skills/semantic-system-debugging/SKILL.md`](.agents/skills/semantic-system-debugging/SKILL.md): Protokol pemecahan masalah sistematis berbasis 6 lapisan semantik (Auth, Tenant, Rules, Reaktif, Mobile, Export).
+
+---
+
 ## 📌 Ringkasan Parameter Sistem SaaS
 
 * **Nama Aplikasi:** SIMFONI PAUD (SaaS Edition)
