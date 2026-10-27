@@ -59,8 +59,10 @@ export default function Login() {
       let userFriendlyMessage = 'Email atau kata sandi tidak sesuai. Silakan coba kembali.';
       if (err.message.includes('dinonaktifkan')) {
         userFriendlyMessage = err.message;
+      } else if (err.message.includes('tidak terdaftar di basis data')) {
+        userFriendlyMessage = 'Akun Anda belum memiliki data profil di SIMFONI PAUD. Silakan hubungi Administrator atau Kepala Sekolah.';
       } else if (err.message.includes('offline') || err.message.includes('unavailable') || err.message.includes('PERMISSION_DENIED')) {
-        userFriendlyMessage = 'Koneksi ke Cloud Firestore gagal. Pastikan database Cloud Firestore sudah dibuat (Create Database) di Firebase Console project simfoni-paud-dev.';
+        userFriendlyMessage = 'Koneksi ke Cloud Firestore gagal. Pastikan jaringan internet stabil dan database sudah aktif.';
       } else if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
         userFriendlyMessage = 'Kombinasi email dan kata sandi salah.';
       } else if (err.code === 'auth/too-many-requests') {

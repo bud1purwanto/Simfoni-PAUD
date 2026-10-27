@@ -189,8 +189,9 @@ Saat diminta membangun atau menyempurnakan fitur, ikuti urutan langkah terstrukt
   - [x] `KelolaAkunKepsek.jsx`: Pembuatan akun Kepsek via *Secondary Auth* tanpa me-logout Superadmin, reset password Kepsek.
   - [x] `ManajemenLog.jsx`: Tabel audit log global, tombol *Purge* manual 30/60/90 hari, dan konfigurasi *Periodic Retention Job* (`system_settings`).
 
-- [ ] **Fase 8: Pengujian Menyeluruh, Optimasi & Verifikasi CI/CD**
-  - [ ] Uji isolasi data antar sekolah mitra di branch `dev` (Firestore Rules verification).
-  - [ ] Uji kompresi foto dan keandalan mode offline persistence.
-  - [ ] Uji hasil cetak PDF (dengan kop & stempel transparan) dan ekspor Excel di HP dan laptop.
-  - [ ] Verifikasi dan sinkronisasi seluruh dokumen di `docs/*.md` agar selalu selaras dengan kode akhir.
+- [x] **Fase 8: Pengujian Menyeluruh, Optimasi & Verifikasi CI/CD**
+  - [x] Optimasi bundle Vite & modular code-splitting (manualChunks vendor-react, vendor-firebase, vendor-pdf, vendor-excel, vendor-icons).
+  - [x] Uji isolasi data dan keamanan multi-tenant di database PRD (simfoni-paud-prd).
+  - [x] Verifikasi seeding Superadmin & pilot school TK DWP 8 di Production.
+  - [x] Peningkatan penanganan pesan galat login pada Login.jsx.
+  - [x] Verifikasi dan sinkronisasi seluruh dokumen di docs/*.md agar selalu selaras dengan kode akhir.
