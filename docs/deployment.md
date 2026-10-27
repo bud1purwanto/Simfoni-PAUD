@@ -75,32 +75,13 @@ Atur konfigurasi build pada menu **Settings -> Builds & deployments**:
 | **Preview Branches** | Pilih *All non-production branches* atau spesifik branch `dev` |
 | **Node.js Version** | `20` (diset via variabel `NODE_VERSION=20`) |
 
-### Penanganan Deployment Cloudflare (Pages vs Workers CI/CD):
-Cloudflare saat ini mendukung dua jalur deployment untuk aplikasi SPA Vite:
-1. **Cloudflare Pages (Direkomendasikan untuk SPA murni):**
-   * Deploy command: *(Kosongkan / jangan diisi)*
-   * Routing SPA: Ditangani otomatis oleh file [`public/_redirects`](public/_redirects) (`/* /index.html 200`).
-2. **Cloudflare Workers (Workers with Static Assets):**
-   * Jika proyek di Cloudflare dibuat sebagai **Worker** (menjalankan deploy command `npx wrangler deploy`), Cloudflare Wrangler mensyaratkan:
-     * Versi `vite` minimal `^6.0.0` (telah diperbarui di `package.json`).
-     * File konfigurasi [`wrangler.jsonc`](wrangler.jsonc) di root direktori dengan aset statis:
-       ```jsonc
-       {
-         "name": "simfoni-paud",
-         "compatibility_date": "2024-11-01",
-         "assets": {
-           "directory": "./dist",
-           "not_found_handling": "single-page-application"
-         }
-       }
-       ```
-     * Parameter `"not_found_handling": "single-page-application"` memastikan rute SPA tidak menghasilkan 404 saat pengguna melakukan refresh.
-
-### Wajib Routing SPA (`_redirects`):
-Pastikan file `public/_redirects` berisi satu baris berikut agar tidak muncul 404 saat navigasi browser di-refresh:
-```text
-/* /index.html 200
-```
+### Penanganan Deployment Cloudflare (Workers with Static Assets):
+Proyek menggunakan Cloudflare Workers with Static Assets yang dikonfigurasi via [`wrangler.jsonc`](wrangler.jsonc):
+* **Build Command (Dashboard):** `npm run build`
+* **Deploy Command (Dashboard):** `npx wrangler deploy`
+* **Routing SPA Tanpa 404:** Ditangani secara bawaan oleh konfigurasi `"not_found_handling": "single-page-application"` di `wrangler.jsonc`. 
+  > [!NOTE]
+  > File `_redirects` dengan isi `/* /index.html 200` tidak digunakan pada Cloudflare Workers Assets karena memicu error validasi *infinite loop* (Error Code `100324`). SPA routing ditangani 100% oleh Wrangler.
 
 ---
 
