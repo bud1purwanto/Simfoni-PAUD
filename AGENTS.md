@@ -171,18 +171,18 @@ Saat diminta membangun atau menyempurnakan fitur, ikuti urutan langkah terstrukt
   - [x] `JadwalGuru.jsx`: Tampilan jadwal mingguan kelas.
   - [x] `LaporanLainGuru.jsx`: Pelaporan tugas tambahan (rapat/lomba), administrasi guru, dan laporan kendala sarpras.
 
-- [ ] **Fase 6: Modul Kepala Sekolah (`/kepsek/*`)**
-  - [ ] `DashboardKepsek.jsx`: Monitoring live kehadiran guru hari ini, antrean review jurnal KBM, notifikasi kendala.
-  - [ ] `KelolaGuru.jsx`: Daftar guru, validasi batas `kuota_guru`, tombol reset password default `Guru1234!` (tanpa email), edit profil, dan soft-delete.
-  - [ ] `ValidasiLaporan.jsx`: Review jurnal dengan catatan revisi terperinci, fitur "Setujui Sekaligus / *Bulk Approval*", dan verifikasi koreksi absen.
-  - [ ] `KelolaJadwal.jsx`: Penataan jadwal KBM kelas TK A & TK B.
-  - [ ] `RekapDanPdf.jsx`: Unduh PDF Ringkas ramah HP, PDF Lengkap Portofolio, ekspor Excel honor `.xlsx`, dan *Share to WA*.
+- [x] **Fase 6: Modul Kepala Sekolah (`/kepsek/*`)**
+  - [x] `DashboardKepsek.jsx`: Monitoring live kehadiran guru hari ini, antrean review jurnal KBM, notifikasi kendala.
+  - [x] `KelolaGuru.jsx`: Daftar guru, validasi batas `kuota_guru`, tombol reset password default `Guru1234!` (tanpa email), edit profil, dan soft-delete.
+  - [x] `ValidasiLaporan.jsx`: Review jurnal dengan catatan revisi terperinci, fitur "Setujui Sekaligus / *Bulk Approval*", dan verifikasi koreksi absen.
+  - [x] `KelolaJadwal.jsx`: Penataan jadwal KBM kelas TK A & TK B.
+  - [x] `RekapDanPdf.jsx`: Unduh PDF Ringkas ramah HP, PDF Lengkap Portofolio, ekspor Excel honor `.xlsx`, dan *Share to WA*.
 
-- [ ] **Fase 7: Modul Superadmin (`/superadmin/*`)**
-  - [ ] `DashboardSuperadmin.jsx`: Metrik SaaS global, sekolah aktif vs expired, meteran estimasi pemakaian storage Firebase.
-  - [ ] `KelolaSekolah.jsx`: CRUD sekolah mitra, atur kuota guru, paket langganan, upload logo & stempel cap resmi, toggle suspend sekolah.
-  - [ ] `KelolaAkunKepsek.jsx`: Pembuatan akun Kepsek via *Secondary Auth* tanpa me-logout Superadmin, reset password Kepsek.
-  - [ ] `ManajemenLog.jsx`: Tabel audit log global, tombol *Purge* manual 30/60/90 hari, dan konfigurasi *Periodic Retention Job* (`system_settings`).
+- [x] **Fase 7: Modul Superadmin (`/superadmin/*`)**
+  - [x] `DashboardSuperadmin.jsx`: Metrik SaaS global, sekolah aktif vs expired, meteran estimasi pemakaian storage Firebase.
+  - [x] `KelolaSekolah.jsx`: CRUD sekolah mitra, atur kuota guru, paket langganan, upload logo & stempel cap resmi, toggle suspend sekolah.
+  - [x] `KelolaAkunKepsek.jsx`: Pembuatan akun Kepsek via *Secondary Auth* tanpa me-logout Superadmin, reset password Kepsek.
+  - [x] `ManajemenLog.jsx`: Tabel audit log global, tombol *Purge* manual 30/60/90 hari, dan konfigurasi *Periodic Retention Job* (`system_settings`).
 
 - [ ] **Fase 8: Pengujian Menyeluruh, Optimasi & Verifikasi CI/CD**
   - [ ] Uji isolasi data antar sekolah mitra di branch `dev` (Firestore Rules verification).

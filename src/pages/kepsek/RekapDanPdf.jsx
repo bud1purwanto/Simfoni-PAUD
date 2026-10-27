@@ -1,0 +1,553 @@
+import React, { useState, useEffect, useMemo } from 'react';
+import { 
+  FileText, 
+  Download, 
+  FileSpreadsheet, 
+  Share2, 
+  Calendar, 
+  Users, 
+  CheckCircle2, 
+  Clock, 
+  AlertCircle, 
+  Sparkles, 
+  Building2, 
+  Printer, 
+  ExternalLink,
+  BookOpen,
+  Image as ImageIcon,
+  CheckSquare
+} from 'lucide-react';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { db } from '../../config/firebase';
+import { useAuth } from '../../context/AuthContext';
+import { exportRingkasPdf, exportLengkapPortofolioPdf } from '../../utils/pdfExporter';
+import { exportAttendanceToExcel } from '../../utils/excelExporter';
+import { formatTanggalIndo } from '../../utils/formatters';
+
+const MONTH_NAMES = [
+  'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+];
+
+export default function RekapDanPdf() {
+  const { userData, schoolData } = useAuth();
+
+  const now = new Date();
+  const [selectedMonth, setSelectedMonth] = useState(now.getMonth()); // 0 - 11
+  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
+  const [selectedTeacherId, setSelectedTeacherId] = useState('all');
+
+  const [teachers, setTeachers] = useState([]);
+  const [attendances, setAttendances] = useState([]);
+  const [journals, setJournals] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [exportingType, setExportingType] = useState(null); // 'ringkas' | 'portofolio' | 'excel' | 'wa'
+
+  // String prefix periode YYYY-MM
+  const monthStr = String(selectedMonth + 1).padStart(2, '0');
+  const periodeKey = `${selectedYear}-${monthStr}`;
+  const namaPeriode = `${MONTH_NAMES[selectedMonth]} ${selectedYear}`;
+
+  // 1. Ambil Data Real-Time dari Firestore
+  useEffect(() => {
+    if (!userData?.school_id) {
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+
+    // Ambil Guru
+    const qTeachers = query(
+      collection(db, 'users'),
+      where('school_id', '==', userData.school_id),
+      where('role', '==', 'guru')
+    );
+    const unsubTeachers = onSnapshot(qTeachers, (snap) => {
+      const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      setTeachers(list);
+    });
+
+    // Ambil Presensi Sekolah
+    const qAttendance = query(
+      collection(db, 'attendance'),
+      where('school_id', '==', userData.school_id)
+    );
+    const unsubAttendance = onSnapshot(qAttendance, (snap) => {
+      const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      setAttendances(list);
+    });
+
+    // Ambil Jurnal Mengajar
+    const qJournals = query(
+      collection(db, 'journals'),
+      where('school_id', '==', userData.school_id)
+    );
+    const unsubJournals = onSnapshot(qJournals, (snap) => {
+      const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      setJournals(list);
+      setLoading(false);
+    });
+
+    return () => {
+      unsubTeachers();
+      unsubAttendance();
+      unsubJournals();
+    };
+  }, [userData?.school_id]);
+
+  // 2. Filter & Agregasi Data berdasarkan Bulan & Guru Terpilih
+  const filteredData = useMemo(() => {
+    // Saring presensi bulan ini
+    let monthAttendances = attendances.filter((a) => a.tanggal && a.tanggal.startsWith(periodeKey));
+    let monthJournals = journals.filter((j) => j.tanggal && j.tanggal.startsWith(periodeKey));
+
+    if (selectedTeacherId !== 'all') {
+      monthAttendances = monthAttendances.filter((a) => a.user_id === selectedTeacherId);
+      monthJournals = monthJournals.filter((j) => j.user_id === selectedTeacherId);
+    }
+
+    // Rekapitulasi per Guru untuk tabel & Excel
+    const rekapPresensi = teachers
+      .filter((t) => (selectedTeacherId === 'all' ? true : t.id === selectedTeacherId))
+      .map((t) => {
+        const teacherAtts = monthAttendances.filter((a) => a.user_id === t.id);
+        const hadir = teacherAtts.filter((a) => a.status === 'hadir').length;
+        const terlambat = teacherAtts.filter((a) => a.status === 'terlambat').length;
+        const izin = teacherAtts.filter((a) => a.status === 'izin').length;
+        const sakit = teacherAtts.filter((a) => a.status === 'sakit').length;
+        const totalMasuk = hadir + terlambat;
+
+        // Asumsi hari efektif kerja sebulan = 22 hari kerja
+        const persentase = totalMasuk > 0 ? Math.min(100, Math.round((totalMasuk / 22) * 100)) : 0;
+
+        return {
+          id: t.id,
+          nama: t.nama,
+          kelompok: t.kelompok_kelas || 'TK',
+          hadir,
+          terlambat,
+          izin,
+          sakit,
+          totalHari: totalMasuk,
+          persentase: `${persentase}%`,
+          catatan: persentase >= 90 ? 'Disiplin Tinggi' : persentase >= 75 ? 'Cukup' : 'Perlu Perhatian',
+        };
+      });
+
+    // Statistik Agregat Keseluruhan
+    const totalHadirGlobal = monthAttendances.filter((a) => a.status === 'hadir').length;
+    const totalTerlambatGlobal = monthAttendances.filter((a) => a.status === 'terlambat').length;
+    const totalIzinGlobal = monthAttendances.filter((a) => a.status === 'izin').length;
+    const totalSakitGlobal = monthAttendances.filter((a) => a.status === 'sakit').length;
+    const totalJurnalDisetujui = monthJournals.filter((j) => j.status === 'disetujui').length;
+
+    return {
+      monthAttendances,
+      monthJournals,
+      rekapPresensi,
+      totalHadirGlobal,
+      totalTerlambatGlobal,
+      totalIzinGlobal,
+      totalSakitGlobal,
+      totalJurnalDisetujui,
+    };
+  }, [attendances, journals, teachers, periodeKey, selectedTeacherId]);
+
+  // 3. Handler Ekspor PDF Ringkas
+  const handleExportRingkasPdf = async () => {
+    try {
+      setExportingType('ringkas');
+      await exportRingkasPdf({
+        schoolData: schoolData || {},
+        periode: namaPeriode,
+        rekapPresensi: filteredData.rekapPresensi,
+        rekapKbm: filteredData.monthJournals.map((j) => ({
+          tanggal: j.tanggal,
+          nama_guru: j.nama_guru,
+          kelompok: j.kelompok,
+          topik: j.topik,
+          status: j.status,
+        })),
+      });
+    } catch (err) {
+      console.error('Error generating Ringkas PDF:', err);
+      alert('Gagal membuat PDF Ringkas: ' + err.message);
+    } finally {
+      setExportingType(null);
+    }
+  };
+
+  // 4. Handler Ekspor PDF Portofolio Foto BAN-PDM
+  const handleExportPortofolioPdf = async () => {
+    try {
+      setExportingType('portofolio');
+      if (filteredData.monthJournals.length === 0) {
+        alert('Belum ada data jurnal pada periode ini untuk dijadikan Portofolio.');
+        return;
+      }
+      await exportLengkapPortofolioPdf({
+        schoolData: schoolData || {},
+        periode: namaPeriode,
+        journals: filteredData.monthJournals,
+      });
+    } catch (err) {
+      console.error('Error generating Portofolio PDF:', err);
+      alert('Gagal membuat Portofolio PDF: ' + err.message);
+    } finally {
+      setExportingType(null);
+    }
+  };
+
+  // 5. Handler Ekspor Excel (.xlsx) untuk Honorarium
+  const handleExportExcel = () => {
+    try {
+      setExportingType('excel');
+      exportAttendanceToExcel({
+        namaSekolah: schoolData?.nama_sekolah || 'SIMFONI PAUD',
+        periodeBulan: namaPeriode,
+        rekapData: filteredData.rekapPresensi,
+      });
+    } catch (err) {
+      console.error('Error exporting Excel:', err);
+      alert('Gagal mengunduh Excel: ' + err.message);
+    } finally {
+      setExportingType(null);
+    }
+  };
+
+  // 6. Handler Bagikan Ringkasan ke WhatsApp (wa.me)
+  const handleShareToWhatsApp = () => {
+    const namaSekolah = schoolData?.nama_sekolah || 'PAUD / TK';
+    const textMsg = 
+      `*REKAPITULASI PEMBELAJARAN & KEHADIRAN PAUD*\n` +
+      `🏫 *${namaSekolah}*\n` +
+      `📅 Periode: *${namaPeriode}*\n\n` +
+      `📊 *Ringkasan Kehadiran Guru:*\n` +
+      `• Hadir Tepat Waktu: ${filteredData.totalHadirGlobal} presensi\n` +
+      `• Terlambat: ${filteredData.totalTerlambatGlobal} presensi\n` +
+      `• Izin / Sakit: ${filteredData.totalIzinGlobal + filteredData.totalSakitGlobal} hari\n` +
+      `• Jurnal KBM Disetujui: ${filteredData.totalJurnalDisetujui} modul\n\n` +
+      `_Dibuat secara otomatis melalui Sistem Terintegrasi SIMFONI PAUD._`;
+
+    const encoded = encodeURIComponent(textMsg);
+    window.open(`https://wa.me/?text=${encoded}`, '_blank');
+  };
+
+  return (
+    <div className="space-y-6 pb-20 md:pb-6">
+      {/* Header Banner */}
+      <div className="bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 rounded-3xl p-6 md:p-8 text-white shadow-lg shadow-orange-500/20 relative overflow-hidden">
+        <div className="absolute right-0 top-0 translate-x-8 -translate-y-8 w-48 h-48 bg-white/10 rounded-full blur-2xl pointer-events-none" />
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <div className="inline-flex items-center space-x-2 px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-bold text-amber-100 mb-3">
+              <Printer className="w-3.5 h-3.5" />
+              <span>Pusat Pelaporan Resmi & Honorarium</span>
+            </div>
+            <h1 className="text-2xl md:text-3xl font-extrabold font-brand tracking-tight">
+              Rekapitulasi & Ekspor Laporan
+            </h1>
+            <p className="text-amber-100 text-sm mt-1 max-w-xl font-medium">
+              Unduh PDF berstempel resmi untuk Pengawas/Yayasan, Portofolio Akreditasi BAN-PDM, dan Spreadsheet Excel honor guru.
+            </p>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={handleShareToWhatsApp}
+              className="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white font-extrabold text-xs rounded-2xl shadow-sm transition flex items-center space-x-2 font-brand"
+            >
+              <Share2 className="w-4 h-4 stroke-[2.5]" />
+              <span>Bagikan WA</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* FILTER PERIODE & GURU */}
+      <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-sm grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Pilih Bulan */}
+        <div>
+          <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wider">
+            Bulan Pelaporan
+          </label>
+          <select
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(Number(e.target.value))}
+            className="w-full px-3.5 py-2.5 text-xs font-bold rounded-2xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-slate-50 text-slate-800"
+          >
+            {MONTH_NAMES.map((name, idx) => (
+              <option key={idx} value={idx}>
+                {name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Pilih Tahun */}
+        <div>
+          <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wider">
+            Tahun
+          </label>
+          <select
+            value={selectedYear}
+            onChange={(e) => setSelectedYear(Number(e.target.value))}
+            className="w-full px-3.5 py-2.5 text-xs font-bold rounded-2xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-slate-50 text-slate-800"
+          >
+            {[2025, 2026, 2027].map((yr) => (
+              <option key={yr} value={yr}>
+                Tahun {yr}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Saring Guru */}
+        <div>
+          <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wider">
+            Saring Guru
+          </label>
+          <select
+            value={selectedTeacherId}
+            onChange={(e) => setSelectedTeacherId(e.target.value)}
+            className="w-full px-3.5 py-2.5 text-xs font-bold rounded-2xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-slate-50 text-slate-800"
+          >
+            <option value="all">Semua Guru ({teachers.length})</option>
+            {teachers.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.nama} ({t.kelompok_kelas || 'TK'})
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* METRIK KARTU RINGKASAN */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+        <div className="bg-white rounded-3xl p-4 md:p-5 border border-slate-200/80 shadow-sm flex items-center space-x-3.5">
+          <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold flex-shrink-0">
+            <CheckCircle2 className="w-5 h-5 md:w-6 md:h-6" />
+          </div>
+          <div>
+            <div className="text-xl md:text-2xl font-black text-slate-800 font-brand">
+              {filteredData.totalHadirGlobal}
+            </div>
+            <div className="text-[11px] md:text-xs text-slate-500 font-semibold">
+              Presensi Hadir
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-3xl p-4 md:p-5 border border-slate-200/80 shadow-sm flex items-center space-x-3.5">
+          <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold flex-shrink-0">
+            <Clock className="w-5 h-5 md:w-6 md:h-6" />
+          </div>
+          <div>
+            <div className="text-xl md:text-2xl font-black text-slate-800 font-brand">
+              {filteredData.totalTerlambatGlobal}
+            </div>
+            <div className="text-[11px] md:text-xs text-slate-500 font-semibold">
+              Terlambat
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-3xl p-4 md:p-5 border border-slate-200/80 shadow-sm flex items-center space-x-3.5">
+          <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold flex-shrink-0">
+            <BookOpen className="w-5 h-5 md:w-6 md:h-6" />
+          </div>
+          <div>
+            <div className="text-xl md:text-2xl font-black text-slate-800 font-brand">
+              {filteredData.totalJurnalDisetujui}
+            </div>
+            <div className="text-[11px] md:text-xs text-slate-500 font-semibold">
+              Jurnal Disetujui
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-3xl p-4 md:p-5 border border-slate-200/80 shadow-sm flex items-center space-x-3.5">
+          <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-purple-100 text-purple-700 flex items-center justify-center font-bold flex-shrink-0">
+            <Users className="w-5 h-5 md:w-6 md:h-6" />
+          </div>
+          <div>
+            <div className="text-xl md:text-2xl font-black text-slate-800 font-brand">
+              {teachers.length}
+            </div>
+            <div className="text-[11px] md:text-xs text-slate-500 font-semibold">
+              Total Guru
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* KARTU 3 PILIHAN EKSPOR DOKUMEN */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* 1. PDF Ringkas Kop Resmi */}
+        <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm flex flex-col justify-between hover:border-orange-300 transition group">
+          <div>
+            <div className="w-12 h-12 rounded-2xl bg-orange-100 text-orange-600 flex items-center justify-center mb-4 group-hover:scale-105 transition">
+              <FileText className="w-6 h-6 stroke-[2.5]" />
+            </div>
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-orange-100 text-orange-700">
+              Format Dinas / Pengawas
+            </span>
+            <h3 className="text-lg font-extrabold text-slate-800 font-brand mt-2">
+              PDF Ringkas Kop Resmi
+            </h3>
+            <p className="text-xs text-slate-500 mt-1 font-medium leading-relaxed">
+              Kop surat dinamis, tabel rekapitulasi kehadiran, daftar materi KBM, tanda tangan Kepala Sekolah, dan stempel cap digital sekolah transparan. Sangat ringan (&lt; 500 KB).
+            </p>
+          </div>
+
+          <button
+            onClick={handleExportRingkasPdf}
+            disabled={exportingType === 'ringkas'}
+            className="mt-6 w-full py-3 px-4 rounded-2xl font-extrabold text-xs text-white bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 active:scale-95 shadow-md shadow-orange-500/20 transition flex items-center justify-center space-x-2 font-brand disabled:opacity-50"
+          >
+            <Download className="w-4 h-4 stroke-[2.5]" />
+            <span>{exportingType === 'ringkas' ? 'Membuat PDF...' : 'Unduh PDF Ringkas'}</span>
+          </button>
+        </div>
+
+        {/* 2. PDF Portofolio Foto BAN-PDM */}
+        <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm flex flex-col justify-between hover:border-indigo-300 transition group">
+          <div>
+            <div className="w-12 h-12 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center mb-4 group-hover:scale-105 transition">
+              <ImageIcon className="w-6 h-6 stroke-[2.5]" />
+            </div>
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-indigo-100 text-indigo-700">
+              Standar Akreditasi
+            </span>
+            <h3 className="text-lg font-extrabold text-slate-800 font-brand mt-2">
+              Portofolio Foto BAN-PDM
+            </h3>
+            <p className="text-xs text-slate-500 mt-1 font-medium leading-relaxed">
+              Dokumen bukti fisik akreditasi PAUD dengan dokumentasi foto kegiatan, pemetaan Capaian Pembelajaran Kurikulum Merdeka, serta refleksi guru.
+            </p>
+          </div>
+
+          <button
+            onClick={handleExportPortofolioPdf}
+            disabled={exportingType === 'portofolio' || filteredData.monthJournals.length === 0}
+            className="mt-6 w-full py-3 px-4 rounded-2xl font-extrabold text-xs text-white bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 active:scale-95 shadow-md shadow-indigo-500/20 transition flex items-center justify-center space-x-2 font-brand disabled:opacity-50"
+          >
+            <Download className="w-4 h-4 stroke-[2.5]" />
+            <span>{exportingType === 'portofolio' ? 'Menyusun Portofolio...' : 'Unduh Portofolio BAN-PDM'}</span>
+          </button>
+        </div>
+
+        {/* 3. Spreadsheet Excel (.xlsx) untuk Honorarium */}
+        <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm flex flex-col justify-between hover:border-emerald-300 transition group">
+          <div>
+            <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center mb-4 group-hover:scale-105 transition">
+              <FileSpreadsheet className="w-6 h-6 stroke-[2.5]" />
+            </div>
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-700">
+              Bendahara & Yayasan
+            </span>
+            <h3 className="text-lg font-extrabold text-slate-800 font-brand mt-2">
+              Excel Honorarium (.xlsx)
+            </h3>
+            <p className="text-xs text-slate-500 mt-1 font-medium leading-relaxed">
+              Format lembar sebar kompatibel Microsoft Excel & Google Sheets untuk penghitungan tunjangan, transport kehadiran harian, dan rekap penggajian guru.
+            </p>
+          </div>
+
+          <button
+            onClick={handleExportExcel}
+            disabled={exportingType === 'excel'}
+            className="mt-6 w-full py-3 px-4 rounded-2xl font-extrabold text-xs text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 active:scale-95 shadow-md shadow-emerald-500/20 transition flex items-center justify-center space-x-2 font-brand disabled:opacity-50"
+          >
+            <Download className="w-4 h-4 stroke-[2.5]" />
+            <span>{exportingType === 'excel' ? 'Mengolah Excel...' : 'Unduh Excel Honor (.xlsx)'}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* TABEL PREVIEW REKAPITULASI KEHADIRAN GURU */}
+      <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
+        <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <Users className="w-5 h-5 text-orange-500" />
+            <h3 className="font-extrabold text-slate-800 text-base font-brand">
+              Preview Rekap Presensi Periode {namaPeriode}
+            </h3>
+          </div>
+          <span className="text-xs text-slate-400 font-bold">
+            {filteredData.rekapPresensi.length} Guru
+          </span>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead className="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider border-b border-slate-100">
+              <tr>
+                <th className="py-3 px-4">Nama Lengkap</th>
+                <th className="py-3 px-4">Kelompok</th>
+                <th className="py-3 px-4 text-center">Hadir</th>
+                <th className="py-3 px-4 text-center">Terlambat</th>
+                <th className="py-3 px-4 text-center">Izin</th>
+                <th className="py-3 px-4 text-center">Sakit</th>
+                <th className="py-3 px-4 text-center">Tingkat Hadir</th>
+                <th className="py-3 px-4 text-center">Catatan</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 font-medium">
+              {filteredData.rekapPresensi.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="py-8 text-center text-slate-400">
+                    Belum ada data guru pada filter ini.
+                  </td>
+                </tr>
+              ) : (
+                filteredData.rekapPresensi.map((row) => (
+                  <tr key={row.id} className="hover:bg-slate-50/80 transition">
+                    <td className="py-3.5 px-4 font-bold text-slate-800">
+                      {row.nama}
+                    </td>
+                    <td className="py-3.5 px-4 text-slate-600">
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200/60">
+                        {row.kelompok}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-4 text-center font-bold text-emerald-600">
+                      {row.hadir} hari
+                    </td>
+                    <td className="py-3.5 px-4 text-center font-bold text-amber-600">
+                      {row.terlambat} hari
+                    </td>
+                    <td className="py-3.5 px-4 text-center text-slate-500">
+                      {row.izin} hari
+                    </td>
+                    <td className="py-3.5 px-4 text-center text-slate-500">
+                      {row.sakit} hari
+                    </td>
+                    <td className="py-3.5 px-4 text-center font-extrabold text-slate-700">
+                      {row.persentase}
+                    </td>
+                    <td className="py-3.5 px-4 text-center">
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
+                          row.catatan === 'Disiplin Tinggi'
+                            ? 'bg-emerald-100 text-emerald-800'
+                            : row.catatan === 'Cukup'
+                            ? 'bg-blue-100 text-blue-800'
+                            : 'bg-rose-100 text-rose-800'
+                        }`}
+                      >
+                        {row.catatan}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
