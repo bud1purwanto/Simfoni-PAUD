@@ -8,16 +8,17 @@ export default function NetworkStatusBanner() {
   const [showReconnected, setShowReconnected] = useState(false);
 
   useEffect(() => {
+    let timer = null;
+
     const handleOnline = () => {
       setIsOnline(true);
       setShowReconnected(true);
-      const timer = setTimeout(() => {
-        setShowReconnected(false);
-      }, 4000);
-      return () => clearTimeout(timer);
+      clearTimeout(timer);
+      timer = setTimeout(() => setShowReconnected(false), 4000);
     };
 
     const handleOffline = () => {
+      clearTimeout(timer);
       setIsOnline(false);
       setShowReconnected(false);
     };
@@ -26,6 +27,7 @@ export default function NetworkStatusBanner() {
     window.addEventListener('offline', handleOffline);
 
     return () => {
+      clearTimeout(timer);
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };

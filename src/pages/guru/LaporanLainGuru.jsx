@@ -26,9 +26,9 @@ import {
   collection, 
   query, 
   where, 
-  onSnapshot, 
-  addDoc, 
-  deleteDoc, 
+ onSnapshot,
+  setDoc,
+  deleteDoc,
   doc, 
   serverTimestamp 
 } from 'firebase/firestore';
@@ -40,6 +40,7 @@ import { useSpeechToText } from '../../hooks/useSpeechToText';
 import { uploadCompressedImage } from '../../utils/imageCompressor';
 import { logActivity } from '../../utils/auditLogger';
 import ModalKonfirmasi from '../../components/ui/ModalKonfirmasi';
+import { commitWrite, QUEUED_SUFFIX } from '../../utils/offlineWrite';
 
 const KATEGORI_OPTIONS = [
   { 
@@ -147,12 +148,14 @@ export default function LaporanLainGuru() {
   const handlePhotoChange = (e) => {
     const file = e.target.files[0];
     if (file) {
+      if (photoPreview) URL.revokeObjectURL(photoPreview);
       setPhotoFile(file);
       setPhotoPreview(URL.createObjectURL(file));
     }
   };
 
   const removePhoto = () => {
+    if (photoPreview) URL.revokeObjectURL(photoPreview);
     setPhotoFile(null);
     setPhotoPreview(null);
   };
@@ -198,6 +201,10 @@ export default function LaporanLainGuru() {
 
     try {
       let fotoUrl = null;
+      if (photoFile && typeof navigator !== 'undefined' && navigator.onLine === false) {
+        setSubmitError('Unggah foto memerlukan sinyal internet. Hapus foto atau coba lagi saat sinyal kembali.');
+        return;
+      }
       if (photoFile) {
         const uploadResult = await uploadCompressedImage(
           photoFile,
@@ -208,7 +215,8 @@ export default function LaporanLainGuru() {
         fotoUrl = uploadResult.url;
       }
 
-      const docRef = await addDoc(collection(db, 'tasks_and_issues'), {
+      const docRef = doc(collection(db, 'tasks_and_issues'));
+      const { queued } = await commitWrite(setDoc(docRef, {
         school_id: userData.school_id,
         user_id: userData.uid,
         nama_guru: userData.nama || 'Guru PAUD',
@@ -221,10 +229,11 @@ export default function LaporanLainGuru() {
         status: 'dilaporkan',
         tanggapan_kepsek: '',
         created_at: serverTimestamp(),
-      });
+        updated_at: serverTimestamp(),
+      }));
 
       // Audit Log
-      await logActivity({
+      logActivity({
         schoolId: userData.school_id,
         actorId: userData.uid,
         actorNama: userData.nama || 'Guru',
@@ -235,6 +244,7 @@ export default function LaporanLainGuru() {
 
       resetForm();
       setModalOpen(false);
+      if (queued) window.alert(`Laporan dicatat${QUEUED_SUFFIX}.`);
     } catch (err) {
       console.error('Gagal menyimpan laporan:', err);
       setSubmitError(err.message || 'Terjadi kesalahan saat menyimpan laporan.');

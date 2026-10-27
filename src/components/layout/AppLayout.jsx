@@ -18,16 +18,21 @@ import {
   User,
   ShieldCheck,
   GraduationCap,
-  Sparkles
+  Sparkles,
+  KeyRound,
+  History
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import NetworkStatusBanner from './NetworkStatusBanner';
 import DevBadge from './DevBadge';
+import ModalGantiPassword from '../ui/ModalGantiPassword';
+import { sisaHariLangganan } from '../../utils/schoolConfig';
+import { formatTanggalIndo } from '../../utils/formatters';
 
 export default function AppLayout() {
-  const { userData, schoolData, logout } = useAuth();
+  const { userData, schoolData, logout, needsPasswordChange } = useAuth();
   const navigate = useNavigate();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
 
   const role = userData?.role || 'guru';
 
@@ -51,6 +56,8 @@ export default function AppLayout() {
     { label: 'Validasi KBM', path: '/kepsek/validasi', icon: CheckSquare },
     { label: 'Jadwal Sekolah', path: '/kepsek/jadwal', icon: Calendar },
     { label: 'Rekap & PDF/Excel', path: '/kepsek/rekap', icon: FileText },
+    // Menu ke-6 hanya tampil di sidebar desktop; di HP diakses dari kartu Dashboard
+    { label: 'Riwayat Aktivitas', path: '/kepsek/riwayat', icon: History, desktopOnly: true },
   ];
 
   // Navigasi Khusus Guru PAUD
@@ -69,7 +76,15 @@ export default function AppLayout() {
   // Nama Sekolah & Branding Dinamis
   const dynamicSchoolName = role === 'superadmin' 
     ? 'SIMFONI PAUD SaaS Master'
-    : (schoolData?.nama_sekolah || userData?.nama_sekolah || 'TK Dharma Wanita Persatuan 8');
+    : (schoolData?.nama_sekolah || userData?.nama_sekolah || 'SIMFONI PAUD');
+
+  // Pengingat masa langganan (trial / masa tenggang / segera berakhir)
+  const sisaHari = role === 'superadmin' ? null : sisaHariLangganan(schoolData);
+  const isTrial = schoolData?.paket_langganan === 'trial';
+  const isMasaTenggang = schoolData?.status_langganan === 'masa_tenggang';
+  const showLanggananBanner =
+    role !== 'superadmin' && (isTrial || isMasaTenggang || (sisaHari !== null && sisaHari <= 14));
+  const statusLabel = isMasaTenggang ? 'Masa Tenggang' : 'Aktif';
 
   const roleBadge = {
     superadmin: { label: 'SUPERADMIN', color: 'bg-amber-100 text-amber-800 border-amber-200' },
@@ -110,7 +125,7 @@ export default function AppLayout() {
               <p className="text-[11px] text-slate-500 font-semibold truncate flex items-center space-x-1.5">
                 <span>{role === 'superadmin' ? 'Project Owner Portal' : `Kelompok: ${userData?.kelompok_kelas || 'Umum'}`}</span>
                 <span>•</span>
-                <span className="text-emerald-600 font-bold">Aktif</span>
+                <span className={isMasaTenggang ? 'text-amber-600 font-bold' : 'text-emerald-600 font-bold'}>{statusLabel}</span>
               </p>
             </div>
           </div>
@@ -131,8 +146,18 @@ export default function AppLayout() {
             </div>
 
             <button
+              onClick={() => setPasswordModalOpen(true)}
+              title="Ganti Kata Sandi"
+              aria-label="Ganti Kata Sandi"
+              className="p-2.5 rounded-2xl text-slate-400 hover:text-orange-600 hover:bg-orange-50 active:scale-95 transition"
+            >
+              <KeyRound className="w-4 h-4 md:w-5 md:h-5" />
+            </button>
+
+            <button
               onClick={handleLogout}
               title="Keluar Akun"
+              aria-label="Keluar Akun"
               className="p-2.5 rounded-2xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 active:scale-95 transition"
             >
               <LogOut className="w-4 h-4 md:w-5 md:h-5" />
@@ -182,16 +207,21 @@ export default function AppLayout() {
 
         {/* Main Content Area (Responsif, ruang bawah disesuaikan untuk BottomNav mobile) */}
         <main className="flex-1 p-4 md:p-6 pb-28 md:pb-12 max-w-full overflow-x-hidden">
-          {schoolData?.paket_langganan === 'trial' && userData?.role !== 'superadmin' && (
+          {showLanggananBanner && (
             <div className="mb-4 p-3 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/80 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-xs">
               <div className="flex items-center space-x-2 text-amber-950 text-xs font-semibold">
                 <Sparkles className="w-4 h-4 text-amber-600 shrink-0" />
                 <span>
-                  Sekolah Anda berada pada <strong>Masa Uji Coba (Trial)</strong> hingga {schoolData?.berlaku_hingga || 'segera berakhir'}.
+                  {isMasaTenggang
+                    ? <>Langganan sekolah dalam <strong>Masa Tenggang</strong>. Hubungi Administrator Sistem agar layanan tidak terhenti.</>
+                    : isTrial
+                    ? <>Sekolah Anda berada pada <strong>Masa Uji Coba (Trial)</strong> hingga {formatTanggalIndo(schoolData?.berlaku_hingga)}.</>
+                    : <>Masa langganan berakhir pada <strong>{formatTanggalIndo(schoolData?.berlaku_hingga)}</strong>.</>}
+                  {sisaHari !== null && sisaHari >= 0 && <> Sisa <strong>{sisaHari} hari</strong>.</>}
                 </span>
               </div>
               <span className="px-2 py-0.5 bg-amber-200/80 text-amber-950 font-black text-[10px] rounded-lg shrink-0 self-start sm:self-auto font-brand">
-                AKSES TRIAL
+                {isMasaTenggang ? 'MASA TENGGANG' : isTrial ? 'AKSES TRIAL' : 'PERPANJANG'}
               </span>
             </div>
           )}
@@ -202,7 +232,7 @@ export default function AppLayout() {
       {/* 5. Bottom Navigation Bar Mobile (Floating Pill Ramah Jempol di < 768px) */}
       <nav className="md:hidden fixed bottom-3 left-4 right-4 bg-white/95 backdrop-blur-md border border-orange-200/70 shadow-2xl shadow-orange-950/10 rounded-3xl z-30 px-2 py-1.5">
         <div className="flex items-center justify-around">
-          {currentNavItems.slice(0, 5).map((item) => {
+          {currentNavItems.filter((item) => !item.desktopOnly).slice(0, 5).map((item) => {
             const Icon = item.icon;
             return (
               <NavLink
@@ -229,6 +259,13 @@ export default function AppLayout() {
           })}
         </div>
       </nav>
+
+      {/* Modal Wajib Ganti Sandi (akun baru / baru di-reset) atau ganti sandi sukarela */}
+      <ModalGantiPassword
+        isOpen={needsPasswordChange || passwordModalOpen}
+        isMandatory={needsPasswordChange}
+        onClose={() => setPasswordModalOpen(false)}
+      />
     </div>
   );
 }

@@ -26,17 +26,16 @@ import {
   updateDoc, 
   serverTimestamp 
 } from 'firebase/firestore';
-import { sendPasswordResetEmail } from 'firebase/auth';
-import { 
-  db, 
-  auth, 
-  createKepsekAccountBySuperadmin, 
-  markPasswordResetByAdmin 
+import {
+  db,
+  createKepsekAccountBySuperadmin
 } from '../../config/firebase';
 import { useAuth } from '../../context/AuthContext';
 import { formatTanggalIndo } from '../../utils/formatters';
 import { logActivity } from '../../utils/auditLogger';
 import ModalKonfirmasi from '../../components/ui/ModalKonfirmasi';
+import { resetPasswordAkun } from '../../utils/adminApi';
+import { DEFAULT_PASSWORD } from '../../utils/schoolConfig';
 
 export default function KelolaAkunKepsek() {
   const { userData } = useAuth();
@@ -56,7 +55,7 @@ export default function KelolaAkunKepsek() {
   const [formSchoolId, setFormSchoolId] = useState('');
   const [formNama, setFormNama] = useState('');
   const [formEmail, setFormEmail] = useState('');
-  const [formPassword, setFormPassword] = useState('Kepsek1234!');
+  const [formPassword, setFormPassword] = useState(DEFAULT_PASSWORD.kepsek);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
 
@@ -72,10 +71,8 @@ export default function KelolaAkunKepsek() {
 
     const unsubSchools = onSnapshot(collection(db, 'schools'), (snap) => {
       const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      list.sort((a, b) => (a.nama_sekolah || '').localeCompare(b.nama_sekolah || ''));
       setSchools(list);
-      if (list.length > 0 && !formSchoolId) {
-        setFormSchoolId(list[0].id);
-      }
     });
 
     const unsubUsers = onSnapshot(collection(db, 'users'), (snap) => {
@@ -99,10 +96,12 @@ export default function KelolaAkunKepsek() {
 
   const handleOpenAddModal = () => {
     setFormEmail('');
-    setFormPassword('Kepsek1234!');
+    setFormPassword(DEFAULT_PASSWORD.kepsek);
     setFormError('');
-    if (schools.length > 0) {
-      const firstSchool = schools[0];
+    // Prioritaskan sekolah yang belum memiliki Kepala Sekolah aktif
+    const schoolsWithKepsek = new Set(kepsekList.filter((k) => k.status_akun === 'aktif').map((k) => k.school_id));
+    const firstSchool = schools.find((s) => !schoolsWithKepsek.has(s.id)) || schools[0];
+    if (firstSchool) {
       setFormSchoolId(firstSchool.id);
       setFormNama(firstSchool.nama_kepsek_resmi || '');
     } else {
@@ -132,6 +131,18 @@ export default function KelolaAkunKepsek() {
       return;
     }
 
+    if (!formSchoolId || !schools.some((s) => s.id === formSchoolId)) {
+      setFormError('Pilih sekolah mitra terlebih dahulu.');
+      return;
+    }
+
+    const existingKepsek = kepsekList.find((k) => k.school_id === formSchoolId && k.status_akun === 'aktif');
+    if (existingKepsek && !window.confirm(
+      `Sekolah ini sudah memiliki Kepala Sekolah aktif (${existingKepsek.nama}). Tetap tambahkan akun Kepsek kedua?`
+    )) {
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -154,11 +165,14 @@ export default function KelolaAkunKepsek() {
         });
       }
 
-      await logActivity(formSchoolId, userData.uid, userData.nama, 'create_kepsek', {
-        kepsekUid: newUid,
-        email: formEmail,
-        nama: formNama,
+      logActivity({
         schoolId: formSchoolId,
+        actorId: userData.uid,
+        actorNama: userData.nama,
+        action: 'ADD_KEPSEK',
+        recordType: 'users',
+        recordId: newUid,
+        detail: { nama: formNama.trim(), email: formEmail.trim() },
       });
 
       showNotification('success', `Akun Kepala Sekolah "${formNama}" berhasil dibuat!`);
@@ -194,9 +208,14 @@ export default function KelolaAkunKepsek() {
         });
       }
 
-      await logActivity(selectedKepsek.school_id, userData.uid, userData.nama, 'update_kepsek', {
-        kepsekUid: selectedKepsek.id,
-        namaBaru: editNama,
+      logActivity({
+        schoolId: selectedKepsek.school_id,
+        actorId: userData.uid,
+        actorNama: userData.nama,
+        action: 'EDIT_KEPSEK',
+        recordType: 'users',
+        recordId: selectedKepsek.id,
+        detail: { nama: editNama.trim() },
       });
 
       showNotification('success', 'Profil Kepala Sekolah berhasil diperbarui!');
@@ -207,30 +226,37 @@ export default function KelolaAkunKepsek() {
     }
   };
 
-  // Reset Password Kepsek ke Default (Kepsek1234!)
+  // Reset Password Kepsek ke Default (Kepsek1234!) via API Worker, fallback email
   const handleResetPassword = (k) => {
     setConfirmModal({
       isOpen: true,
       title: 'Reset Kata Sandi Kepala Sekolah',
-      message: `Reset kata sandi untuk Kepala Sekolah "${k.nama}" (${k.email}) ke password default "Kepsek1234!"? Kepala Sekolah akan diwajibkan mengganti kata sandi baru saat login berikutnya.`,
+      message: `Reset kata sandi untuk Kepala Sekolah "${k.nama}" (${k.email}) ke password default "${DEFAULT_PASSWORD.kepsek}"?\n\nKepala Sekolah akan diwajibkan mengganti kata sandi baru saat login berikutnya.`,
       confirmText: 'Ya, Reset Sandi',
       type: 'warning',
       loading: false,
       onConfirm: async () => {
         setConfirmModal((prev) => ({ ...prev, loading: true }));
         try {
-          await markPasswordResetByAdmin(k.id);
-          try {
-            await sendPasswordResetEmail(auth, k.email);
-          } catch (e) {}
+          const result = await resetPasswordAkun({ targetUid: k.id, targetEmail: k.email });
 
-          await logActivity(k.school_id, userData.uid, userData.nama, 'reset_password_kepsek', {
-            kepsekUid: k.id,
-            email: k.email,
+          await logActivity({
+            schoolId: k.school_id,
+            actorId: userData.uid,
+            actorNama: userData.nama,
+            action: 'RESET_PASSWORD_KEPSEK',
+            recordType: 'users',
+            recordId: k.id,
+            detail: { mode: result.mode },
           });
 
           setConfirmModal((prev) => ({ ...prev, isOpen: false, loading: false }));
-          showNotification('success', `Kata sandi ${k.nama} berhasil direset ke default (Kepsek1234!).`);
+          showNotification(
+            'success',
+            result.mode === 'default'
+              ? `Kata sandi ${k.nama} berhasil direset ke "${result.defaultPassword}". Akun ditandai wajib ganti kata sandi.`
+              : `Layanan reset instan belum aktif di server. Tautan reset sandi dikirim ke ${k.email} dan akun ditandai wajib ganti sandi.`
+          );
         } catch (err) {
           console.error('Error resetting password:', err);
           setConfirmModal((prev) => ({ ...prev, isOpen: false, loading: false }));
@@ -261,9 +287,14 @@ export default function KelolaAkunKepsek() {
             updated_at: serverTimestamp(),
           });
 
-          await logActivity(k.school_id, userData.uid, userData.nama, 'toggle_status_kepsek', {
-            kepsekUid: k.id,
-            statusBaru: nextStatus,
+          await logActivity({
+            schoolId: k.school_id,
+            actorId: userData.uid,
+            actorNama: userData.nama,
+            action: 'TOGGLE_STATUS_KEPSEK',
+            recordType: 'users',
+            recordId: k.id,
+            detail: { status: nextStatus },
           });
 
           setConfirmModal((prev) => ({ ...prev, isOpen: false, loading: false }));
@@ -431,7 +462,7 @@ export default function KelolaAkunKepsek() {
                         <div className="flex items-center justify-end space-x-1.5">
                           <button
                             onClick={() => handleResetPassword(k)}
-                            title="Reset Kata Sandi ke Default (Kepsek1234!)"
+                            title={`Reset Kata Sandi ke Default (${DEFAULT_PASSWORD.kepsek})`}
                             className="px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold rounded-xl transition text-[11px] flex items-center space-x-1"
                           >
                             <KeyRound className="w-3.5 h-3.5" />

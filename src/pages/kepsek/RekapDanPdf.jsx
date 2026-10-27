@@ -23,7 +23,8 @@ import { db } from '../../config/firebase';
 import { useAuth } from '../../context/AuthContext';
 import { exportRingkasPdf, exportLengkapPortofolioPdf } from '../../utils/pdfExporter';
 import { exportAttendanceToExcel } from '../../utils/excelExporter';
-import { formatTanggalIndo } from '../../utils/formatters';
+import { createWhatsAppShareUrl, getLocalDateString } from '../../utils/formatters';
+import { hitungHariKerja, hitungMenitTerlambat } from '../../utils/schoolConfig';
 
 const MONTH_NAMES = [
   'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
@@ -50,7 +51,11 @@ export default function RekapDanPdf() {
   const periodeKey = `${selectedYear}-${monthStr}`;
   const namaPeriode = `${MONTH_NAMES[selectedMonth]} ${selectedYear}`;
 
-  // 1. Ambil Data Real-Time dari Firestore
+  const lastDay = new Date(selectedYear, selectedMonth + 1, 0).getDate();
+  const periodeStart = `${periodeKey}-01`;
+  const periodeEnd = `${periodeKey}-${String(lastDay).padStart(2, '0')}`;
+
+  // 1. Ambil Data Real-Time dari Firestore (hanya periode terpilih agar hemat kuota baca)
   useEffect(() => {
     if (!userData?.school_id) {
       setLoading(false);
@@ -70,24 +75,35 @@ export default function RekapDanPdf() {
       setTeachers(list);
     });
 
-    // Ambil Presensi Sekolah
+    // Ambil Presensi Sekolah pada periode terpilih
     const qAttendance = query(
       collection(db, 'attendance'),
-      where('school_id', '==', userData.school_id)
+      where('school_id', '==', userData.school_id),
+      where('tanggal', '>=', periodeStart),
+      where('tanggal', '<=', periodeEnd)
     );
     const unsubAttendance = onSnapshot(qAttendance, (snap) => {
       const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
       setAttendances(list);
-    });
+    }, (err) => console.warn('Gagal memuat presensi:', err));
 
-    // Ambil Jurnal Mengajar
+    // Ambil Jurnal Mengajar pada periode terpilih
     const qJournals = query(
       collection(db, 'journals'),
-      where('school_id', '==', userData.school_id)
+      where('school_id', '==', userData.school_id),
+      where('tanggal', '>=', periodeStart),
+      where('tanggal', '<=', periodeEnd)
     );
     const unsubJournals = onSnapshot(qJournals, (snap) => {
-      const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      // Draf belum resmi dilaporkan guru, tidak masuk rekap
+      const list = snap.docs
+        .map((d) => ({ id: d.id, ...d.data() }))
+        .filter((j) => j.status !== 'draf');
+      list.sort((a, b) => (a.tanggal || '').localeCompare(b.tanggal || ''));
       setJournals(list);
+      setLoading(false);
+    }, (err) => {
+      console.warn('Gagal memuat jurnal:', err);
       setLoading(false);
     });
 
@@ -96,12 +112,16 @@ export default function RekapDanPdf() {
       unsubAttendance();
       unsubJournals();
     };
-  }, [userData?.school_id]);
+  }, [userData?.school_id, periodeStart, periodeEnd]);
+
+  const hariKerjaEfektif = hitungHariKerja(periodeKey, schoolData);
 
   // 2. Filter & Agregasi Data berdasarkan Bulan & Guru Terpilih
   const filteredData = useMemo(() => {
     // Saring presensi bulan ini
-    let monthAttendances = attendances.filter((a) => a.tanggal && a.tanggal.startsWith(periodeKey));
+    // Izin/sakit yang diajukan untuk tanggal mendatang belum dihitung dalam rekap
+    const todayKey = getLocalDateString();
+    let monthAttendances = attendances.filter((a) => a.tanggal && a.tanggal.startsWith(periodeKey) && a.tanggal <= todayKey);
     let monthJournals = journals.filter((j) => j.tanggal && j.tanggal.startsWith(periodeKey));
 
     if (selectedTeacherId !== 'all') {
@@ -110,27 +130,38 @@ export default function RekapDanPdf() {
     }
 
     // Rekapitulasi per Guru untuk tabel & Excel
+    // Guru nonaktif tetap direkap bila memiliki presensi di periode ini (mis. mutasi di tengah bulan)
     const rekapPresensi = teachers
       .filter((t) => (selectedTeacherId === 'all' ? true : t.id === selectedTeacherId))
+      .filter((t) => t.status_akun === 'aktif' || monthAttendances.some((a) => a.user_id === t.id))
       .map((t) => {
         const teacherAtts = monthAttendances.filter((a) => a.user_id === t.id);
         const hadir = teacherAtts.filter((a) => a.status === 'hadir').length;
-        const terlambat = teacherAtts.filter((a) => a.status === 'terlambat').length;
+        const terlambatAtts = teacherAtts.filter((a) => a.status === 'terlambat');
+        const terlambat = terlambatAtts.length;
+        const menitTerlambat = terlambatAtts.reduce(
+          (acc, a) => acc + (Number.isFinite(a.menit_terlambat) ? a.menit_terlambat : hitungMenitTerlambat(a.jam_datang_device, schoolData)),
+          0
+        );
         const izin = teacherAtts.filter((a) => a.status === 'izin').length;
         const sakit = teacherAtts.filter((a) => a.status === 'sakit').length;
+        const lupaPulang = teacherAtts.filter((a) => a.status_pulang === 'lupa_absen').length;
         const totalMasuk = hadir + terlambat;
 
-        // Asumsi hari efektif kerja sebulan = 22 hari kerja
-        const persentase = totalMasuk > 0 ? Math.min(100, Math.round((totalMasuk / 22) * 100)) : 0;
+        const persentase = hariKerjaEfektif > 0 ? Math.min(100, Math.round((totalMasuk / hariKerjaEfektif) * 100)) : 0;
+        const alpa = Math.max(0, hariKerjaEfektif - totalMasuk - izin - sakit);
 
         return {
           id: t.id,
           nama: t.nama,
-          kelompok: t.kelompok_kelas || 'TK',
+          kelompok: t.kelompok_kelas || '-',
           hadir,
           terlambat,
+          menitTerlambat,
           izin,
           sakit,
+          alpa,
+          lupaPulang,
           totalHari: totalMasuk,
           persentase: `${persentase}%`,
           catatan: persentase >= 90 ? 'Disiplin Tinggi' : persentase >= 75 ? 'Cukup' : 'Perlu Perhatian',
@@ -154,7 +185,7 @@ export default function RekapDanPdf() {
       totalSakitGlobal,
       totalJurnalDisetujui,
     };
-  }, [attendances, journals, teachers, periodeKey, selectedTeacherId]);
+  }, [attendances, journals, teachers, periodeKey, selectedTeacherId, hariKerjaEfektif, schoolData]);
 
   // 3. Handler Ekspor PDF Ringkas
   const handleExportRingkasPdf = async () => {
@@ -163,6 +194,7 @@ export default function RekapDanPdf() {
       await exportRingkasPdf({
         schoolData: schoolData || {},
         periode: namaPeriode,
+        hariKerjaEfektif,
         rekapPresensi: filteredData.rekapPresensi,
         rekapKbm: filteredData.monthJournals.map((j) => ({
           tanggal: j.tanggal,
@@ -184,14 +216,16 @@ export default function RekapDanPdf() {
   const handleExportPortofolioPdf = async () => {
     try {
       setExportingType('portofolio');
-      if (filteredData.monthJournals.length === 0) {
-        setNotification({ type: 'warning', text: 'Belum ada data jurnal pada periode ini untuk dijadikan Portofolio.' });
+      // Portofolio akreditasi hanya memuat jurnal yang telah divalidasi Kepala Sekolah
+      const approvedJournals = filteredData.monthJournals.filter((j) => j.status === 'disetujui');
+      if (approvedJournals.length === 0) {
+        setNotification({ type: 'warning', text: 'Belum ada jurnal berstatus DISETUJUI pada periode ini untuk dijadikan Portofolio.' });
         return;
       }
       await exportLengkapPortofolioPdf({
         schoolData: schoolData || {},
         periode: namaPeriode,
-        journals: filteredData.monthJournals,
+        journals: approvedJournals,
       });
     } catch (err) {
       console.error('Error generating Portofolio PDF:', err);
@@ -208,6 +242,7 @@ export default function RekapDanPdf() {
       exportAttendanceToExcel({
         namaSekolah: schoolData?.nama_sekolah || 'SIMFONI PAUD',
         periodeBulan: namaPeriode,
+        hariKerjaEfektif,
         rekapData: filteredData.rekapPresensi,
       });
     } catch (err) {
@@ -224,7 +259,7 @@ export default function RekapDanPdf() {
     const textMsg = 
       `*REKAPITULASI PEMBELAJARAN & KEHADIRAN PAUD*\n` +
       `🏫 *${namaSekolah}*\n` +
-      `📅 Periode: *${namaPeriode}*\n\n` +
+      `📅 Periode: *${namaPeriode}* (${hariKerjaEfektif} hari kerja)\n\n` +
       `📊 *Ringkasan Kehadiran Guru:*\n` +
       `• Hadir Tepat Waktu: ${filteredData.totalHadirGlobal} presensi\n` +
       `• Terlambat: ${filteredData.totalTerlambatGlobal} presensi\n` +
@@ -232,8 +267,7 @@ export default function RekapDanPdf() {
       `• Jurnal KBM Disetujui: ${filteredData.totalJurnalDisetujui} modul\n\n` +
       `_Dibuat secara otomatis melalui Sistem Terintegrasi SIMFONI PAUD._`;
 
-    const encoded = encodeURIComponent(textMsg);
-    window.open(`https://wa.me/?text=${encoded}`, '_blank');
+    window.open(createWhatsAppShareUrl(textMsg), '_blank');
   };
 
   return (
@@ -512,6 +546,7 @@ export default function RekapDanPdf() {
             <h3 className="font-extrabold text-slate-800 text-base font-brand">
               Preview Rekap Presensi Periode {namaPeriode}
             </h3>
+            <span className="hidden sm:inline text-[11px] text-slate-400 font-semibold">({hariKerjaEfektif} hari kerja efektif)</span>
           </div>
           <span className="text-xs text-slate-400 font-bold">
             {filteredData.rekapPresensi.length} Guru
@@ -528,6 +563,7 @@ export default function RekapDanPdf() {
                 <th className="py-3 px-4 text-center">Terlambat</th>
                 <th className="py-3 px-4 text-center">Izin</th>
                 <th className="py-3 px-4 text-center">Sakit</th>
+                <th className="py-3 px-4 text-center">Tanpa Ket.</th>
                 <th className="py-3 px-4 text-center">Tingkat Hadir</th>
                 <th className="py-3 px-4 text-center">Catatan</th>
               </tr>
@@ -535,7 +571,7 @@ export default function RekapDanPdf() {
             <tbody className="divide-y divide-slate-100 font-medium">
               {filteredData.rekapPresensi.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-8 text-center text-slate-400">
+                  <td colSpan={9} className="py-8 text-center text-slate-400">
                     Belum ada data guru pada filter ini.
                   </td>
                 </tr>
@@ -555,12 +591,18 @@ export default function RekapDanPdf() {
                     </td>
                     <td className="py-3.5 px-4 text-center font-bold text-amber-600">
                       {row.terlambat} hari
+                      {row.menitTerlambat > 0 && (
+                        <span className="block text-[10px] font-semibold text-amber-500">{row.menitTerlambat} menit</span>
+                      )}
                     </td>
                     <td className="py-3.5 px-4 text-center text-slate-500">
                       {row.izin} hari
                     </td>
                     <td className="py-3.5 px-4 text-center text-slate-500">
                       {row.sakit} hari
+                    </td>
+                    <td className="py-3.5 px-4 text-center text-rose-500 font-bold">
+                      {row.alpa} hari
                     </td>
                     <td className="py-3.5 px-4 text-center font-extrabold text-slate-700">
                       {row.persentase}

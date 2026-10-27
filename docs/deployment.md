@@ -45,6 +45,17 @@ VITE_FIREBASE_APP_ID=your_app_id
 Buat file `.env.local` pada direktori root proyek dan isi dengan kredensial dari proyek Firebase **`simfoni-paud-dev`**.  
 File ini otomatis diabaikan oleh Git via `.gitignore`.
 
+**Opsional — Firebase Local Emulator Suite:** set `VITE_USE_FIREBASE_EMULATOR=true` (dan `VITE_FIREBASE_PROJECT_ID=demo-simfoni`), lalu jalankan `firebase emulators:start` (port di `firebase.json`: Auth 9099, Firestore 8080, Storage 9199). Data uji tidak menyentuh project dev.
+
+### 2.2a. Secrets Cloudflare Worker (Reset Sandi ke Default)
+Endpoint `/api/admin/reset-password` membutuhkan Service Account Firebase Admin per environment:
+```bash
+# Firebase Console > Project Settings > Service accounts > Generate new private key
+npx wrangler secret put FIREBASE_PROJECT_ID        # simfoni-paud-dev / simfoni-paud-prod
+npx wrangler secret put FIREBASE_SERVICE_ACCOUNT   # tempel seluruh isi JSON service account
+```
+Tanpa secrets ini, endpoint mengembalikan `503` dan aplikasi otomatis memakai fallback tautan reset via email. **Jangan pernah** menaruh JSON service account di repo atau variabel `VITE_*` (akan terbundel ke browser).
+
 ### 2.3. Pengaturan di Cloudflare Pages Dashboard
 1. Buka dashboard Cloudflare: **Workers & Pages** -> Pilih proyek `simfoni-paud`.
 2. Masuk ke **Settings** -> **Environment variables**.
@@ -79,6 +90,7 @@ Atur konfigurasi build pada menu **Settings -> Builds & deployments**:
 Proyek menggunakan Cloudflare Workers with Static Assets yang dikonfigurasi via [`wrangler.jsonc`](wrangler.jsonc):
 * **Build Command (Dashboard):** `npm run build`
 * **Deploy Command (Dashboard):** `npx wrangler deploy`
+* **Worker API:** `"main": "worker/index.js"` dengan `"run_worker_first": ["/api/*"]`; selain `/api/*` disajikan langsung dari static assets (`ASSETS` binding). Membutuhkan Wrangler versi terbaru yang mendukung `run_worker_first` berbentuk array.
 * **Routing SPA Tanpa 404:** Ditangani secara bawaan oleh konfigurasi `"not_found_handling": "single-page-application"` di `wrangler.jsonc`. 
   > [!NOTE]
   > File `_redirects` dengan isi `/* /index.html 200` tidak digunakan pada Cloudflare Workers Assets karena memicu error validasi *infinite loop* (Error Code `100324`). SPA routing ditangani 100% oleh Wrangler.
@@ -96,15 +108,28 @@ Wajib mendaftarkan domain Cloudflare di masing-masing project Firebase agar pros
   * Tambahkan `simfoni-paud.pages.dev` (serta custom domain sekolah jika ada).
 
 ### 4.2. Penerapan Rules & Indeks
-Terapkan aturan keamanan multi-tenant ke kedua proyek Firebase menggunakan Firebase CLI:
+Konfigurasi ada di [`firebase.json`](../firebase.json) dan [`firestore.indexes.json`](../firestore.indexes.json). Terapkan ke kedua proyek Firebase:
 ```powershell
 # 1. Terapkan ke lingkungan DEV
 firebase use simfoni-paud-dev
-firebase deploy --only firestore:rules,storage
+firebase deploy --only firestore:rules,firestore:indexes,storage
 
 # 2. Terapkan ke lingkungan PROD
 firebase use simfoni-paud-prod
-firebase deploy --only firestore:rules,storage
+firebase deploy --only firestore:rules,firestore:indexes,storage
+```
+* Saat deploy `storage.rules` pertama kali, setujui permintaan izin *cross-service rules* (Storage membaca `users` di Firestore).
+* Indeks komposit `attendance`/`journals` (`school_id` + `tanggal`) wajib ada untuk halaman Rekap per bulan, dan `audit_logs` (`school_id` + `timestamp` desc) untuk Riwayat Aktivitas Kepsek.
+* **Setelah deploy rules versi kuota-server**, Superadmin wajib login sekali dan membuka Dashboard agar counter `jumlah_guru_aktif` setiap sekolah tersinkron; sebelum itu Kepsek tidak dapat menambah guru.
+
+### 4.2a. Service Worker (PWA)
+`public/sw.js` didaftarkan otomatis pada build produksi. Saat mengubah strategi cache, naikkan konstanta `CACHE` (mis. `simfoni-shell-v2`) agar cache lama dibersihkan. Aset Vite ber-hash sehingga rilis baru tetap terambil (navigasi selalu *network-first*).
+
+### 4.3. CORS Bucket Storage (Foto & Stempel di PDF)
+Generator PDF memuat logo, stempel, dan foto ke `<canvas>` sehingga bucket memerlukan CORS. Tanpa ini PDF tetap terbentuk, namun gambar dilewati.
+```bash
+# cors.json: [{"origin": ["https://simfoni-paud.pages.dev","https://dev.simfoni-paud.pages.dev","http://localhost:3000"],"method": ["GET"],"maxAgeSeconds": 3600}]
+gsutil cors set cors.json gs://<storage-bucket-project>
 ```
 
 ---
@@ -116,7 +141,7 @@ Pastikan file `public/manifest.json` memuat metadata aplikasi:
 * Short Name: `SIMFONI`
 * Start URL: `/`
 * Display: `standalone`
-* Theme Color: `#2563eb`
+* Theme Color: `#f59e0b` (Warm Honey)
 
 Uji instalasi di smartphone:
 1. Akses link `https://dev.simfoni-paud.pages.dev` atau `https://simfoni-paud.pages.dev` dari Chrome Android / Safari iOS.

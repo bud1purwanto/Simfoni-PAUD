@@ -17,23 +17,29 @@ import {
   RefreshCw,
   HardDrive
 } from 'lucide-react';
-import { 
-  collection, 
-  onSnapshot, 
-  query, 
-  doc, 
-  getDoc, 
-  setDoc, 
-  updateDoc, 
-  writeBatch, 
-  serverTimestamp,
-  getDocs,
-  where
+import {
+  collection,
+  onSnapshot,
+  query,
+  orderBy,
+  limit,
+  doc,
+  setDoc,
+  updateDoc,
+  serverTimestamp
 } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { useAuth } from '../../context/AuthContext';
-import { formatTanggalIndo, formatJamMenit } from '../../utils/formatters';
-import { logActivity } from '../../utils/auditLogger';
+import { countLogsOlderThan, purgeLogsOlderThan, recordCleanup, runAutoRetentionIfDue } from '../../utils/logRetention';
+
+const LOG_DISPLAY_LIMIT = 500;
+const PURGE_OPTIONS = [
+  { value: 30, label: 'Hapus log lebih lama dari 30 hari yang lalu' },
+  { value: 60, label: 'Hapus log lebih lama dari 60 hari yang lalu' },
+  { value: 90, label: 'Hapus log lebih lama dari 90 hari yang lalu' },
+  { value: 'custom', label: 'Rentang kustom (hari)' },
+  { value: 0, label: 'Hapus SELURUH catatan log (Reset Bersih)' },
+];
 
 export default function ManajemenLog() {
   const { userData } = useAuth();
@@ -57,22 +63,21 @@ export default function ManajemenLog() {
   // Modal Purge
   const [purgeModalOpen, setPurgeModalOpen] = useState(false);
   const [purgeDaysOption, setPurgeDaysOption] = useState(60);
+  const [customDays, setCustomDays] = useState(180);
+  const [purgeCounts, setPurgeCounts] = useState({});
   const [isPurging, setIsPurging] = useState(false);
 
   // 1. Ambil Data Real-Time: Logs, Schools, dan System Settings
   useEffect(() => {
     setLoading(true);
 
-    // Ambil Data Audit Logs
-    const unsubLogs = onSnapshot(collection(db, 'audit_logs'), (snap) => {
-      const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      // Urutkan in-memory berdasarkan timestamp terbaru
-      list.sort((a, b) => {
-        const timeA = a.timestamp?.seconds || (a.timestamp ? new Date(a.timestamp).getTime() / 1000 : 0);
-        const timeB = b.timestamp?.seconds || (b.timestamp ? new Date(b.timestamp).getTime() / 1000 : 0);
-        return timeB - timeA;
-      });
-      setLogs(list);
+    // Ambil Audit Logs terbaru saja (hemat kuota baca); pembersihan dihitung di server
+    const qLogs = query(collection(db, 'audit_logs'), orderBy('timestamp', 'desc'), limit(LOG_DISPLAY_LIMIT));
+    const unsubLogs = onSnapshot(qLogs, (snap) => {
+      setLogs(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      setLoading(false);
+    }, (err) => {
+      console.error('Gagal memuat audit log:', err);
       setLoading(false);
     });
 
@@ -107,6 +112,30 @@ export default function ManajemenLog() {
     };
   }, []);
 
+  // Periodic Retention Job: jalan otomatis bila siklus terakhir > 24 jam
+  useEffect(() => {
+    if (!userData?.uid) return;
+    runAutoRetentionIfDue(userData).then((deleted) => {
+      if (deleted) showNotification('success', `Job retensi otomatis membersihkan ${deleted} log usang.`);
+    });
+  }, [userData?.uid]);
+
+  const resolvePurgeDays = (option) => (option === 'custom' ? Math.max(1, Number(customDays) || 1) : option);
+
+  // Hitung jumlah dokumen per opsi langsung di server saat modal dibuka
+  useEffect(() => {
+    if (!purgeModalOpen) return;
+    let active = true;
+    PURGE_OPTIONS.forEach((opt) => {
+      const days = resolvePurgeDays(opt.value);
+      countLogsOlderThan(days)
+        .then((count) => active && setPurgeCounts((prev) => ({ ...prev, [opt.value]: count })))
+        .catch(() => active && setPurgeCounts((prev) => ({ ...prev, [opt.value]: '?' })));
+    });
+    return () => { active = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [purgeModalOpen, customDays]);
+
   const showNotification = (type, message) => {
     setNotification({ type, message });
     setTimeout(() => setNotification(null), 4000);
@@ -134,61 +163,29 @@ export default function ManajemenLog() {
     }
   };
 
-  // Hitung jumlah dokumen yang akan terhapus jika di-purge
-  const getLogsToPurgeCount = (days) => {
-    if (days === 'all') return logs.length;
-    const cutoffTime = Date.now() - Number(days) * 24 * 60 * 60 * 1000;
-    return logs.filter((l) => {
-      const timeMs = l.timestamp?.seconds ? l.timestamp.seconds * 1000 : new Date(l.timestamp).getTime();
-      return timeMs < cutoffTime;
-    }).length;
-  };
-
   // Eksekusi Pembersihan Log Manual (Manual Purge)
   const handleExecutePurge = async () => {
-    const toDeleteCount = getLogsToPurgeCount(purgeDaysOption);
+    const days = resolvePurgeDays(purgeDaysOption);
+    const toDeleteCount = purgeCounts[purgeDaysOption];
     if (toDeleteCount === 0) {
       showNotification('error', 'Tidak ada dokumen log yang memenuhi kriteria untuk dihapus.');
+      return;
+    }
+
+    const label = days === 0 ? 'SELURUH' : `lebih lama dari ${days} hari`;
+    if (!window.confirm(`Yakin ingin menghapus permanen ${toDeleteCount ?? ''} dokumen log ${label}? Tindakan ini tidak dapat dibatalkan.`)) {
       return;
     }
 
     setIsPurging(true);
 
     try {
-      const cutoffTime = purgeDaysOption === 'all' ? Infinity : Date.now() - Number(purgeDaysOption) * 24 * 60 * 60 * 1000;
-      
-      const docsToDelete = logs.filter((l) => {
-        if (purgeDaysOption === 'all') return true;
-        const timeMs = l.timestamp?.seconds ? l.timestamp.seconds * 1000 : new Date(l.timestamp).getTime();
-        return timeMs < cutoffTime;
-      });
+      const deletedCount = await purgeLogsOlderThan(days);
+      await recordCleanup({ deletedCount, days, actor: userData, mode: 'manual' });
 
-      // Hapus dalam batch maksimal 500 dokumen per batch (aturan Firestore)
-      const batchSize = 450;
-      for (let i = 0; i < docsToDelete.length; i += batchSize) {
-        const batch = writeBatch(db);
-        const chunk = docsToDelete.slice(i, i + batchSize);
-        chunk.forEach((item) => {
-          batch.delete(doc(db, 'audit_logs', item.id));
-        });
-        await batch.commit();
-      }
-
-      // Perbarui metadata pembersihan terakhir di system_settings
-      const configDocRef = doc(db, 'system_settings', 'general_config');
-      await updateDoc(configDocRef, {
-        last_cleanup_timestamp: serverTimestamp(),
-        last_cleanup_deleted_count: docsToDelete.length,
-      });
-
-      // Catat aksi pembersihan ke dalam log
-      await logActivity(null, userData.uid, userData.nama, 'PURGE_LOGS', {
-        deletedCount: docsToDelete.length,
-        criteriaDays: purgeDaysOption,
-      });
-
-      showNotification('success', `Berhasil membersihkan ${docsToDelete.length} dokumen log usang!`);
+      showNotification('success', `Berhasil membersihkan ${deletedCount} dokumen log usang!`);
       setPurgeModalOpen(false);
+      setPurgeCounts({});
     } catch (err) {
       console.error('Error purging logs:', err);
       showNotification('error', 'Gagal membersihkan log: ' + err.message);
@@ -462,13 +459,8 @@ export default function ManajemenLog() {
             </p>
 
             <div className="mt-4 space-y-2">
-              {[
-                { value: 30, label: 'Hapus log lebih lama dari 30 hari yang lalu' },
-                { value: 60, label: 'Hapus log lebih lama dari 60 hari yang lalu' },
-                { value: 90, label: 'Hapus log lebih lama dari 90 hari yang lalu' },
-                { value: 'all', label: 'Hapus SELURUH catatan log (Reset Bersih)' },
-              ].map((opt) => {
-                const count = getLogsToPurgeCount(opt.value);
+              {PURGE_OPTIONS.map((opt) => {
+                const count = purgeCounts[opt.value] ?? '…';
                 const isSelected = purgeDaysOption === opt.value;
 
                 return (
@@ -482,7 +474,20 @@ export default function ManajemenLog() {
                         : 'border-slate-200 hover:bg-slate-50 text-slate-700'
                     }`}
                   >
-                    <span>{opt.label}</span>
+                    <span className="flex items-center gap-2">
+                      {opt.label}
+                      {opt.value === 'custom' && (
+                        <input
+                          type="number"
+                          min={1}
+                          max={3650}
+                          value={customDays}
+                          onClick={(e) => e.stopPropagation()}
+                          onChange={(e) => { setCustomDays(e.target.value); setPurgeDaysOption('custom'); }}
+                          className="w-16 px-2 py-1 rounded-lg border border-slate-200 text-xs font-bold"
+                        />
+                      )}
+                    </span>
                     <span
                       className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
                         isSelected ? 'bg-rose-200 text-rose-800' : 'bg-slate-100 text-slate-500'

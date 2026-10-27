@@ -16,8 +16,25 @@ import {
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp, collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { useAuth } from '../../context/AuthContext';
-import { formatTanggalIndo, formatJamMenit } from '../../utils/formatters';
+import { formatTanggalIndo, getLocalDateString, getLocalTimeString, getNamaHari } from '../../utils/formatters';
 import { logActivity } from '../../utils/auditLogger';
+import { commitWrite, QUEUED_SUFFIX } from '../../utils/offlineWrite';
+import {
+  getJamMasuk,
+  getJamPulang,
+  hitungStatusKedatangan,
+  hitungMenitTerlambat,
+  normalizeKelompok,
+  KELOMPOK_SEMUA,
+} from '../../utils/schoolConfig';
+
+const sapaan = () => {
+  const jam = new Date().getHours();
+  if (jam < 11) return 'Selamat Pagi';
+  if (jam < 15) return 'Selamat Siang';
+  if (jam < 18) return 'Selamat Sore';
+  return 'Selamat Malam';
+};
 
 export default function DashboardGuru() {
   const { userData, schoolData } = useAuth();
@@ -30,9 +47,11 @@ export default function DashboardGuru() {
   const [actionLoading, setActionLoading] = useState(false);
   const [msg, setMsg] = useState(null);
 
-  const todayStr = new Date().toISOString().split('T')[0];
-  const daysIndo = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
-  const todayDayName = daysIndo[new Date().getDay()];
+  const todayStr = getLocalDateString();
+  const todayDayName = getNamaHari();
+  const jamMasuk = getJamMasuk(schoolData);
+  const jamPulang = getJamPulang(schoolData);
+  const kelasSaya = normalizeKelompok(userData?.kelompok_kelas);
 
   // Fetch data harian guru
   useEffect(() => {
@@ -72,7 +91,21 @@ export default function DashboardGuru() {
         );
         const schedSnap = await getDocs(qSchedule);
         if (isMounted) {
-          const scheds = schedSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+          // Tampilkan jadwal kelas sendiri, kegiatan bersama, atau yang PIC-nya guru ini
+          const scheds = schedSnap.docs
+            .map(d => ({ id: d.id, ...d.data() }))
+            .filter((item) => {
+              const klp = normalizeKelompok(item.kelompok);
+              return (
+                !kelasSaya ||
+                kelasSaya === KELOMPOK_SEMUA ||
+                klp === KELOMPOK_SEMUA ||
+                klp === kelasSaya ||
+                item.pic_guru_id === userData.uid ||
+                item.pic_guru_id === 'all'
+              );
+            })
+            .sort((a, b) => (a.jam_mulai || '').localeCompare(b.jam_mulai || ''));
           setTodaySchedule(scheds);
         }
       } catch (err) {
@@ -84,7 +117,7 @@ export default function DashboardGuru() {
 
     fetchDashboardData();
     return () => { isMounted = false; };
-  }, [userData, todayStr, todayDayName]);
+  }, [userData?.uid, userData?.school_id, kelasSaya, todayStr, todayDayName]);
 
   // Aksi Absen Datang
   const handleAbsenDatang = async () => {
@@ -92,11 +125,13 @@ export default function DashboardGuru() {
     setMsg(null);
     try {
       const now = new Date();
-      const jamDevice = now.toTimeString().split(' ')[0]; // '07:30:15'
+      const jamDevice = getLocalTimeString(now); // '07:30:15' (jam HP, aman dari delay sinkronisasi)
       const docId = `${userData.school_id}_${todayStr}_${userData.uid}`;
 
-      // Status keterlambatan sederhana (jika lewat jam 07:45)
-      const isLate = now.getHours() > 7 || (now.getHours() === 7 && now.getMinutes() > 45);
+      // Status keterlambatan dihitung dari jam masuk + toleransi yang diatur sekolah
+      const statusDatang = hitungStatusKedatangan(jamDevice, schoolData);
+      const menitTerlambat = hitungMenitTerlambat(jamDevice, schoolData);
+      const isLate = statusDatang === 'terlambat';
 
       const payload = {
         id: docId,
@@ -108,9 +143,10 @@ export default function DashboardGuru() {
         jam_datang_device: jamDevice,
         jam_pulang_server: null,
         jam_pulang_device: null,
-        status: isLate ? 'terlambat' : 'hadir',
+        status: statusDatang,
+        menit_terlambat: menitTerlambat,
         status_pulang: 'belum_absen',
-        catatan: isLate ? 'Terlambat masuk sekolah' : 'Tepat waktu',
+        catatan: isLate ? `Terlambat ${menitTerlambat} menit` : 'Tepat waktu',
         lokasi: null,
         koreksi: {
           diajukan: false,
@@ -124,10 +160,10 @@ export default function DashboardGuru() {
         updated_at: serverTimestamp(),
       };
 
-      await setDoc(doc(db, 'attendance', docId), payload);
+      const { queued } = await commitWrite(setDoc(doc(db, 'attendance', docId), payload));
       setTodayAttendance(payload);
 
-      await logActivity({
+      logActivity({
         schoolId: userData.school_id,
         actorId: userData.uid,
         actorNama: userData.nama,
@@ -136,7 +172,10 @@ export default function DashboardGuru() {
         recordId: docId,
       });
 
-      setMsg({ type: 'success', text: `Berhasil mencatat kehadiran pukul ${jamDevice} WIB.` });
+      setMsg({
+        type: 'success',
+        text: `Berhasil mencatat kehadiran pukul ${jamDevice.slice(0, 5)}.${queued ? QUEUED_SUFFIX : ''}`,
+      });
     } catch (err) {
       console.error(err);
       setMsg({ type: 'error', text: 'Gagal melakukan presensi datang. Silakan coba lagi.' });
@@ -150,8 +189,7 @@ export default function DashboardGuru() {
     setActionLoading(true);
     setMsg(null);
     try {
-      const now = new Date();
-      const jamDevice = now.toTimeString().split(' ')[0];
+      const jamDevice = getLocalTimeString();
       const docId = `${userData.school_id}_${todayStr}_${userData.uid}`;
 
       const updateData = {
@@ -161,10 +199,10 @@ export default function DashboardGuru() {
         updated_at: serverTimestamp(),
       };
 
-      await updateDoc(doc(db, 'attendance', docId), updateData);
+      const { queued } = await commitWrite(updateDoc(doc(db, 'attendance', docId), updateData));
       setTodayAttendance(prev => ({ ...prev, ...updateData }));
 
-      await logActivity({
+      logActivity({
         schoolId: userData.school_id,
         actorId: userData.uid,
         actorNama: userData.nama,
@@ -173,7 +211,10 @@ export default function DashboardGuru() {
         recordId: docId,
       });
 
-      setMsg({ type: 'success', text: `Presensi pulang berhasil dicatat pukul ${jamDevice} WIB. Selamat beristirahat!` });
+      setMsg({
+        type: 'success',
+        text: `Presensi pulang berhasil dicatat pukul ${jamDevice.slice(0, 5)}. Selamat beristirahat!${queued ? QUEUED_SUFFIX : ''}`,
+      });
     } catch (err) {
       console.error(err);
       setMsg({ type: 'error', text: 'Gagal mencatat presensi pulang.' });
@@ -194,15 +235,13 @@ export default function DashboardGuru() {
           <div className="inline-flex items-center space-x-2 px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-bold mb-3 border border-white/20">
             <Sun className="w-3.5 h-3.5 text-amber-200" />
             <span>{formatTanggalIndo(new Date())}</span>
-            <span>•</span>
-            <span>Cerah & Ceria ☀️</span>
           </div>
 
           <h1 className="text-xl md:text-3xl font-extrabold tracking-tight font-brand">
-            Semangat Pagi, {userData?.nama || 'Ibu Guru'}! 👋
+            {sapaan()}, {userData?.nama || 'Bapak/Ibu Guru'}! 👋
           </h1>
           <p className="text-xs md:text-sm text-amber-50 mt-1.5 leading-relaxed font-medium">
-            Mendampingi <strong>Kelompok {userData?.kelompok_kelas || 'TK A'}</strong> di {schoolData?.nama_sekolah || 'TK Dharma Wanita Persatuan 8'}. Semoga hari ini penuh senyum, tawa, dan kreasi buah hati!
+            Mendampingi <strong>Kelompok {kelasSaya || '-'}</strong> di {schoolData?.nama_sekolah || 'sekolah Anda'}. Semoga hari ini penuh senyum, tawa, dan kreasi buah hati!
           </p>
         </div>
       </div>
@@ -247,7 +286,7 @@ export default function DashboardGuru() {
                     ? 'bg-amber-50 text-amber-800 border-amber-300'
                     : 'bg-slate-100 text-slate-700 border-slate-300'
                 }`}>
-                  <span>{todayAttendance.status === 'hadir' ? '🌸' : '⏳'}</span>
+                  <span>{todayAttendance.status === 'hadir' ? '🌸' : todayAttendance.status === 'terlambat' ? '⏳' : '📝'}</span>
                   <span className="capitalize">{todayAttendance.status}</span>
                 </span>
               )}
@@ -262,7 +301,7 @@ export default function DashboardGuru() {
                   {todayAttendance?.jam_datang_device ? `${todayAttendance.jam_datang_device.slice(0, 5)} WIB` : 'Belum Absen'}
                 </span>
                 <span className="text-[10px] text-emerald-600 font-medium mt-0.5 block">
-                  {todayAttendance ? '✅ Tercatat di sistem' : 'Menunggu Anda'}
+                  {todayAttendance ? '✅ Tercatat di sistem' : `Jam masuk ${jamMasuk}`}
                 </span>
               </div>
 
@@ -274,7 +313,7 @@ export default function DashboardGuru() {
                   {todayAttendance?.jam_pulang_device ? `${todayAttendance.jam_pulang_device.slice(0, 5)} WIB` : 'Belum Absen'}
                 </span>
                 <span className="text-[10px] text-amber-600 font-medium mt-0.5 block">
-                  {todayAttendance?.jam_pulang_device ? '✅ Selesai bertugas' : '⏳ Jadwal 11:30'}
+                  {todayAttendance?.jam_pulang_device ? '✅ Selesai bertugas' : `⏳ Jadwal ${jamPulang}`}
                 </span>
               </div>
             </div>
@@ -282,19 +321,31 @@ export default function DashboardGuru() {
 
           <div className="pt-2">
             {!todayAttendance ? (
-              <button
-                onClick={handleAbsenDatang}
-                disabled={actionLoading}
-                className="w-full py-4 px-5 rounded-2xl font-extrabold text-xs text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 active:scale-98 shadow-md shadow-emerald-500/25 transition flex items-center justify-center space-x-2"
-              >
-                <Clock className="w-4 h-4 stroke-[2.5]" />
-                <span>{actionLoading ? 'Mencatat Kehadiran...' : 'Sentuh untuk Absen Datang (07:15)'}</span>
-              </button>
+              <div className="space-y-2">
+                <button
+                  onClick={handleAbsenDatang}
+                  disabled={actionLoading || loading}
+                  className="w-full py-4 px-5 rounded-2xl font-extrabold text-xs text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 active:scale-98 shadow-md shadow-emerald-500/25 transition flex items-center justify-center space-x-2 disabled:opacity-60"
+                >
+                  <Clock className="w-4 h-4 stroke-[2.5]" />
+                  <span>{actionLoading ? 'Mencatat Kehadiran...' : loading ? 'Memuat...' : 'Sentuh untuk Absen Datang'}</span>
+                </button>
+                <button
+                  onClick={() => navigate('/guru/presensi?izin=1')}
+                  className="w-full py-2.5 rounded-2xl text-[11px] font-bold text-slate-500 hover:text-orange-700 hover:bg-orange-50 transition"
+                >
+                  Berhalangan hadir? Ajukan Izin / Sakit
+                </button>
+              </div>
+            ) : ['izin', 'sakit'].includes(todayAttendance.status) ? (
+              <div className="w-full py-3 rounded-2xl bg-slate-50 border border-slate-200 text-slate-700 text-center text-xs font-bold">
+                📝 Tercatat {todayAttendance.status} hari ini. Semoga lekas membaik & urusan lancar.
+              </div>
             ) : !todayAttendance.jam_pulang_device ? (
               <button
                 onClick={handleAbsenPulang}
                 disabled={actionLoading}
-                className="w-full py-4 px-5 rounded-2xl font-extrabold text-xs text-white bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 active:scale-98 shadow-md shadow-orange-500/25 transition flex items-center justify-center space-x-2"
+                className="w-full py-4 px-5 rounded-2xl font-extrabold text-xs text-white bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 active:scale-98 shadow-md shadow-orange-500/25 transition flex items-center justify-center space-x-2 disabled:opacity-60"
               >
                 <Coffee className="w-4 h-4 stroke-[2.5]" />
                 <span>{actionLoading ? 'Mencatat Checkout...' : 'Sentuh untuk Absen Pulang'}</span>
@@ -336,7 +387,7 @@ export default function DashboardGuru() {
                     ? 'bg-blue-50 text-blue-800 border-blue-300'
                     : 'bg-amber-50 text-amber-800 border-amber-300'
                 }`}>
-                  {todayJournal.status}
+                  {todayJournal.status.replace('_', ' ')}
                 </span>
               )}
             </div>
@@ -392,7 +443,7 @@ export default function DashboardGuru() {
             </div>
             <div>
               <h3 className="text-sm font-extrabold text-slate-800 font-brand">
-                Jadwal Sentra & Kelas Hari Ini ({todayDayName})
+                Jadwal Kelas Saya Hari Ini ({todayDayName})
               </h3>
               <p className="text-[11px] text-slate-400">Roster kegiatan harian sekolah</p>
             </div>

@@ -19,7 +19,7 @@ import {
 import { collection, query, where, onSnapshot, getDocs } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { useAuth } from '../../context/AuthContext';
-import { formatTanggalIndo, formatJamMenit } from '../../utils/formatters';
+import { formatTanggalIndo, formatJamMenit, getLocalDateString } from '../../utils/formatters';
 
 export default function DashboardKepsek() {
   const { userData, schoolData } = useAuth();
@@ -32,7 +32,7 @@ export default function DashboardKepsek() {
   const [pendingIssues, setPendingIssues] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = getLocalDateString();
   const now = new Date();
   const isAfter18 = now.getHours() >= 18;
 
@@ -66,11 +66,21 @@ export default function DashboardKepsek() {
     const unsubAttendance = onSnapshot(qAttendance, (snap) => {
       const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
       setTodayAttendance(list);
-
-      // Saring pengajuan koreksi yang menunggu persetujuan
-      const corrections = list.filter((a) => a.koreksi?.status_koreksi === 'menunggu');
-      setPendingCorrections(corrections);
     });
+
+    // 2b. Pengajuan koreksi presensi yang menunggu keputusan (semua tanggal, bukan hanya hari ini)
+    const qCorrections = query(
+      collection(db, 'attendance'),
+      where('school_id', '==', userData.school_id),
+      where('koreksi.status_koreksi', '==', 'menunggu'),
+      where('koreksi.diajukan', '==', true)
+    );
+
+    const unsubCorrections = onSnapshot(
+      qCorrections,
+      (snap) => setPendingCorrections(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
+      (err) => console.warn('Gagal memuat antrean koreksi:', err)
+    );
 
     // 3. Ambil Antrean Jurnal KBM yang Perlu Direview ('dikirim')
     const qJournals = query(
@@ -92,15 +102,23 @@ export default function DashboardKepsek() {
       where('status', '==', 'dilaporkan')
     );
 
-    const unsubIssues = onSnapshot(qIssues, (snap) => {
-      const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      setPendingIssues(list);
-      setLoading(false);
-    });
+    const unsubIssues = onSnapshot(
+      qIssues,
+      (snap) => {
+        const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        setPendingIssues(list);
+        setLoading(false);
+      },
+      (err) => {
+        console.warn('Gagal memuat laporan kendala:', err);
+        setLoading(false);
+      }
+    );
 
     return () => {
       unsubTeachers();
       unsubAttendance();
+      unsubCorrections();
       unsubJournals();
       unsubIssues();
     };
@@ -111,13 +129,17 @@ export default function DashboardKepsek() {
   const kuotaGuru = schoolData?.kuota_guru || 5;
   const kuotaTerpakai = activeTeachers.length;
 
-  const hadirCount = todayAttendance.filter((a) => a.status === 'hadir').length;
-  const terlambatCount = todayAttendance.filter((a) => a.status === 'terlambat').length;
-  const belumAbsenCount = Math.max(0, activeTeachers.length - todayAttendance.length);
+  // Hanya hitung presensi milik guru aktif (bukan presensi Kepsek sendiri / guru nonaktif)
+  const activeTeacherIds = new Set(activeTeachers.map((t) => t.id));
+  const teacherAttendance = todayAttendance.filter((a) => activeTeacherIds.has(a.user_id));
+  const hadirCount = teacherAttendance.filter((a) => a.status === 'hadir').length;
+  const terlambatCount = teacherAttendance.filter((a) => a.status === 'terlambat').length;
+  const izinSakitCount = teacherAttendance.filter((a) => a.status === 'izin' || a.status === 'sakit').length;
+  const belumAbsenCount = Math.max(0, activeTeachers.length - teacherAttendance.length);
 
   // Deteksi Lupa Absen Pulang (Sudah masuk tapi belum checkout setelah jam 18:00)
-  const lupaPulangList = todayAttendance.filter(
-    (a) => a.jam_datang_device && !a.jam_pulang_device && isAfter18
+  const lupaPulangList = teacherAttendance.filter(
+    (a) => ['hadir', 'terlambat'].includes(a.status) && a.jam_datang_device && !a.jam_pulang_device && isAfter18
   );
 
   return (
@@ -140,7 +162,7 @@ export default function DashboardKepsek() {
             Selamat Datang, {userData?.nama || 'Kepala Sekolah'}! 🌸
           </h1>
           <p className="text-xs md:text-sm text-amber-50 mt-1.5 leading-relaxed font-medium">
-            Monitoring aktivitas harian guru, review jurnal KBM Kurikulum Merdeka, dan pengelolaan administrasi di <strong>{schoolData?.nama_sekolah || 'TK Dharma Wanita Persatuan 8'}</strong>.
+            Monitoring aktivitas harian guru, review jurnal KBM Kurikulum Merdeka, dan pengelolaan administrasi di <strong>{schoolData?.nama_sekolah || 'sekolah Anda'}</strong>.
           </p>
         </div>
       </div>
@@ -183,7 +205,7 @@ export default function DashboardKepsek() {
               {hadirCount + terlambatCount} <span className="text-sm text-slate-400 font-semibold">/ {activeTeachers.length} Guru</span>
             </div>
             <p className="text-[11px] text-emerald-700 mt-0.5 font-medium">
-              {hadirCount} tepat waktu, {terlambatCount} terlambat
+              {hadirCount} tepat waktu, {terlambatCount} terlambat{izinSakitCount > 0 ? `, ${izinSakitCount} izin/sakit` : ''}
             </p>
           </div>
         </div>
@@ -233,6 +255,14 @@ export default function DashboardKepsek() {
         </div>
 
       </div>
+
+      <button
+        onClick={() => navigate('/kepsek/riwayat')}
+        className="md:hidden w-full p-3.5 rounded-2xl bg-white border border-orange-200/70 text-xs font-extrabold text-orange-800 flex items-center justify-between shadow-xs"
+      >
+        <span>🕘 Riwayat Aktivitas Sekolah</span>
+        <ArrowRight className="w-4 h-4" />
+      </button>
 
       {/* 3. Banner Notifikasi Spesial: Deteksi Lupa Absen Pulang */}
       {lupaPulangList.length > 0 && (
@@ -304,6 +334,15 @@ export default function DashboardKepsek() {
               const isHadir = att?.status === 'hadir';
               const isTerlambat = att?.status === 'terlambat';
               const isBelumAbsen = !att;
+              const isIzinSakit = att?.status === 'izin' || att?.status === 'sakit';
+              // Dual Timestamp: selisih besar antara jam HP dan jam server bisa berarti sinkron
+              // tertunda (sinyal lemah) ATAU jam HP diubah. Ditampilkan netral sebagai bahan pertimbangan.
+              const serverDate = att?.jam_datang_server?.toDate?.();
+              const selisihJamHp = serverDate && att?.jam_datang_device
+                ? Math.round(((Number(att.jam_datang_device.slice(0, 2)) * 60 + Number(att.jam_datang_device.slice(3, 5)))
+                    - (serverDate.getHours() * 60 + serverDate.getMinutes())))
+                : 0;
+              const selisihBesar = Math.abs(selisihJamHp) > 15;
 
               return (
                 <div
@@ -331,6 +370,11 @@ export default function DashboardKepsek() {
                       <span>•</span>
                       <span>Pulang: <strong className="text-slate-700">{att?.jam_pulang_device ? formatJamMenit(att.jam_pulang_device) : '-'}</strong></span>
                     </div>
+                    {selisihBesar && (
+                      <div className="text-[10px] font-semibold text-amber-700" title="Selisih jam HP saat tombol ditekan dengan jam diterima server">
+                        ℹ️ Diterima server {formatJamMenit(serverDate)} (selisih {Math.abs(selisihJamHp)} menit dari jam HP)
+                      </div>
+                    )}
                   </div>
 
                   <div>
@@ -344,6 +388,11 @@ export default function DashboardKepsek() {
                       <span className="px-3 py-1 bg-amber-100 text-amber-800 rounded-xl text-xs font-extrabold border border-amber-300 flex items-center space-x-1">
                         <span>⏳</span>
                         <span>Terlambat</span>
+                      </span>
+                    )}
+                    {isIzinSakit && (
+                      <span title={att.catatan || ''} className="px-3 py-1 bg-sky-50 text-sky-800 rounded-xl text-xs font-extrabold border border-sky-200 capitalize">
+                        📝 {att.status}
                       </span>
                     )}
                     {isBelumAbsen && (
