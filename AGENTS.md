@@ -5,6 +5,19 @@ File ini merupakan **Master Blueprint & Global Entrypoint** yang wajib dibaca da
 
 ---
 
+## 🛑 ATURAN MUTLAK: DILARANG AUTO-COMMIT & AUTO-PUSH KE GIT!
+
+> [!CAUTION]
+> ### ⛔ MANDATORY REVIEW POLICY: DILARANG AUTO-COMMIT & AUTO-PUSH
+> **AI Agent (Antigravity) DILARANG KERAS melakukan `git commit` dan `git push` secara otomatis / sepihak.**
+> 
+> **Aturan Operasional:**
+> 1. Setiap penambahan, penghapusan, atau perubahan kode/dokumen **HANYA** boleh diterapkan di *working directory* lokal.
+> 2. AI Agent wajib menyajikan ringkasan perubahan kepada Pengguna dan **menunggu Pengguna melakukan review manual terlebih dahulu**.
+> 3. Perintah `git commit` maupun `git push` **HANYA** boleh dieksekusi jika dan hanya jika Pengguna memberikan instruksi eksplisit (misal: *"commit sekarang"*, *"push ke github"*). Dilarang berinisiatif melakukan commit/push sendiri!
+
+---
+
 ## ⚠️ ATURAN EMAS: SINKRONISASI ATURAN KECIL DI `.md` JIKA ADA PERUBAHAN BESAR
 
 > [!CAUTION]

@@ -49,6 +49,13 @@ Dokumen ini berisi pedoman penulisan kode, konvensi teknis multi-tenant, alur ke
 
 ## 3. Alur Kerja Git & Siklus Rilis (Git Workflow: Dev vs Prod)
 
+> [!CAUTION]
+> ### ⛔ ATURAN MUTLAK GIT: DILARANG AUTO-COMMIT & AUTO-PUSH!
+> **AI Agent DILARANG KERAS melakukan `git commit` dan `git push` secara otomatis/mandiri.**
+> 1. Perubahan hanya diterapkan di *working directory* lokal.
+> 2. Berikan kesempatan kepada Pengguna untuk me-review hasil kerja secara menyeluruh.
+> 3. `git commit` dan `git push` HANYA dieksekusi setelah ada instruksi perintah eksplisit dari Pengguna!
+
 Untuk melindungi data sekolah mitra yang sedang aktif, pengembang **dilarang langsung membuat fitur baru di branch `main`**. Ikuti alur kerja berikut:
 
 ```mermaid
