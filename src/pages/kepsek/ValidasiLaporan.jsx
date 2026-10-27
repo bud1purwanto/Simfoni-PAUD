@@ -16,7 +16,8 @@ import {
   Layers,
   ArrowRight,
   Send,
-  Lock
+  Lock,
+  Wrench
 } from 'lucide-react';
 import { 
   collection, 
@@ -30,16 +31,37 @@ import {
 } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { useAuth } from '../../context/AuthContext';
-import { formatTanggalIndo, formatJamMenit } from '../../utils/formatters';
+import { formatTanggalIndo } from '../../utils/formatters';
 import { logActivity } from '../../utils/auditLogger';
+import { hitungStatusKedatangan, hitungMenitTerlambat } from '../../utils/schoolConfig';
+
+const JOURNAL_STATUS_LABEL = { draf: 'Draf', dikirim: 'Dikirim', perlu_revisi: 'Perlu Revisi', disetujui: 'Disetujui' };
+const KATEGORI_LABEL = {
+  laporan_kegiatan: 'Tugas Tambahan',
+  administrasi_guru: 'Administrasi',
+  laporan_kendala: 'Kendala Sarpras',
+};
+const TASK_STATUS_STYLE = {
+  dilaporkan: 'bg-amber-50 text-amber-800 border-amber-200',
+  diproses: 'bg-sky-50 text-sky-800 border-sky-200',
+  selesai: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+};
 
 export default function ValidasiLaporan() {
   const { userData, schoolData } = useAuth();
   const isProPlan = schoolData?.paket_langganan === 'pro';
 
-  const [activeTab, setActiveTab] = useState('jurnal'); // 'jurnal' | 'koreksi'
+  const [activeTab, setActiveTab] = useState('jurnal'); // 'jurnal' | 'koreksi' | 'tugas'
   const [journals, setJournals] = useState([]);
   const [corrections, setCorrections] = useState([]);
+  const [tasks, setTasks] = useState([]);
+  const [taskFilter, setTaskFilter] = useState('aktif'); // 'aktif' | 'semua'
+
+  // Modal Tanggapan Tugas & Kendala
+  const [selectedTask, setSelectedTask] = useState(null);
+  const [taskResponse, setTaskResponse] = useState('');
+  const [taskStatus, setTaskStatus] = useState('diproses');
+  const [savingTask, setSavingTask] = useState(false);
   const [loading, setLoading] = useState(true);
   const [notification, setNotification] = useState(null);
 
@@ -77,29 +99,52 @@ export default function ValidasiLaporan() {
     );
 
     const unsubJournals = onSnapshot(qJournals, (snap) => {
-      const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      // Draf adalah ruang kerja pribadi guru, tidak ditampilkan ke Kepala Sekolah
+      const list = snap.docs
+        .map((d) => ({ id: d.id, ...d.data() }))
+        .filter((j) => j.status !== 'draf');
       list.sort((a, b) => (b.tanggal || '').localeCompare(a.tanggal || ''));
       setJournals(list);
+      setLoading(false);
+    }, (err) => {
+      console.warn('Gagal memuat jurnal:', err);
+      setLoading(false);
     });
 
-    // 2. Ambil Riwayat Presensi dengan Pengajuan Koreksi
+    // 2. Ambil Presensi yang memiliki Pengajuan Koreksi (tanpa memuat seluruh riwayat presensi)
     const qAttendance = query(
       collection(db, 'attendance'),
-      where('school_id', '==', userData.school_id)
+      where('school_id', '==', userData.school_id),
+      where('koreksi.diajukan', '==', true)
     );
 
     const unsubAttendance = onSnapshot(qAttendance, (snap) => {
-      const list = snap.docs
-        .map((d) => ({ id: d.id, ...d.data() }))
-        .filter((a) => a.koreksi?.diajukan === true);
-      list.sort((a, b) => (b.tanggal || '').localeCompare(a.tanggal || ''));
+      const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      // Yang menunggu keputusan tampil paling atas
+      list.sort((a, b) => {
+        const pa = a.koreksi?.status_koreksi === 'menunggu' ? 0 : 1;
+        const pb = b.koreksi?.status_koreksi === 'menunggu' ? 0 : 1;
+        return pa - pb || (b.tanggal || '').localeCompare(a.tanggal || '');
+      });
       setCorrections(list);
-      setLoading(false);
-    });
+    }, (err) => console.warn('Gagal memuat koreksi presensi:', err));
+
+    // 3. Ambil Laporan Tugas Tambahan, Administrasi & Kendala Sarpras
+    const qTasks = query(
+      collection(db, 'tasks_and_issues'),
+      where('school_id', '==', userData.school_id)
+    );
+
+    const unsubTasks = onSnapshot(qTasks, (snap) => {
+      const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      list.sort((a, b) => (b.tanggal || '').localeCompare(a.tanggal || ''));
+      setTasks(list);
+    }, (err) => console.warn('Gagal memuat laporan tugas & kendala:', err));
 
     return () => {
       unsubJournals();
       unsubAttendance();
+      unsubTasks();
     };
   }, [userData?.school_id]);
 
@@ -129,24 +174,28 @@ export default function ValidasiLaporan() {
 
   // EKSEKUSI BULK APPROVAL (Setujui Sekaligus)
   const handleBulkApprove = async () => {
-    if (selectedJournalIds.length === 0) return;
-    if (!window.confirm(`Setujui sekaligus ${selectedJournalIds.length} jurnal KBM terpilih?`)) return;
+    // Hanya jurnal yang masih berstatus 'dikirim' (bisa berubah realtime sejak dipilih)
+    const pendingIds = new Set(pendingJournals.map((j) => j.id));
+    const targetIds = selectedJournalIds.filter((id) => pendingIds.has(id));
+    if (targetIds.length === 0) return;
+    if (!window.confirm(`Setujui sekaligus ${targetIds.length} jurnal KBM terpilih?`)) return;
 
     setBulkProcessing(true);
     try {
-      const batch = writeBatch(db);
-
-      selectedJournalIds.forEach((id) => {
-        const ref = doc(db, 'journals', id);
-        batch.update(ref, {
-          status: 'disetujui',
-          review_note: '',
-          reviewed_at: serverTimestamp(),
-          updated_at: serverTimestamp(),
+      // Batas Firestore 500 operasi per batch
+      for (let i = 0; i < targetIds.length; i += 450) {
+        const batch = writeBatch(db);
+        targetIds.slice(i, i + 450).forEach((id) => {
+          batch.update(doc(db, 'journals', id), {
+            status: 'disetujui',
+            review_note: '',
+            reviewed_at: serverTimestamp(),
+            reviewed_by: userData.uid,
+            updated_at: serverTimestamp(),
+          });
         });
-      });
-
-      await batch.commit();
+        await batch.commit();
+      }
 
       await logActivity({
         schoolId: userData.school_id,
@@ -154,12 +203,13 @@ export default function ValidasiLaporan() {
         actorNama: userData.nama,
         action: 'BULK_APPROVE_JOURNALS',
         recordType: 'journals',
-        recordId: `${selectedJournalIds.length}_DOCS`,
+        recordId: `${targetIds.length}_DOCS`,
+        detail: { jumlah: targetIds.length },
       });
 
       setNotification({
         type: 'success',
-        text: `Berhasil menyetujui ${selectedJournalIds.length} jurnal mengajar secara serentak!`,
+        text: `Berhasil menyetujui ${targetIds.length} jurnal mengajar secara serentak!`,
       });
 
       setSelectedJournalIds([]);
@@ -178,6 +228,7 @@ export default function ValidasiLaporan() {
         status: 'disetujui',
         review_note: '',
         reviewed_at: serverTimestamp(),
+        reviewed_by: userData.uid,
         updated_at: serverTimestamp(),
       });
 
@@ -212,6 +263,7 @@ export default function ValidasiLaporan() {
         status: 'perlu_revisi',
         review_note: revisionNote.trim(),
         reviewed_at: serverTimestamp(),
+        reviewed_by: userData.uid,
         updated_at: serverTimestamp(),
       });
 
@@ -249,13 +301,18 @@ export default function ValidasiLaporan() {
         updated_at: serverTimestamp(),
       };
 
-      // Jika disetujui, update jam kedatangan/pulang resmi dengan jam ajuan
+      // Jika disetujui, update jam kedatangan/pulang resmi dengan jam ajuan,
+      // lalu hitung ulang status keterlambatan sesuai jam masuk sekolah
       if (isApproved) {
-        if (selectedCorrection.koreksi.jam_datang_ajuan) {
-          updatePayload.jam_datang_device = selectedCorrection.koreksi.jam_datang_ajuan;
+        const { jam_datang_ajuan: jamDatang, jam_pulang_ajuan: jamPulang } = selectedCorrection.koreksi;
+        if (jamDatang) {
+          updatePayload.jam_datang_device = `${jamDatang.slice(0, 5)}:00`;
+          updatePayload.status = hitungStatusKedatangan(jamDatang, schoolData);
+          updatePayload.menit_terlambat = hitungMenitTerlambat(jamDatang, schoolData);
         }
-        if (selectedCorrection.koreksi.jam_pulang_ajuan) {
-          updatePayload.jam_pulang_device = selectedCorrection.koreksi.jam_pulang_ajuan;
+        if (jamPulang) {
+          updatePayload.jam_pulang_device = `${jamPulang.slice(0, 5)}:00`;
+          updatePayload.status_pulang = 'selesai';
         }
       }
 
@@ -282,6 +339,47 @@ export default function ValidasiLaporan() {
     }
   };
 
+  // Tanggapi Laporan Tugas Tambahan / Kendala Sarpras
+  const openTaskModal = (task) => {
+    setSelectedTask(task);
+    setTaskResponse(task.tanggapan_kepsek || '');
+    setTaskStatus(task.status === 'dilaporkan' ? 'diproses' : task.status);
+  };
+
+  const handleSaveTaskResponse = async (e) => {
+    e.preventDefault();
+    if (!selectedTask) return;
+    setSavingTask(true);
+    try {
+      await updateDoc(doc(db, 'tasks_and_issues', selectedTask.id), {
+        status: taskStatus,
+        tanggapan_kepsek: taskResponse.trim(),
+        ditanggapi_at: serverTimestamp(),
+        updated_at: serverTimestamp(),
+      });
+
+      logActivity({
+        schoolId: userData.school_id,
+        actorId: userData.uid,
+        actorNama: userData.nama,
+        action: 'RESPOND_TASK_OR_ISSUE',
+        recordType: 'tasks_and_issues',
+        recordId: selectedTask.id,
+        detail: { status: taskStatus },
+      });
+
+      setNotification({ type: 'success', text: `Tanggapan untuk "${selectedTask.judul}" tersimpan.` });
+      setSelectedTask(null);
+    } catch (err) {
+      alert('Gagal menyimpan tanggapan: ' + err.message);
+    } finally {
+      setSavingTask(false);
+    }
+  };
+
+  const pendingTasksCount = tasks.filter((t) => t.status === 'dilaporkan').length;
+  const filteredTasks = taskFilter === 'aktif' ? tasks.filter((t) => t.status !== 'selesai') : tasks;
+
   return (
     <div className="space-y-6 max-w-6xl mx-auto pb-12">
       
@@ -305,7 +403,7 @@ export default function ValidasiLaporan() {
           </div>
 
           {/* Tab Switcher Antara Jurnal vs Koreksi Absen */}
-          <div className="flex items-center space-x-2 bg-black/20 p-1.5 rounded-2xl backdrop-blur-sm self-start md:self-auto font-brand">
+          <div className="flex items-center space-x-2 bg-black/20 p-1.5 rounded-2xl backdrop-blur-sm self-start md:self-auto font-brand overflow-x-auto max-w-full">
             <button
               onClick={() => setActiveTab('jurnal')}
               className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-2 ${
@@ -326,6 +424,17 @@ export default function ValidasiLaporan() {
               <span>Koreksi Absen</span>
               <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-rose-100 text-rose-800">
                 {corrections.filter((c) => c.koreksi?.status_koreksi === 'menunggu').length}
+              </span>
+            </button>
+            <button
+              onClick={() => setActiveTab('tugas')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-2 ${
+                activeTab === 'tugas' ? 'bg-white text-orange-700 shadow-sm' : 'text-white/80 hover:text-white'
+              }`}
+            >
+              <span>Tugas & Kendala</span>
+              <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-amber-100 text-amber-800">
+                {pendingTasksCount}
               </span>
             </button>
           </div>
@@ -459,7 +568,7 @@ export default function ValidasiLaporan() {
                             ? 'bg-blue-50 text-blue-800 border-blue-300'
                             : 'bg-slate-100 text-slate-600 border-slate-200'
                         }`}>
-                          {journal.status}
+                          {JOURNAL_STATUS_LABEL[journal.status] || journal.status}
                         </span>
                       </div>
 
@@ -595,7 +704,7 @@ export default function ValidasiLaporan() {
                         <div>
                           <span className="text-[10px] text-slate-400 block font-semibold">Jam Tercatat Asli:</span>
                           <span className="font-bold text-slate-700">
-                            Masuk: {item.jam_datang_device || '-'} | Pulang: {item.jam_pulang_device || '-'}
+                            Masuk: {item.jam_datang_device?.slice(0, 5) || '-'} | Pulang: {item.jam_pulang_device?.slice(0, 5) || '-'}
                           </span>
                         </div>
                         <div>
@@ -637,6 +746,144 @@ export default function ValidasiLaporan() {
         </div>
       )}
 
+      {/* TAMPILAN 3: TUGAS TAMBAHAN, ADMINISTRASI & KENDALA SARPRAS */}
+      {activeTab === 'tugas' && (
+        <div className="bg-white rounded-3xl p-6 border border-orange-200/70 shadow-sm space-y-4">
+          <div className="border-b border-orange-100 pb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <h3 className="text-base font-extrabold text-slate-900 font-brand">
+                Laporan Tugas Tambahan & Kendala Sarpras
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Beri tanggapan dan tandai tindak lanjut agar guru tahu laporannya diproses
+              </p>
+            </div>
+            <div className="flex items-center space-x-1.5">
+              {[
+                { id: 'aktif', label: 'Belum Selesai' },
+                { id: 'semua', label: 'Semua' },
+              ].map((f) => (
+                <button
+                  key={f.id}
+                  onClick={() => setTaskFilter(f.id)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+                    taskFilter === f.id ? 'bg-amber-100 text-amber-800 border border-amber-300' : 'bg-slate-100 text-slate-600 border border-transparent'
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {filteredTasks.length === 0 ? (
+            <div className="p-10 text-center text-xs text-slate-400">
+              ✅ Tidak ada laporan yang menunggu tindak lanjut.
+            </div>
+          ) : (
+            <div className="divide-y divide-orange-100">
+              {filteredTasks.map((task) => (
+                <div key={task.id} className="py-4 flex flex-col md:flex-row md:items-start justify-between gap-3">
+                  <div className="space-y-1.5 max-w-2xl">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-sm font-extrabold text-slate-900 font-brand">{task.judul}</span>
+                      <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-orange-50 text-orange-800 border border-orange-200">
+                        {task.kategori === 'laporan_kendala' && <Wrench className="w-3 h-3 inline mr-1" />}
+                        {KATEGORI_LABEL[task.kategori] || task.kategori}
+                      </span>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border capitalize ${TASK_STATUS_STYLE[task.status] || TASK_STATUS_STYLE.dilaporkan}`}>
+                        {task.status}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 font-semibold">
+                      {task.nama_guru} • {formatTanggalIndo(task.tanggal)}
+                    </p>
+                    <p className="text-xs text-slate-600 leading-relaxed">{task.deskripsi}</p>
+                    {task.hasil_atau_tindak_lanjut && (
+                      <p className="text-xs text-slate-500 italic">Hasil/Tindak lanjut guru: {task.hasil_atau_tindak_lanjut}</p>
+                    )}
+                    {task.foto_pendukung_url && (
+                      <a href={task.foto_pendukung_url} target="_blank" rel="noreferrer">
+                        <img src={task.foto_pendukung_url} alt="Foto pendukung" className="w-20 h-20 rounded-xl object-cover border border-slate-200 mt-1" />
+                      </a>
+                    )}
+                    {task.tanggapan_kepsek && (
+                      <p className="text-[11px] p-2 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-800">
+                        <strong>Tanggapan Anda:</strong> {task.tanggapan_kepsek}
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => openTaskModal(task)}
+                    className="self-end md:self-auto shrink-0 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-xl text-xs font-extrabold transition shadow-xs flex items-center space-x-1"
+                  >
+                    <MessageSquare className="w-3.5 h-3.5" />
+                    <span>{task.tanggapan_kepsek ? 'Ubah Tanggapan' : 'Tanggapi'}</span>
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* MODAL: Tanggapan Tugas & Kendala */}
+      {selectedTask && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
+          <form onSubmit={handleSaveTaskResponse} className="bg-white rounded-3xl w-full max-w-md p-6 shadow-2xl border border-orange-200/80 space-y-4">
+            <div className="flex items-center justify-between border-b border-orange-100 pb-3">
+              <div>
+                <span className="text-[11px] font-extrabold text-orange-600 uppercase tracking-wide">{KATEGORI_LABEL[selectedTask.kategori]}</span>
+                <h3 className="text-base font-extrabold text-slate-900 font-brand">{selectedTask.judul}</h3>
+              </div>
+              <button type="button" onClick={() => setSelectedTask(null)} className="p-1.5 text-slate-400 hover:text-slate-600 rounded-xl">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              {['diproses', 'selesai'].map((st) => (
+                <button
+                  key={st}
+                  type="button"
+                  onClick={() => setTaskStatus(st)}
+                  className={`py-2.5 rounded-2xl text-xs font-extrabold border capitalize transition ${
+                    taskStatus === st ? 'bg-amber-500 text-white border-amber-500' : 'bg-white text-slate-600 border-slate-200'
+                  }`}
+                >
+                  {st === 'diproses' ? '🔧 Sedang Diproses' : '✅ Selesai'}
+                </button>
+              ))}
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-800 mb-1">Tanggapan untuk Guru</label>
+              <textarea
+                rows={3}
+                value={taskResponse}
+                onChange={(e) => setTaskResponse(e.target.value)}
+                placeholder="Contoh: Sudah dihubungi tukang, perbaikan atap dijadwalkan Sabtu ini."
+                className="w-full p-3 bg-amber-50/40 border border-slate-200 rounded-2xl text-xs focus:outline-none focus:bg-white focus:ring-2 focus:ring-orange-400/20"
+              />
+            </div>
+
+            <div className="flex items-center justify-end space-x-2 pt-2 border-t border-orange-100">
+              <button type="button" onClick={() => setSelectedTask(null)} className="px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl">
+                Batal
+              </button>
+              <button
+                type="submit"
+                disabled={savingTask}
+                className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-extrabold shadow-md disabled:opacity-60"
+              >
+                {savingTask ? 'Menyimpan...' : 'Simpan Tanggapan'}
+              </button>
+            </div>
+          </form>
+        </div>,
+        document.body
+      )}
+
       {/* MODAL: Rincian Jurnal & Catatan Revisi */}
       {reviewModalOpen && selectedJournal && createPortal(
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
@@ -656,11 +903,18 @@ export default function ValidasiLaporan() {
             </div>
 
             <div className="space-y-3.5 text-xs text-slate-700">
-              <div className="flex items-center justify-between p-3 bg-amber-50/50 rounded-2xl border border-amber-200/60 font-semibold">
+              <div className="flex flex-wrap gap-x-4 gap-y-1 items-center justify-between p-3 bg-amber-50/50 rounded-2xl border border-amber-200/60 font-semibold">
                 <span>Pendidik: <strong>{selectedJournal.nama_guru}</strong></span>
                 <span>Kelompok: <strong>{selectedJournal.kelompok}</strong></span>
                 <span>Tanggal: <strong>{formatTanggalIndo(selectedJournal.tanggal)}</strong></span>
               </div>
+
+              {selectedJournal.tujuan && (
+                <div>
+                  <span className="font-extrabold text-slate-800 block">Tujuan Pembelajaran:</span>
+                  <p className="leading-relaxed">{selectedJournal.tujuan}</p>
+                </div>
+              )}
 
               <div>
                 <span className="font-extrabold text-slate-800 block mb-1">Capaian Pembelajaran:</span>
@@ -683,9 +937,19 @@ export default function ValidasiLaporan() {
                   <p className="p-3 bg-slate-50 rounded-2xl border border-slate-200 leading-relaxed">{selectedJournal.kegiatan_inti || '-'}</p>
                 </div>
                 <div>
-                  <span className="font-extrabold text-slate-800 block">Kegiatan Penutup & Refleksi:</span>
+                  <span className="font-extrabold text-slate-800 block">Kegiatan Penutup:</span>
                   <p className="p-3 bg-slate-50 rounded-2xl border border-slate-200 leading-relaxed">{selectedJournal.kegiatan_penutup || '-'}</p>
                 </div>
+                <div>
+                  <span className="font-extrabold text-slate-800 block">Refleksi Guru:</span>
+                  <p className="p-3 bg-slate-50 rounded-2xl border border-slate-200 leading-relaxed">{selectedJournal.refleksi || '-'}</p>
+                </div>
+                {selectedJournal.kendala && (
+                  <div>
+                    <span className="font-extrabold text-slate-800 block">Kendala:</span>
+                    <p className="p-3 bg-amber-50 rounded-2xl border border-amber-200 leading-relaxed">{selectedJournal.kendala}</p>
+                  </div>
+                )}
               </div>
 
               {/* Foto Dokumentasi */}
@@ -694,19 +958,20 @@ export default function ValidasiLaporan() {
                   <span className="font-extrabold text-slate-800 block mb-1">Foto Dokumentasi Pembelajaran:</span>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {selectedJournal.fotos.map((f, i) => (
-                      <img
-                        key={i}
-                        src={f.url}
-                        alt="Foto KBM"
-                        className="w-full h-28 rounded-2xl object-cover border border-slate-200"
-                      />
+                      <a key={i} href={f.url} target="_blank" rel="noreferrer">
+                        <img
+                          src={f.url}
+                          alt="Foto KBM"
+                          className="w-full h-28 rounded-2xl object-cover border border-slate-200"
+                        />
+                      </a>
                     ))}
                   </div>
                 </div>
               )}
 
               {/* Form Catatan Revisi */}
-              <div className="pt-2 border-t border-orange-100">
+              {selectedJournal.status === 'dikirim' && <div className="pt-2 border-t border-orange-100">
                 <label className="block text-xs font-bold text-slate-800 mb-1">
                   Catatan Revisi untuk Guru (Jika Memerlukan Perbaikan):
                 </label>
@@ -717,7 +982,7 @@ export default function ValidasiLaporan() {
                   placeholder="Contoh: Tambahkan deskripsi respons anak saat eksperimen bahan alam..."
                   className="w-full p-3 bg-amber-50/40 border border-slate-200 rounded-2xl text-xs focus:outline-none focus:bg-white focus:ring-2 focus:ring-orange-400/20 leading-relaxed"
                 />
-              </div>
+              </div>}
             </div>
 
             <div className="pt-2 border-t border-orange-100 flex items-center justify-between">
@@ -729,7 +994,7 @@ export default function ValidasiLaporan() {
                 Tutup
               </button>
 
-              <div className="flex items-center space-x-2">
+              {selectedJournal.status === 'dikirim' && <div className="flex items-center space-x-2">
                 <button
                   type="button"
                   disabled={!revisionNote.trim() || submittingReview}
@@ -746,7 +1011,7 @@ export default function ValidasiLaporan() {
                   <Check className="w-4 h-4 stroke-[3]" />
                   <span>Setujui Jurnal Ini</span>
                 </button>
-              </div>
+              </div>}
             </div>
           </div>
         </div>,

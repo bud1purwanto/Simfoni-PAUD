@@ -25,6 +25,7 @@ import KelolaGuru from './pages/kepsek/KelolaGuru';
 import ValidasiLaporan from './pages/kepsek/ValidasiLaporan';
 import KelolaJadwal from './pages/kepsek/KelolaJadwal';
 import RekapDanPdf from './pages/kepsek/RekapDanPdf';
+import RiwayatAktivitas from './pages/kepsek/RiwayatAktivitas';
 
 export default function App() {
   return (
@@ -54,6 +55,7 @@ export default function App() {
               <Route path="/kepsek/validasi" element={<ValidasiLaporan />} />
               <Route path="/kepsek/jadwal" element={<KelolaJadwal />} />
               <Route path="/kepsek/rekap" element={<RekapDanPdf />} />
+              <Route path="/kepsek/riwayat" element={<RiwayatAktivitas />} />
             </Route>
           </Route>
 

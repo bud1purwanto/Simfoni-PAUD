@@ -95,7 +95,8 @@ Masing-masing peran memiliki dashboard eksklusif yang dirancang spesifik sesuai 
 ### 3.3. Kelola Akun Kepala Sekolah (`/superadmin/kepsek`)
 * Pendaftaran akun Kepala Sekolah baru menggunakan **Secondary Firebase App Instance** (`secondaryAuth`) sehingga sesi login Superadmin tidak terganggu.
 * Form pendaftaran: Pilih Sekolah Mitra (`school_id`), Nama Lengkap Kepala Sekolah, Email Login, dan Password Default.
-* **Fitur Reset Password Kepala Sekolah:** Tombol reset instan password Kepala Sekolah ke default (`Kepsek1234!`) tanpa perlu buka email.
+* **Fitur Reset Password Kepala Sekolah:** Tombol reset instan password Kepala Sekolah ke default (`Kepsek1234!`) tanpa perlu buka email, diproses Cloudflare Worker `/api/admin/reset-password`. Jika Worker belum dikonfigurasi, sistem mengirim tautan reset ke email sebagai alternatif dan memberi tahu Superadmin secara jujur.
+* Peringatan bila sekolah yang dipilih sudah memiliki Kepala Sekolah aktif.
 
 ### 3.4. Manajemen Log & Pembersihan Data Berkala (`/superadmin/logs`)
 Mengingat keterbatasan kuota penyimpanan dan pembacaan/penulisan Firestore, Superadmin memiliki modul pemeliharaan log:
@@ -107,9 +108,10 @@ Mengingat keterbatasan kuota penyimpanan dan pembacaan/penulisan Firestore, Supe
     * *Hapus log lebih lama dari 90 hari*
     * *Rentang tanggal kustom*
   * Menampilkan hitungan jumlah log yang akan dihapus sebelum eksekusi konfirmasi.
+* **Hitungan & Pembersihan Berbasis Query:** Jumlah log per opsi dihitung di server (`getCountFromServer`) dan penghapusan dilakukan bertahap (batch ≤ 400) tanpa memuat seluruh log ke memori. Tabel hanya menampilkan 500 log terbaru.
 * **Fitur Pembersihan Otomatis Periodik (*Periodic Retention Job*):**
   * Superadmin dapat mengatur durasi retensi otomatis (misal: simpan 60 hari terakhir).
-  * Sistem secara periodik menjalankan pembersihan data usang (*background cleanup batch*) yang kedaluwarsa, lalu memperbarui status eksekusi terakhir di `system_settings.last_cleanup_timestamp`.
+  * Job berjalan otomatis saat Superadmin membuka Dashboard atau Manajemen Log, maksimal sekali per sesi dan hanya jika siklus terakhir lebih dari 24 jam, lalu memperbarui `system_settings.last_cleanup_timestamp` dan mencatat `AUTO_PURGE_LOGS`. (Tanpa Cloud Functions, aman untuk Spark Plan.)
   * Menjamin basis data tetap ramping, cepat di-load, dan tidak melebihi batas kuota gratis/berbayar Firestore.
 
 ---
@@ -119,11 +121,13 @@ Mengingat keterbatasan kuota penyimpanan dan pembacaan/penulisan Firestore, Supe
 ### 4.1. Dashboard Monitoring Live
 * Pemantauan real-time guru yang telah absen datang/pulang hari ini di sekolahnya.
 * **Deteksi Lupa Absen Pulang:** Kartu status otomatis menandai guru yang sudah absen datang namun belum checkout setelah pukul 18:00.
+* Kartu guru menampilkan status Izin/Sakit, serta info netral bila jam diterima server berselisih > 15 menit dari jam HP (sinkron tertunda atau jam HP berubah) sebagai bahan pertimbangan Kepsek.
+* Antrean koreksi presensi memuat pengajuan dari **semua tanggal**, bukan hanya hari ini.
 * Notifikasi antrean jurnal mengajar baru berstatus `dikirim` yang siap diperiksa.
 * Notifikasi pengajuan koreksi absen dan kendala sarpras yang butuh tindak lanjut.
 
 ### 4.2. Kelola Akun Guru, Validasi Kuota & Reset Password
-* **Pengecekan Kuota Otomatis:** Saat Kepala Sekolah menekan tombol **"Tambah Guru Baru"**, sistem menghitung jumlah akun guru aktif di sekolah tersebut.
+* **Pengecekan Kuota Otomatis (UI + Server):** Saat Kepala Sekolah menekan tombol **"Tambah Guru Baru"**, sistem menghitung jumlah akun guru aktif di sekolah tersebut. Batas yang sama juga ditegakkan Security Rules melalui counter `jumlah_guru_aktif`, sehingga tidak bisa dilewati lewat manipulasi klien; bila server menolak, akun Auth yang baru dibuat langsung dihapus kembali.
   * Jika jumlah guru aktif < `schoolData.kuota_guru`: Form pendaftaran via `secondaryAuth` terbuka.
   * Jika kuota telah penuh: Sistem menampilkan modal dialog peringatan:  
     *"Kuota akun guru untuk paket sekolah Anda telah penuh (X/X Guru). Silakan hubungi Administrator Sistem (Superadmin) untuk menambah kuota."*
@@ -134,7 +138,18 @@ Mengingat keterbatasan kuota penyimpanan dan pembacaan/penulisan Firestore, Supe
 ### 4.3. Validasi Jurnal & Fitur "Setujui Sekaligus" (Bulk Approval)
 * Memberikan status `disetujui` atau `perlu_revisi` (dengan kolom catatan revisi terperinci) per dokumen.
 * **Fitur "Setujui Sekaligus" (*Bulk Approval*):** Checkbox multi-select dan tombol sekali klik untuk menyetujui seluruh jurnal yang telah memenuhi syarat secara serentak, menghemat waktu Kepsek saat mereview puluhan laporan mingguan.
-* Memberikan keputusan pada pengajuan koreksi jam presensi guru (`disetujui` / `ditolak`).
+* Memberikan keputusan pada pengajuan koreksi jam presensi guru (`disetujui` / `ditolak`). Saat disetujui, status `hadir`/`terlambat` dan menit keterlambatan dihitung ulang dari jam ajuan.
+* **Tab Tugas & Kendala:** Kepsek menanggapi laporan tugas tambahan, administrasi, dan kendala sarpras guru (`diproses` / `selesai` + catatan tanggapan) yang langsung terlihat di halaman guru.
+* Jurnal `draf` tidak ditampilkan; tombol setujui/revisi hanya muncul untuk jurnal berstatus `dikirim`.
+
+### 4.2.1. Riwayat Aktivitas Sekolah (`/kepsek/riwayat`)
+* Audit trail read-only 200 aktivitas terbaru di sekolah sendiri (presensi, jurnal, akun guru, jadwal, kendala), dikelompokkan per tanggal dengan pencarian & filter kategori.
+* Di desktop tersedia di sidebar; di HP diakses dari tombol pada Dashboard Kepsek (bottom-nav maksimal 5 menu).
+
+### 4.3.1. Pengaturan Jam Sekolah (Menu Jadwal)
+* Kepsek mengatur **jam masuk, toleransi keterlambatan (menit), jam pulang, dan hari kerja** (Senin–Jumat / Senin–Sabtu).
+* Nilai ini menentukan status `terlambat`, menit keterlambatan pada presensi, dan hari kerja efektif pada rekap/Excel.
+* Form jadwal memakai daftar kelompok kelas sekolah, mendukung PIC "Semua Guru", validasi jam, dan peringatan jadwal yang beririsan.
 
 ### 4.4. Rekapitulasi Laporan Multi-Format (PDF Ringkas, Portofolio & Excel)
 * **1. Cetak Rekap PDF Ringkas (Format Administrasi/Dinas):**  
@@ -142,7 +157,8 @@ Mengingat keterbatasan kuota penyimpanan dan pembacaan/penulisan Firestore, Supe
 * **2. Cetak Rekap PDF Lengkap (Portofolio Foto):**  
   Menghasilkan dokumen lengkap beserta lampiran foto dokumentasi pembelajaran resolusi tinggi untuk arsip akreditasi BAN-PDM (direkomendasikan diunduh via laptop).
 * **3. Ekspor Data Excel (`.xlsx`):**  
-  Ekspor rekapitulasi presensi (total kehadiran, menit keterlambatan, izin, sakit) ke format Spreadsheet Excel untuk keperluan **perhitungan gaji / uang transport / honorarium guru** oleh Kepala Sekolah dan Bendahara.
+  Ekspor rekapitulasi presensi (hadir, terlambat + total menit keterlambatan, izin, sakit, tanpa keterangan, lupa absen pulang, persentase terhadap hari kerja efektif) ke format Spreadsheet Excel untuk keperluan **perhitungan gaji / uang transport / honorarium guru** oleh Kepala Sekolah dan Bendahara.
+* **Aturan data rekap:** Data dimuat per bulan (kueri rentang tanggal), jurnal `draf` dikecualikan, presensi bertanggal mendatang (izin terencana) belum dihitung, dan persentase memakai hari kerja efektif sekolah (bulan berjalan dihitung sampai hari ini). Portofolio PDF hanya memuat jurnal `disetujui` lengkap dengan kop surat, foto dokumentasi (maks. 2 per kegiatan), dan pengesahan.
 * **4. Fitur "Bagikan Rekap ke WhatsApp" (*One-Click WA Share*):**  
   Tombol cepat untuk membuat pesan terformat rapi dan langsung membuka WhatsApp Web / Aplikasi WA HP untuk mengirimkan rekap bulanan ke Yayasan atau Pengawas Sekolah.
 
@@ -153,14 +169,16 @@ Mengingat keterbatasan kuota penyimpanan dan pembacaan/penulisan Firestore, Supe
 1. **Presensi Cepat Dual Timestamp (Anti-Trap Offline):**  
    Mencatat `jam_datang_device` (waktu lokal saat tombol ditekan) dan `jam_datang_server`. Jika sinkronisasi tertunda karena sinyal drop, guru tidak akan dirugikan sebagai terlambat.
 2. **Penanganan Lupa Absen Pulang:**  
-   Jika jam telah melewati 18:00 dan guru lupa checkout, sistem otomatis menyajikan tombol pengajuan koreksi absen pulang keesokan harinya.
+   Record hari lalu yang hadir tanpa checkout otomatis ditandai `lupa_absen` dan disajikan tombol **"Ajukan Jam Pulang"**. Koreksi yang sudah diputuskan Kepsek terkunci.
+2a. **Pengajuan Izin / Sakit:**  
+   Guru mengajukan izin/sakit sendiri (tanggal −7 s.d. +30 hari) dari halaman Presensi atau tautan di kartu presensi dashboard; tercatat di rekap honor.
 3. **Modal Wajib Ganti Password:**  
    Jika akun guru baru saja direset oleh Kepsek (`wajib_ganti_password: true`), sistem langsung memunculkan modal pembuatan kata sandi baru saat login pertama berhasil.
-4. **Jurnal KBM Harian:** Form terstruktur mencakup Topik, Capaian Pembelajaran Kurikulum Merdeka, Kegiatan Pembuka-Inti-Penutup, Refleksi, dan Kendala.
+4. **Jurnal KBM Harian:** Form terstruktur mencakup Topik, Capaian Pembelajaran Kurikulum Merdeka, Kegiatan Pembuka-Inti-Penutup, Refleksi, dan Kendala. Jurnal `disetujui` bersifat read-only, draf dapat dihapus, dan tombol "Tulis Jurnal dari Jadwal" mengisi kelompok & topik otomatis. Kegiatan inti wajib diisi sebelum dikirim.
 5. **Bank Template Kegiatan KBM Kurikulum Merdeka:**  
    Pilihan template cepat sekali klik (*Upacara & Pembiasaan Pagi*, *Motorik Kasar & Senam*, *Sentra Sains Eksperimen*, *Sentra Seni & Kreativitas*, *Literasi Awal*) yang otomatis mengisi isian kegiatan sehingga guru cukup mengedit sedikit narasi (hemat waktu hingga 90%).
 6. **Voice-to-Text (`id-ID`):** Menggunakan Web Speech API agar guru PAUD dapat mendiktekan narasi kegiatan langsung menggunakan mikrofon smartphone.
-7. **Kompresi Foto Klien (< 300 KB):** Foto dari kamera smartphone otomatis dikompresi di browser sebelum proses unggah untuk menghemat kuota guru.
+7. **Kompresi Foto Klien (< 300 KB):** Foto dari kamera **atau galeri** otomatis dikompresi ke JPEG di browser sebelum diunggah (maks. 6 foto per jurnal). Foto yang dihapus sebelum jurnal disimpan ikut dihapus dari Storage, dan counter meteran storage sekolah diperbarui.
 8. **Tagging Kurikulum Merdeka & Salin Jurnal:** Checkbox cepat Capaian Pembelajaran dan tombol duplikasi jurnal dari hari sebelumnya.
 9. **Fitur "Bagikan Jurnal ke WhatsApp":**  
    Tombol sekali sentuh untuk membagikan ringkasan KBM hari ini (topik, kegiatan, nama guru, status disetujui) ke grup WhatsApp Paguyuban Orang Tua Murid / Yayasan.
@@ -221,13 +239,24 @@ sequenceDiagram
 Pada saat sistem baru pertama kali dipasang dan koleksi `users` di database masih kosong:
 * Halaman `Login.jsx` mendeteksi status kosong dan memunculkan tombol:  
   **"Inisialisasi Sistem SaaS (Setup Superadmin & Sekolah Pertama)"**.
+* Deteksi dilakukan dengan memeriksa keberadaan `system_settings/general_config` (dapat dibaca tanpa login).
 * Wizard ini akan otomatis membuat:
-  1. Akun `superadmin` pertama untuk Project Owner.
-  2. Mitra sekolah pilot pertama di koleksi `schools` yaitu **"TK Dharma Wanita Persatuan 8"** dengan status `aktif` dan kuota `5 Guru`.
+  1. Akun `superadmin` pertama untuk Project Owner (sandi minimal 8 karakter).
+  2. Mitra sekolah pilot pertama di koleksi `schools` yaitu **"TK Dharma Wanita Persatuan 8"** dengan status `aktif`, kuota `5 Guru`, dan jam sekolah bawaan (profil kop surat dilengkapi Superadmin setelah masuk).
+  3. Dokumen `system_settings/general_config` yang sekaligus menutup jalur pembuatan superadmin mandiri.
+
+### 7.1a. Wajib Ganti Kata Sandi & Ganti Sandi Sukarela
+* Modal wajib ganti sandi ditampilkan oleh `AppLayout` di seluruh halaman selama `wajib_ganti_password: true` (tidak bisa ditutup, hanya "Keluar").
+* Ikon kunci di header membuka ganti sandi sukarela. Kedua mode meminta sandi saat ini (re-autentikasi Firebase) dan menolak sandi default.
 
 ### 7.2. Indikator Lingkungan (DEV Environment Badge)
 * Komponen `DevBadge.jsx` akan merender label mengambang berwarna oranye/kuning bertuliskan **`DEV ENVIRONMENT`** di sudut kanan atas layar saat `import.meta.env.VITE_APP_ENV !== 'production'`.
 * Ini mencegah Project Owner atau tester salah mengira lingkungan pengujian sebagai lingkungan produksi sekolah sungguhan.
+
+### 7.2a. PWA Offline Shell (`public/sw.js`)
+* Service Worker (aktif di build produksi) meng-cache cangkang aplikasi: navigasi *network-first* dengan fallback `index.html`, aset `/assets/*` *cache-first*, font *stale-while-revalidate*; `/api/*` dan Firebase tidak pernah di-cache.
+* Dikombinasikan dengan Firestore offline persistence, guru dapat membuka aplikasi, melihat presensi/jurnal terakhir, dan mengisi data walau sinyal hilang.
+* Pada sinyal "ada tapi tidak bisa dipakai", profil login diambil dari cache lokal setelah 4 detik (`getDocFast`) agar layar tidak tertahan di loading.
 
 ### 7.3. Banner Indikator Jaringan Visual (`NetworkStatusBanner.jsx`)
 * Memantau konektivitas internet perangkat (`navigator.onLine`) secara *real-time*:

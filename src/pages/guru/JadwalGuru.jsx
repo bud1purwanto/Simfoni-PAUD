@@ -15,6 +15,8 @@ import {
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { useAuth } from '../../context/AuthContext';
+import { getNamaHari } from '../../utils/formatters';
+import { normalizeKelompok, KELOMPOK_SEMUA } from '../../utils/schoolConfig';
 
 const HARI_LIST = ['Semua Hari', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
 
@@ -23,7 +25,8 @@ export default function JadwalGuru() {
   const navigate = useNavigate();
 
   // Dapatkan hari ini dalam bahasa Indonesia
-  const hariIni = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'][new Date().getDay()];
+  const hariIni = getNamaHari();
+  const kelasSaya = normalizeKelompok(userData?.kelompok_kelas);
   const defaultHari = HARI_LIST.includes(hariIni) ? hariIni : 'Senin';
 
   const [schedules, setSchedules] = useState([]);
@@ -62,7 +65,7 @@ export default function JadwalGuru() {
     );
 
     return () => unsubscribe();
-  }, [currentUser?.school_id]);
+  }, [userData?.school_id]);
 
   // Filter jadwal berdasarkan hari dan PIC guru
   const filteredSchedules = schedules.filter((item) => {
@@ -72,9 +75,11 @@ export default function JadwalGuru() {
     }
     // Filter jadwal saya
     if (filterSaya) {
-      const isMySchedule = item.pic_guru_id === userData?.uid || 
-                           item.pic_guru_id === 'all' || 
-                           (item.pic_nama && item.pic_nama.toLowerCase().includes((userData?.nama || '').toLowerCase()));
+      const klp = normalizeKelompok(item.kelompok);
+      const isMySchedule = item.pic_guru_id === userData?.uid ||
+                           item.pic_guru_id === 'all' ||
+                           klp === KELOMPOK_SEMUA ||
+                           (kelasSaya && klp === kelasSaya);
       if (!isMySchedule) return false;
     }
     return true;
@@ -270,7 +275,7 @@ export default function JadwalGuru() {
                     <span className="text-[11px] text-slate-400 block font-medium">Kelompok / Kelas</span>
                     <span className="font-bold text-slate-700 flex items-center space-x-1 mt-0.5">
                       <Users className="w-3.5 h-3.5 text-slate-500" />
-                      <span>{item.kelompok || 'Semua Kelompok'}</span>
+                      <span>{normalizeKelompok(item.kelompok) || KELOMPOK_SEMUA}</span>
                     </span>
                   </div>
                   <div>
@@ -287,7 +292,7 @@ export default function JadwalGuru() {
                   type="button"
                   onClick={() => {
                     const queryParams = new URLSearchParams({
-                      kelompok: item.kelompok || 'TK A',
+                      kelompok: normalizeKelompok(item.kelompok) || '',
                       topik: item.kegiatan || '',
                     });
                     navigate(`/guru/jurnal?${queryParams.toString()}`);

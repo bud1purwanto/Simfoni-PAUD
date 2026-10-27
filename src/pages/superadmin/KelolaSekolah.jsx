@@ -25,16 +25,30 @@ import {
   collection, 
   onSnapshot, 
   doc, 
-  setDoc, 
-  updateDoc, 
-  deleteDoc, 
-  serverTimestamp 
+  setDoc,
+  getDoc,
+  updateDoc,
+  deleteDoc,
+  serverTimestamp
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../../config/firebase';
 import { useAuth } from '../../context/AuthContext';
 import { formatTanggalIndo } from '../../utils/formatters';
 import { logActivity } from '../../utils/auditLogger';
+import { syncGuruCounters } from '../../utils/quotaSync';
+import { addDays, format } from 'date-fns';
+import {
+  DEFAULT_KELOMPOK,
+  DEFAULT_JAM_MASUK,
+  DEFAULT_JAM_PULANG,
+  DEFAULT_TOLERANSI_MENIT,
+  DEFAULT_HARI_KERJA,
+  isLanggananKedaluwarsa,
+} from '../../utils/schoolConfig';
+
+const STATUS_LANGGANAN_LABEL = { aktif: 'AKTIF', masa_tenggang: 'MASA TENGGANG', nonaktif: 'LAYANAN DISUSPEND' };
+const defaultBerlakuHingga = () => format(addDays(new Date(), 365), 'yyyy-MM-dd');
 
 export default function KelolaSekolah() {
   const { userData } = useAuth();
@@ -57,14 +71,17 @@ export default function KelolaSekolah() {
   const [formNama, setFormNama] = useState('');
   const [formNpsn, setFormNpsn] = useState('');
   const [formAlamat, setFormAlamat] = useState('');
-  const [formKota, setFormKota] = useState('Surabaya');
+  const [formKota, setFormKota] = useState('');
   const [formTelepon, setFormTelepon] = useState('');
   const [formNamaKepsek, setFormNamaKepsek] = useState('');
   const [formNipKepsek, setFormNipKepsek] = useState('');
   const [formPaket, setFormPaket] = useState('basic');
   const [formKuotaGuru, setFormKuotaGuru] = useState(5);
-  const [formBerlakuHingga, setFormBerlakuHingga] = useState('2027-12-31');
+  const [formBerlakuHingga, setFormBerlakuHingga] = useState(defaultBerlakuHingga());
   const [formStatus, setFormStatus] = useState('aktif');
+  const [formKelompok, setFormKelompok] = useState(DEFAULT_KELOMPOK.join(', '));
+  const [formJamMasuk, setFormJamMasuk] = useState(DEFAULT_JAM_MASUK);
+  const [formJamPulang, setFormJamPulang] = useState(DEFAULT_JAM_PULANG);
 
   // File Upload States
   const [logoFile, setLogoFile] = useState(null);
@@ -93,6 +110,11 @@ export default function KelolaSekolah() {
     };
   }, []);
 
+  // Selaraskan counter kuota guru (dipakai Security Rules untuk menegakkan kuota)
+  useEffect(() => {
+    if (!loading && schools.length > 0) syncGuruCounters(schools, users);
+  }, [loading, schools, users]);
+
   const showNotification = (type, message) => {
     setNotification({ type, message });
     setTimeout(() => setNotification(null), 4000);
@@ -105,14 +127,17 @@ export default function KelolaSekolah() {
     setFormNama('');
     setFormNpsn('');
     setFormAlamat('');
-    setFormKota('Surabaya');
+    setFormKota('');
     setFormTelepon('');
     setFormNamaKepsek('');
     setFormNipKepsek('');
     setFormPaket('basic');
     setFormKuotaGuru(5);
-    setFormBerlakuHingga('2027-12-31');
+    setFormBerlakuHingga(defaultBerlakuHingga());
     setFormStatus('aktif');
+    setFormKelompok(DEFAULT_KELOMPOK.join(', '));
+    setFormJamMasuk(DEFAULT_JAM_MASUK);
+    setFormJamPulang(DEFAULT_JAM_PULANG);
     setLogoFile(null);
     setLogoPreview('');
     setStempelFile(null);
@@ -126,14 +151,17 @@ export default function KelolaSekolah() {
     setFormNama(s.nama_sekolah || '');
     setFormNpsn(s.npsn || '');
     setFormAlamat(s.alamat || '');
-    setFormKota(s.kota || 'Surabaya');
+    setFormKota(s.kota || '');
     setFormTelepon(s.telepon || '');
     setFormNamaKepsek(s.nama_kepsek_resmi || '');
     setFormNipKepsek(s.nip_kepsek || '');
     setFormPaket(s.paket_langganan || 'basic');
     setFormKuotaGuru(s.kuota_guru || 5);
-    setFormBerlakuHingga(s.berlaku_hingga || '2027-12-31');
+    setFormBerlakuHingga(s.berlaku_hingga || defaultBerlakuHingga());
     setFormStatus(s.status_langganan || 'aktif');
+    setFormKelompok((s.kelompok_tersedia?.length ? s.kelompok_tersedia : DEFAULT_KELOMPOK).join(', '));
+    setFormJamMasuk(s.jam_masuk || DEFAULT_JAM_MASUK);
+    setFormJamPulang(s.jam_pulang || DEFAULT_JAM_PULANG);
     setLogoFile(null);
     setLogoPreview(s.logo_url || '');
     setStempelFile(null);
@@ -165,6 +193,12 @@ export default function KelolaSekolah() {
       return;
     }
 
+    const kelompokList = [...new Set(formKelompok.split(',').map((k) => k.trim()).filter(Boolean))];
+    if (kelompokList.length === 0) {
+      showNotification('error', 'Minimal satu kelompok kelas wajib diisi');
+      return;
+    }
+
     setSubmitting(true);
 
     try {
@@ -172,18 +206,31 @@ export default function KelolaSekolah() {
       let finalStempelUrl = stempelPreview;
 
       const schoolId = editingSchoolId || formId.trim().toLowerCase().replace(/[^a-z0-9_]/g, '_');
+      if (!schoolId) {
+        showNotification('error', 'ID sekolah tidak valid');
+        return;
+      }
+
+      // Cegah menimpa tenant lain yang sudah memakai ID yang sama
+      if (!editingSchoolId) {
+        const existing = await getDoc(doc(db, 'schools', schoolId));
+        if (existing.exists()) {
+          showNotification('error', `ID sekolah "${schoolId}" sudah dipakai. Gunakan ID lain.`);
+          return;
+        }
+      }
 
       // Upload Logo jika ada file baru
       if (logoFile) {
         const logoRef = ref(storage, `schools/${schoolId}/branding/logo_${Date.now()}`);
-        const snap = await uploadBytes(logoRef, logoFile);
+        const snap = await uploadBytes(logoRef, logoFile, { contentType: logoFile.type });
         finalLogoUrl = await getDownloadURL(snap.ref);
       }
 
       // Upload Stempel jika ada file baru
       if (stempelFile) {
         const stempelRef = ref(storage, `schools/${schoolId}/branding/stempel_${Date.now()}`);
-        const snap = await uploadBytes(stempelRef, stempelFile);
+        const snap = await uploadBytes(stempelRef, stempelFile, { contentType: stempelFile.type });
         finalStempelUrl = await getDownloadURL(snap.ref);
       }
 
@@ -197,9 +244,12 @@ export default function KelolaSekolah() {
         nama_kepsek_resmi: formNamaKepsek.trim(),
         nip_kepsek: formNipKepsek.trim(),
         paket_langganan: formPaket,
-        kuota_guru: Number(formKuotaGuru) || 5,
+        kuota_guru: Math.max(1, Number(formKuotaGuru) || 5),
         berlaku_hingga: formBerlakuHingga,
         status_langganan: formStatus,
+        kelompok_tersedia: kelompokList,
+        jam_masuk: formJamMasuk,
+        jam_pulang: formJamPulang,
         logo_url: finalLogoUrl || null,
         stempel_url: finalStempelUrl || null,
         updated_at: serverTimestamp(),
@@ -207,17 +257,32 @@ export default function KelolaSekolah() {
 
       if (editingSchoolId) {
         await updateDoc(doc(db, 'schools', editingSchoolId), payload);
-        await logActivity(schoolId, userData.uid, userData.nama, 'update_sekolah', {
-          namaSekolah: formNama,
+        logActivity({
+          schoolId,
+          actorId: userData.uid,
+          actorNama: userData.nama,
+          action: 'UPDATE_SCHOOL',
+          recordType: 'schools',
+          recordId: schoolId,
+          detail: { nama_sekolah: formNama.trim(), paket: formPaket, kuota_guru: Number(formKuotaGuru) },
         });
         showNotification('success', 'Profil sekolah mitra berhasil diperbarui!');
       } else {
         payload.created_at = serverTimestamp();
+        payload.jumlah_guru_aktif = 0;
         payload.total_foto_terunggah = 0;
         payload.estimasi_storage_mb = 0;
+        payload.toleransi_terlambat_menit = DEFAULT_TOLERANSI_MENIT;
+        payload.hari_kerja = DEFAULT_HARI_KERJA;
         await setDoc(doc(db, 'schools', schoolId), payload);
-        await logActivity(schoolId, userData.uid, userData.nama, 'tambah_sekolah', {
-          namaSekolah: formNama,
+        logActivity({
+          schoolId,
+          actorId: userData.uid,
+          actorNama: userData.nama,
+          action: 'ADD_SCHOOL',
+          recordType: 'schools',
+          recordId: schoolId,
+          detail: { nama_sekolah: formNama.trim() },
         });
         showNotification('success', 'Sekolah mitra baru berhasil didaftarkan!');
       }
@@ -233,7 +298,11 @@ export default function KelolaSekolah() {
 
   // Toggle Suspend Langganan Sekolah
   const handleToggleSuspend = async (s) => {
-    const nextStatus = s.status_langganan === 'aktif' ? 'nonaktif' : 'aktif';
+    const nextStatus = s.status_langganan === 'nonaktif' ? 'aktif' : 'nonaktif';
+    if (nextStatus === 'aktif' && isLanggananKedaluwarsa(s)) {
+      showNotification('error', `Masa berlaku ${s.nama_sekolah} sudah lewat. Perpanjang tanggal "Masa Berlaku" lewat tombol Edit terlebih dahulu.`);
+      return;
+    }
     const actionLabel = nextStatus === 'nonaktif' ? 'menonaktifkan (suspend)' : 'mengaktifkan kembali';
 
     if (!window.confirm(`Apakah Anda yakin ingin ${actionLabel} layanan untuk "${s.nama_sekolah}"?`)) {
@@ -246,9 +315,14 @@ export default function KelolaSekolah() {
         updated_at: serverTimestamp(),
       });
 
-      await logActivity(s.id, userData.uid, userData.nama, 'toggle_suspend_sekolah', {
-        statusBaru: nextStatus,
-        namaSekolah: s.nama_sekolah,
+      logActivity({
+        schoolId: s.id,
+        actorId: userData.uid,
+        actorNama: userData.nama,
+        action: nextStatus === 'nonaktif' ? 'SUSPEND_SCHOOL' : 'ACTIVATE_SCHOOL',
+        recordType: 'schools',
+        recordId: s.id,
+        detail: { nama_sekolah: s.nama_sekolah },
       });
 
       showNotification('success', `Status langganan ${s.nama_sekolah} berhasil diubah ke: ${nextStatus.toUpperCase()}`);
@@ -260,10 +334,26 @@ export default function KelolaSekolah() {
 
   // Hapus Sekolah (Hard Delete)
   const handleDeleteSchool = async (s) => {
+    // Relasi: sekolah yang masih memiliki akun tidak boleh dihapus (akun akan yatim & terkunci)
+    const linkedUsers = users.filter((u) => u.school_id === s.id);
+    if (linkedUsers.length > 0) {
+      showNotification(
+        'error',
+        `"${s.nama_sekolah}" masih memiliki ${linkedUsers.length} akun (kepsek/guru). Suspend sekolah atau nonaktifkan akun terlebih dahulu.`
+      );
+      setDeleteConfirmSchool(null);
+      return;
+    }
     try {
       await deleteDoc(doc(db, 'schools', s.id));
-      await logActivity(s.id, userData.uid, userData.nama, 'hapus_sekolah', {
-        namaSekolah: s.nama_sekolah,
+      logActivity({
+        schoolId: s.id,
+        actorId: userData.uid,
+        actorNama: userData.nama,
+        action: 'DELETE_SCHOOL',
+        recordType: 'schools',
+        recordId: s.id,
+        detail: { nama_sekolah: s.nama_sekolah },
       });
       showNotification('success', `Sekolah "${s.nama_sekolah}" berhasil dihapus.`);
       setDeleteConfirmSchool(null);
@@ -282,12 +372,13 @@ export default function KelolaSekolah() {
       (s.npsn || '').toLowerCase().includes(q) ||
       (s.id || '').toLowerCase().includes(q);
 
+    const isNonaktif = s.status_langganan === 'nonaktif' || isLanggananKedaluwarsa(s);
     const matchStatus =
       statusFilter === 'semua'
         ? true
         : statusFilter === 'aktif'
-        ? s.status_langganan === 'aktif'
-        : s.status_langganan === 'nonaktif';
+        ? !isNonaktif
+        : isNonaktif;
 
     return matchSearch && matchStatus;
   });
@@ -400,7 +491,8 @@ export default function KelolaSekolah() {
             const kepsekInSchool = users.find(
               (u) => u.school_id === s.id && u.role === 'kepsek'
             );
-            const isSuspended = s.status_langganan === 'nonaktif';
+            const isExpired = isLanggananKedaluwarsa(s);
+            const isSuspended = s.status_langganan === 'nonaktif' || isExpired;
             const kuota = s.kuota_guru || 5;
             const terpakai = teachersInSchool.length;
             const kuotaPersen = Math.min(100, Math.round((terpakai / kuota) * 100));
@@ -518,7 +610,7 @@ export default function KelolaSekolah() {
                         : 'bg-emerald-100 text-emerald-800'
                     }`}
                   >
-                    {isSuspended ? 'LAYANAN DISUSPEND' : 'AKTIF'}
+                    {isExpired && s.status_langganan !== 'nonaktif' ? 'KEDALUWARSA' : STATUS_LANGGANAN_LABEL[s.status_langganan] || 'AKTIF'}
                   </span>
 
                   <button
@@ -602,7 +694,7 @@ export default function KelolaSekolah() {
                     required
                     value={formNama}
                     onChange={(e) => setFormNama(e.target.value)}
-                    placeholder="Contoh: TK Dharma Wanita Persatuan 8"
+                    placeholder="Contoh: TK Pertiwi 1"
                     className="w-full px-3 py-2 text-xs font-bold rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
                   />
                 </div>
@@ -742,7 +834,7 @@ export default function KelolaSekolah() {
                           onClick={() => {
                             const targetDate = new Date();
                             targetDate.setDate(targetDate.getDate() + days);
-                            setFormBerlakuHingga(targetDate.toISOString().split('T')[0]);
+                            setFormBerlakuHingga(format(targetDate, 'yyyy-MM-dd'));
                             setFormKuotaGuru(3);
                           }}
                           className="px-2.5 py-1 text-xs font-bold rounded-lg bg-white border border-amber-300 text-amber-800 hover:bg-amber-100 transition shadow-xs"
@@ -753,6 +845,51 @@ export default function KelolaSekolah() {
                     </div>
                   </div>
                 )}
+              </div>
+
+              {/* Status Langganan, Kelompok Kelas & Jam Sekolah */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Status Langganan</label>
+                  <select
+                    value={formStatus}
+                    onChange={(e) => setFormStatus(e.target.value)}
+                    className="w-full px-3 py-2 text-xs font-bold rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
+                  >
+                    <option value="aktif">Aktif</option>
+                    <option value="masa_tenggang">Masa Tenggang (tetap bisa akses)</option>
+                    <option value="nonaktif">Nonaktif (suspend)</option>
+                  </select>
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Kelompok Kelas (pisahkan dengan koma)</label>
+                  <input
+                    type="text"
+                    value={formKelompok}
+                    onChange={(e) => setFormKelompok(e.target.value)}
+                    placeholder="TK A, TK B, Kelompok Bermain"
+                    className="w-full px-3 py-2 text-xs font-medium rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Jam Masuk Guru</label>
+                  <input
+                    type="time"
+                    value={formJamMasuk}
+                    onChange={(e) => setFormJamMasuk(e.target.value)}
+                    className="w-full px-3 py-2 text-xs font-bold rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Jam Pulang Guru</label>
+                  <input
+                    type="time"
+                    value={formJamPulang}
+                    onChange={(e) => setFormJamPulang(e.target.value)}
+                    className="w-full px-3 py-2 text-xs font-bold rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
+                  />
+                </div>
+                <p className="text-[11px] text-slate-500 self-end pb-2">Kepala Sekolah dapat menyesuaikan jam & toleransi dari menu Jadwal.</p>
               </div>
 
               {/* Upload Logo & Stempel PNG Transparan */}

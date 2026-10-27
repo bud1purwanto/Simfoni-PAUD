@@ -24,6 +24,7 @@ import * as XLSX from "xlsx";
 export const exportAttendanceToExcel = ({
   namaSekolah = "SIMFONI PAUD",
   periodeBulan = "Periode Berjalan",
+  hariKerjaEfektif = null,
   rekapData = [],
 }) => {
   // 1. Siapkan header informasi sekolah
@@ -31,7 +32,8 @@ export const exportAttendanceToExcel = ({
     ["REKAPITULASI PRESENSI & HONORARIUM GURU"],
     [`Nama Sekolah: ${namaSekolah}`],
     [`Periode: ${periodeBulan}`],
-    [`Tanggal Unduh: ${new Date().toLocaleDateString("id-ID")}`],
+    ...(hariKerjaEfektif !== null ? [[`Hari Kerja Efektif: ${hariKerjaEfektif} hari`]] : []),
+    [`Tanggal Unduh: ${new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}`],
     [], // Baris kosong pemisah
   ];
 
@@ -40,27 +42,33 @@ export const exportAttendanceToExcel = ({
     "No",
     "Nama Lengkap Guru",
     "Kelompok Kelas",
-    "Hadir (Hari)",
+    "Hadir Tepat Waktu (Hari)",
     "Terlambat (Hari)",
+    "Total Menit Terlambat",
     "Izin (Hari)",
     "Sakit (Hari)",
-    "Total Kehadiran",
-    "Persentase (%)",
-    "Status Honor",
+    "Tanpa Keterangan (Hari)",
+    "Lupa Absen Pulang (Hari)",
+    "Total Kehadiran (Hari)",
+    "Persentase Kehadiran (%)",
+    "Catatan",
   ];
 
-  // 3. Data isi tabel
+  // 3. Data isi tabel (angka disimpan sebagai number agar bisa langsung dihitung di Excel)
   const rows = rekapData.map((item, index) => [
     index + 1,
     item.nama || "-",
     item.kelompok || "-",
     item.hadir || 0,
     item.terlambat || 0,
+    item.menitTerlambat || 0,
     item.izin || 0,
     item.sakit || 0,
+    item.alpa || 0,
+    item.lupaPulang || 0,
     (item.hadir || 0) + (item.terlambat || 0),
-    item.persentase || "0%",
-    item.catatan || "Lengkap",
+    parseInt(item.persentase, 10) || 0,
+    item.catatan || "-",
   ]);
 
   // Gabungkan seluruh baris
@@ -74,13 +82,16 @@ export const exportAttendanceToExcel = ({
     { wch: 5 },  // No
     { wch: 28 }, // Nama
     { wch: 15 }, // Kelompok
-    { wch: 12 }, // Hadir
-    { wch: 14 }, // Terlambat
-    { wch: 12 }, // Izin
-    { wch: 12 }, // Sakit
-    { wch: 15 }, // Total
-    { wch: 15 }, // %
-    { wch: 20 }, // Catatan
+    { wch: 14 }, // Hadir
+    { wch: 12 }, // Terlambat
+    { wch: 14 }, // Menit terlambat
+    { wch: 10 }, // Izin
+    { wch: 10 }, // Sakit
+    { wch: 14 }, // Tanpa keterangan
+    { wch: 14 }, // Lupa pulang
+    { wch: 14 }, // Total
+    { wch: 14 }, // %
+    { wch: 18 }, // Catatan
   ];
 
   const workbook = XLSX.utils.book_new();

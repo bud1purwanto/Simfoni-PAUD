@@ -18,13 +18,15 @@ import {
   GraduationCap
 } from 'lucide-react';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
-import { sendPasswordResetEmail } from 'firebase/auth';
-import { db, auth, createGuruAccountByKepsek, updateGuruByKepsek, toggleStatusGuruByKepsek, markPasswordResetByAdmin } from '../../config/firebase';
+import { db, createGuruAccountByKepsek, updateGuruByKepsek, toggleStatusGuruByKepsek } from '../../config/firebase';
 import { useAuth } from '../../context/AuthContext';
 import { logActivity } from '../../utils/auditLogger';
+import { resetPasswordAkun } from '../../utils/adminApi';
+import { getKelompokOptions, normalizeKelompok, DEFAULT_PASSWORD, KELOMPOK_SEMUA } from '../../utils/schoolConfig';
 
 export default function KelolaGuru() {
   const { userData, schoolData } = useAuth();
+  const kelompokOptions = getKelompokOptions(schoolData);
 
   const [teachers, setTeachers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -40,14 +42,15 @@ export default function KelolaGuru() {
   // Form Tambah Guru
   const [namaGuru, setNamaGuru] = useState('');
   const [emailGuru, setEmailGuru] = useState('');
-  const [passwordGuru, setPasswordGuru] = useState('Guru1234!');
-  const [kelompokKelas, setKelompokKelas] = useState('TK A');
+  const [passwordGuru, setPasswordGuru] = useState(DEFAULT_PASSWORD.guru);
+  const [kelompokKelas, setKelompokKelas] = useState(kelompokOptions[0] || '');
   const [formSubmitting, setFormSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
 
   // Form Edit Guru
   const [editNama, setEditNama] = useState('');
-  const [editKelompok, setEditKelompok] = useState('TK A');
+  const [editKelompok, setEditKelompok] = useState(kelompokOptions[0] || '');
+  const [resettingUid, setResettingUid] = useState(null);
 
   // Ambil Data Guru dari Firestore
   useEffect(() => {
@@ -95,8 +98,8 @@ export default function KelolaGuru() {
     } else {
       setNamaGuru('');
       setEmailGuru('');
-      setPasswordGuru('Guru1234!');
-      setKelompokKelas('TK A');
+      setPasswordGuru(DEFAULT_PASSWORD.guru);
+      setKelompokKelas(kelompokOptions[0] || '');
       setFormError('');
       setAddModalOpen(true);
     }
@@ -105,6 +108,12 @@ export default function KelolaGuru() {
   // Simpan Guru Baru via Secondary Auth
   const handleCreateGuru = async (e) => {
     e.preventDefault();
+    // Cek ulang kuota (data guru bisa berubah realtime selama modal terbuka)
+    if (isQuotaFull) {
+      setAddModalOpen(false);
+      setQuotaExceededModalOpen(true);
+      return;
+    }
     if (!namaGuru.trim() || !emailGuru.trim()) {
       setFormError('Harap lengkapi nama dan email guru.');
       return;
@@ -128,7 +137,7 @@ export default function KelolaGuru() {
       );
 
       // Audit Log
-      await logActivity({
+      logActivity({
         schoolId: userData.school_id,
         actorId: userData.uid,
         actorNama: userData.nama,
@@ -150,6 +159,12 @@ export default function KelolaGuru() {
         errMsg = 'Alamat email ini sudah terdaftar di SIMFONI PAUD.';
       } else if (err.code === 'auth/invalid-email') {
         errMsg = 'Format alamat email tidak valid.';
+      } else if (err.code === 'auth/weak-password') {
+        errMsg = 'Kata sandi awal terlalu lemah (minimal 6 karakter).';
+      } else if (err.code === 'auth/network-request-failed') {
+        errMsg = 'Pendaftaran akun memerlukan koneksi internet.';
+      } else if (err.code === 'permission-denied') {
+        errMsg = 'Pendaftaran ditolak server: kuota guru penuh atau data kuota sekolah belum disinkronkan Superadmin.';
       }
       setFormError(errMsg);
     } finally {
@@ -161,7 +176,7 @@ export default function KelolaGuru() {
   const handleOpenEdit = (teacher) => {
     setSelectedTeacher(teacher);
     setEditNama(teacher.nama || '');
-    setEditKelompok(teacher.kelompok_kelas || 'TK A');
+    setEditKelompok(normalizeKelompok(teacher.kelompok_kelas) || kelompokOptions[0] || '');
     setEditModalOpen(true);
   };
 
@@ -175,7 +190,7 @@ export default function KelolaGuru() {
         kelompok_kelas: editKelompok,
       });
 
-      await logActivity({
+      logActivity({
         schoolId: userData.school_id,
         actorId: userData.uid,
         actorNama: userData.nama,
@@ -200,18 +215,18 @@ export default function KelolaGuru() {
     const newStatus = isCurrentlyActive ? 'nonaktif' : 'aktif';
     const actionDesc = isCurrentlyActive ? 'menonaktifkan' : 'mengaktifkan kembali';
 
-    if (!window.confirm(`Apakah Anda yakin ingin ${actionDesc} akun "${teacher.nama}"?`)) return;
-
     // Jika ingin mengaktifkan tapi kuota sudah penuh
     if (newStatus === 'aktif' && isQuotaFull) {
       setQuotaExceededModalOpen(true);
       return;
     }
 
-    try {
-      await toggleStatusGuruByKepsek(teacher.uid || teacher.id, newStatus);
+    if (!window.confirm(`Apakah Anda yakin ingin ${actionDesc} akun "${teacher.nama}"?`)) return;
 
-      await logActivity({
+    try {
+      await toggleStatusGuruByKepsek(teacher.uid || teacher.id, newStatus, userData.school_id);
+
+      logActivity({
         schoolId: userData.school_id,
         actorId: userData.uid,
         actorNama: userData.nama,
@@ -225,42 +240,44 @@ export default function KelolaGuru() {
         text: `Status akun guru "${teacher.nama}" diubah menjadi ${newStatus}.`,
       });
     } catch (err) {
-      alert('Gagal mengubah status guru: ' + err.message);
+      alert(err.code === 'permission-denied'
+        ? 'Ditolak server: kuota guru aktif sudah penuh.'
+        : 'Gagal mengubah status guru: ' + err.message);
     }
   };
 
-  // Reset Password Guru
+  // Reset Password Guru ke Default (Guru1234!) tanpa perlu membuka email
   const handleResetPassword = async (teacher) => {
-    if (!window.confirm(`Reset kata sandi guru "${teacher.nama}"? Tautan pembuatan sandi baru akan dikirimkan ke email ${teacher.email} dan guru wajib membuat sandi baru.`)) return;
+    const targetUid = teacher.uid || teacher.id;
+    if (!window.confirm(
+      `Reset kata sandi guru "${teacher.nama}" ke password default "${DEFAULT_PASSWORD.guru}"?\n\nGuru wajib membuat sandi baru saat login berikutnya.`
+    )) return;
 
+    setResettingUid(targetUid);
     try {
-      // 1. Set flag wajib ganti password di Firestore
-      await markPasswordResetByAdmin(teacher.uid || teacher.id);
+      const result = await resetPasswordAkun({ targetUid, targetEmail: teacher.email });
 
-      // 2. Kirim email reset password resmi dari Firebase Auth
-      await sendPasswordResetEmail(auth, teacher.email);
-
-      await logActivity({
+      logActivity({
         schoolId: userData.school_id,
         actorId: userData.uid,
         actorNama: userData.nama,
         action: 'RESET_PASSWORD_GURU',
         recordType: 'users',
-        recordId: teacher.uid || teacher.id,
+        recordId: targetUid,
+        detail: { mode: result.mode },
       });
 
       setNotification({
         type: 'success',
-        text: `Tautan reset sandi telah dikirim ke ${teacher.email}. Flag wajib ganti sandi telah diaktifkan untuk guru "${teacher.nama}".`,
+        text: result.mode === 'default'
+          ? `Kata sandi "${teacher.nama}" telah direset ke "${result.defaultPassword}". Sampaikan langsung ke guru; sandi wajib diganti saat login.`
+          : `Layanan reset instan belum aktif di server, sehingga tautan reset sandi dikirim ke ${teacher.email} dan akun ditandai wajib ganti sandi.`,
       });
     } catch (err) {
       console.warn('Gagal reset sandi:', err);
-      // Fallback tetap tandai flag
-      await markPasswordResetByAdmin(teacher.uid || teacher.id);
-      setNotification({
-        type: 'success',
-        text: `Flag wajib ganti password berhasil diaktifkan untuk "${teacher.nama}". Guru dapat menggunakan tombol lupa sandi saat login.`,
-      });
+      setNotification({ type: 'error', text: `Gagal mereset sandi: ${err.message}` });
+    } finally {
+      setResettingUid(null);
     }
   };
 
@@ -416,11 +433,12 @@ export default function KelolaGuru() {
                   <div className="flex items-center space-x-2 self-end md:self-auto">
                     <button
                       onClick={() => handleResetPassword(teacher)}
+                      disabled={resettingUid === (teacher.uid || teacher.id)}
                       title="Reset Kata Sandi Guru"
-                      className="inline-flex items-center space-x-1.5 px-3 py-2 bg-amber-50 hover:bg-amber-100 text-amber-900 rounded-xl text-xs font-bold transition border border-amber-200"
+                      className="inline-flex items-center space-x-1.5 px-3 py-2 bg-amber-50 hover:bg-amber-100 text-amber-900 rounded-xl text-xs font-bold transition border border-amber-200 disabled:opacity-60"
                     >
                       <KeyRound className="w-3.5 h-3.5" />
-                      <span>Reset Sandi</span>
+                      <span>{resettingUid === (teacher.uid || teacher.id) ? 'Mereset...' : 'Reset Sandi'}</span>
                     </button>
 
                     <button
@@ -519,10 +537,10 @@ export default function KelolaGuru() {
                     onChange={(e) => setKelompokKelas(e.target.value)}
                     className="w-full px-3 py-2.5 text-xs font-bold text-slate-800 bg-amber-50/30 border border-slate-200 rounded-xl focus:outline-none focus:bg-white"
                   >
-                    <option value="TK A">TK A (4-5 Thn)</option>
-                    <option value="TK B">TK B (5-6 Thn)</option>
-                    <option value="Kelompok Bermain">Kelompok Bermain (KB)</option>
-                    <option value="Semua">Semua Kelas</option>
+                    {kelompokOptions.map((k) => (
+                      <option key={k} value={k}>{k}</option>
+                    ))}
+                    <option value={KELOMPOK_SEMUA}>Semua Kelas (Guru Pendamping)</option>
                   </select>
                 </div>
 
@@ -541,7 +559,7 @@ export default function KelolaGuru() {
               </div>
 
               <div className="p-3 bg-amber-50/60 rounded-2xl border border-amber-200/70 text-[11px] text-amber-900 leading-relaxed">
-                💡 <strong>Solusi Lupa Sandi:</strong> Password awal diatur ke <code>Guru1234!</code>. Guru wajib memperbarui password pribadi saat login pertama kali.
+                💡 <strong>Solusi Lupa Sandi:</strong> Password awal diatur ke <code>{DEFAULT_PASSWORD.guru}</code>. Guru wajib memperbarui password pribadi saat login pertama kali.
               </div>
 
               <div className="pt-2 flex justify-end space-x-2">
@@ -636,10 +654,13 @@ export default function KelolaGuru() {
                   onChange={(e) => setEditKelompok(e.target.value)}
                   className="w-full px-3 py-2.5 text-xs font-bold text-slate-800 bg-amber-50/30 border border-slate-200 rounded-xl focus:outline-none focus:bg-white"
                 >
-                  <option value="TK A">TK A (4-5 Thn)</option>
-                  <option value="TK B">TK B (5-6 Thn)</option>
-                  <option value="Kelompok Bermain">Kelompok Bermain (KB)</option>
-                  <option value="Semua">Semua Kelas</option>
+                  {!kelompokOptions.includes(editKelompok) && editKelompok !== KELOMPOK_SEMUA && editKelompok && (
+                    <option value={editKelompok}>{editKelompok}</option>
+                  )}
+                  {kelompokOptions.map((k) => (
+                    <option key={k} value={k}>{k}</option>
+                  ))}
+                  <option value={KELOMPOK_SEMUA}>Semua Kelas (Guru Pendamping)</option>
                 </select>
               </div>
 

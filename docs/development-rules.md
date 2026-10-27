@@ -112,5 +112,17 @@ gitGraph
    ```
 4. **Keamanan Kredensial:**  
    File `.env`, `.env.local`, `.env.development`, dan `.env.production` **DILARANG** di-commit ke Git. Hanya berkas `.env.example` yang boleh tersimpan di repositori.
-5. **Indikator DEV Mode:**  
+5. **Tanggal Operasional = Tanggal Lokal:**  
+   Dilarang memakai `new Date().toISOString().split('T')[0]` untuk tanggal presensi/jurnal (UTC → absen sebelum 07:00 WIB tercatat kemarin). Gunakan `getLocalDateString()`, `getLocalMonthString()`, `getLocalTimeString()` dari `src/utils/formatters.js`.
+6. **Konfigurasi Sekolah Lewat Helper:**  
+   Jam masuk/pulang, toleransi, hari kerja, daftar kelompok, dan password default dibaca dari `src/utils/schoolConfig.js`. Dilarang meng-hardcode `'07:45'`, `'TK A'`, `'Guru1234!'`, dsb. di komponen.
+7. **Penulisan Ramah Offline:**  
+   Penulisan operasional guru dibungkus `commitWrite()` (`src/utils/offlineWrite.js`). Untuk dokumen baru gunakan `doc(collection(db, 'x'))` + `setDoc` (bukan `addDoc`, yang menunggu server).
+8. **Audit Log:**  
+   Panggil `logActivity({ schoolId, actorId, actorNama, action, recordType, recordId, detail })` dengan **satu objek** (bukan argumen posisi) dan kode aksi `UPPER_SNAKE_CASE`. Tidak perlu di-`await`. `actorId` harus UID sesi aktif (divalidasi rules).
+8a. **Perubahan Status Akun Guru Wajib Lewat Helper:**  
+   Gunakan `createGuruAccountByKepsek` / `toggleStatusGuruByKepsek` (batch + counter kuota). `updateDoc` langsung pada `status_akun` guru akan ditolak rules.
+9. **Uji Rules Sebelum Deploy:**  
+   Setiap perubahan `firestore.rules`/`storage.rules` wajib diuji di Firebase Emulator (lihat `docs/security-rules.md` §6). Ingat: Firestore meng-OR-kan semua `match` yang cocok.
+10. **Indikator DEV Mode:**  
    Komponen `DevBadge.jsx` wajib terpasang di layout aplikasi untuk menampilkan label peringatan visual saat berjalan di luar mode production.

@@ -20,6 +20,9 @@ import { collection, onSnapshot, query } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { useAuth } from '../../context/AuthContext';
 import { formatTanggalIndo } from '../../utils/formatters';
+import { runAutoRetentionIfDue } from '../../utils/logRetention';
+import { syncGuruCounters } from '../../utils/quotaSync';
+import { sisaHariLangganan, isLanggananKedaluwarsa } from '../../utils/schoolConfig';
 
 export default function DashboardSuperadmin() {
   const { userData } = useAuth();
@@ -51,10 +54,20 @@ export default function DashboardSuperadmin() {
     };
   }, []);
 
+  // Selaraskan counter kuota guru (dipakai Security Rules untuk menegakkan kuota)
+  useEffect(() => {
+    if (!loading && schools.length > 0) syncGuruCounters(schools, users);
+  }, [loading, schools, users]);
+
+  // Periodic Retention Job audit_logs (maks. sekali per sesi, hanya jika sudah > 24 jam)
+  useEffect(() => {
+    if (userData?.uid) runAutoRetentionIfDue(userData);
+  }, [userData?.uid]);
+
   // Metrik Agregat
   const totalSchools = schools.length;
-  const activeSchools = schools.filter((s) => s.status_langganan === 'aktif').length;
-  const suspendedSchools = schools.filter((s) => s.status_langganan === 'nonaktif').length;
+  const activeSchools = schools.filter((s) => s.status_langganan !== 'nonaktif' && !isLanggananKedaluwarsa(s)).length;
+  const suspendedSchools = schools.length - activeSchools;
   const totalKepsek = users.filter((u) => u.role === 'kepsek').length;
   const totalGuru = users.filter((u) => u.role === 'guru').length;
 
@@ -69,14 +82,12 @@ export default function DashboardSuperadmin() {
   const storagePercentage = Math.min(100, Math.round((totalStorageMb / maxStorageMb) * 100));
 
   // Deteksi Sekolah yang Masa Langganannya Berakhir dalam 30 Hari atau Sudah Berakhir
-  const now = new Date();
-  const thirtyDaysLater = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-
-  const expiringSchools = schools.filter((s) => {
-    if (!s.berlaku_hingga) return false;
-    const expiryDate = new Date(s.berlaku_hingga);
-    return expiryDate <= thirtyDaysLater;
-  });
+  const expiringSchools = schools
+    .filter((s) => {
+      const sisa = sisaHariLangganan(s);
+      return sisa !== null && sisa <= 30;
+    })
+    .sort((a, b) => (a.berlaku_hingga || '').localeCompare(b.berlaku_hingga || ''));
 
   return (
     <div className="space-y-6 pb-20 md:pb-6">

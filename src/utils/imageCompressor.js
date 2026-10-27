@@ -29,6 +29,10 @@ export const compressImage = async (imageFile) => {
     return compressedFile;
   } catch (error) {
     console.warn('Kompresi gagal, menggunakan file asli:', error);
+    // File asli > 2 MB akan ditolak Storage Rules, beri pesan yang jelas
+    if (imageFile.size > 2 * 1024 * 1024) {
+      throw new Error('Foto tidak dapat dikompresi dan ukurannya melebihi 2 MB. Coba foto lain.');
+    }
     return imageFile;
   }
 };
@@ -40,11 +44,13 @@ export const compressImage = async (imageFile) => {
  * @param {string} schoolId 
  * @param {string} userId 
  * @param {string} folderPrefix ('journals' | 'tasks' | 'logos' | 'stempel')
- * @returns {Promise<{ url: string, storagePath: string }>}
+ * @returns {Promise<{ url: string, storagePath: string, sizeKb: number }>}
  */
 export const uploadCompressedImage = async (file, schoolId, userId, folderPrefix = 'journals') => {
   const compressed = await compressImage(file);
-  const cleanFileName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
+  // Hasil kompresi selalu JPEG, jadi ekstensi disesuaikan (mis. foto HEIC iPhone)
+  const baseName = file.name.replace(/\.[^.]+$/, '').replace(/[^a-zA-Z0-9]/g, '_').slice(0, 40) || 'foto';
+  const cleanFileName = `${baseName}.jpg`;
   const timestamp = Date.now();
   const storagePath = `schools/${schoolId}/${folderPrefix}/${userId}/${timestamp}_${cleanFileName}`;
 
@@ -54,6 +60,6 @@ export const uploadCompressedImage = async (file, schoolId, userId, folderPrefix
   });
 
   const url = await getDownloadURL(snapshot.ref);
-  return { url, storagePath };
+  return { url, storagePath, sizeKb: Math.max(1, Math.round(compressed.size / 1024)) };
 };
 

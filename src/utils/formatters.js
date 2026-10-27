@@ -2,6 +2,29 @@ import { format, parseISO } from "date-fns";
 import { id } from "date-fns/locale";
 
 /**
+ * Tanggal lokal perangkat dalam format 'YYYY-MM-DD'.
+ * JANGAN gunakan `toISOString()` untuk tanggal operasional: nilainya UTC, sehingga
+ * presensi pukul 00:00–06:59 WIB tercatat sebagai tanggal kemarin.
+ */
+export const getLocalDateString = (date = new Date()) => format(date, "yyyy-MM-dd");
+
+/**
+ * Bulan lokal perangkat dalam format 'YYYY-MM'.
+ */
+export const getLocalMonthString = (date = new Date()) => format(date, "yyyy-MM");
+
+/**
+ * Jam lokal perangkat dalam format 'HH:mm:ss' (dipakai untuk *_device timestamp).
+ */
+export const getLocalTimeString = (date = new Date()) => format(date, "HH:mm:ss");
+
+/**
+ * Nama hari Indonesia untuk tanggal tertentu (Minggu, Senin, ...).
+ */
+export const HARI_INDO = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+export const getNamaHari = (date = new Date()) => HARI_INDO[date.getDay()];
+
+/**
  * Format tanggal standar Indonesia (contoh: 'Senin, 27 Oktober 2026')
  */
 export const formatTanggalIndo = (dateOrString) => {
@@ -61,7 +84,7 @@ export const formatKbmToWhatsAppMessage = ({
   kegiatanInti,
   status,
 }) => {
-  return `🎶 *LAPORAN KEGIATAN KBM - ${namaSekolah.toUpperCase()}*\n\n` +
+  return `🎶 *LAPORAN KEGIATAN KBM - ${(namaSekolah || "PAUD").toUpperCase()}*\n\n` +
     `📅 *Tanggal:* ${formatTanggalIndo(tanggal)}\n` +
     `👩‍🏫 *Guru:* ${namaGuru} (${kelompok})\n` +
     `🎨 *Topik:* ${topik}\n` +

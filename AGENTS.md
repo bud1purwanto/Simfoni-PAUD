@@ -114,7 +114,7 @@ Sistem SIMFONI PAUD dilengkapi dengan spesialisasi Subagent dinamis dan Workspac
 2. **Isolasi Data Multi-Tenant:**  
    Seluruh dokumen operasional wajib memiliki atribut `"school_id": "string"`. Seluruh kueri dari Kepsek dan Guru wajib menyertakan `where("school_id", "==", currentUser.school_id)`.
 3. **Pemberlakuan Batas Kuota Guru:**  
-   Sebelum Kepsek mendaftarkan guru baru, hitung total guru aktif di sekolah tersebut. Blokir penambahan jika sudah mencapai `schoolData.kuota_guru`.
+   Sebelum Kepsek mendaftarkan guru baru, hitung total guru aktif di sekolah tersebut. Blokir penambahan jika sudah mencapai `schoolData.kuota_guru`. Batas ini juga ditegakkan Security Rules lewat counter `schools.jumlah_guru_aktif` yang wajib diubah dalam batch yang sama (gunakan helper di `firebase.js`).
 4. **Kompresi Gambar di HP Guru:**  
    Gunakan library `browser-image-compression` untuk menekan ukuran foto kamera (3-10 MB) menjadi **< 300 KB** sebelum diunggah ke Firebase Storage.
 5. **Dynamic Branding & Kop Surat PDF:**  
@@ -126,7 +126,9 @@ Sistem SIMFONI PAUD dilengkapi dengan spesialisasi Subagent dinamis dan Workspac
 8. **Presensi Dual Timestamp (Anti-Trap Offline):**  
    Catat waktu lokal perangkat (`jam_datang_device`) dan jam server (`jam_datang_server`) agar saat guru absen di zona sinyal lemah lalu tersinkron belakangan, guru tidak dirugikan sebagai terlambat.
 9. **Solusi Lupa Password Guru (Tanpa Buka Email):**  
-   Kepsek memiliki tombol "Reset Password ke Default" (`Guru1234!`) di panel guru dengan flag `wajib_ganti_password: true`.
+   Kepsek memiliki tombol "Reset Password ke Default" (`Guru1234!`) di panel guru dengan flag `wajib_ganti_password: true`. Penggantian sandi dilakukan Cloudflare Worker `worker/index.js` (`/api/admin/reset-password`, butuh secret Service Account); fallback otomatis ke tautan email bila Worker belum dikonfigurasi.
+13. **Tanggal Lokal, Jam Sekolah & Offline Write:**  
+   Tanggal operasional memakai `getLocalDateString()` (bukan `toISOString()` UTC). Jam masuk/toleransi/hari kerja/kelompok dibaca dari `schoolConfig.js`. Penulisan guru dibungkus `commitWrite()` agar UI tidak macet saat offline.
 10. **Multi-Format Export & Bulk Approval:**  
     Sediakan PDF Ringkas (ramah HP), PDF Lengkap Portofolio, Ekspor Excel (`.xlsx`) untuk rekap honor/transport guru, serta tombol "Setujui Sekaligus" (*Bulk Approval*) pada dashboard Kepsek.
 11. **Pembersihan Log & Job Retensi Berkala:**  
@@ -190,7 +192,15 @@ Saat diminta membangun atau menyempurnakan fitur, ikuti urutan langkah terstrukt
   - [x] `ManajemenLog.jsx`: Tabel audit log global, tombol *Purge* manual 30/60/90 hari, dan konfigurasi *Periodic Retention Job* (`system_settings`).
 
 - [ ] **Fase 8: Pengujian Menyeluruh, Optimasi & Verifikasi CI/CD**
-  - [ ] Uji isolasi data antar sekolah mitra di branch `dev` (Firestore Rules verification).
-  - [ ] Uji kompresi foto dan keandalan mode offline persistence.
-  - [ ] Uji hasil cetak PDF (dengan kop & stempel transparan) dan ekspor Excel di HP dan laptop.
-  - [ ] Verifikasi dan sinkronisasi seluruh dokumen di `docs/*.md` agar selalu selaras dengan kode akhir.
+  - [x] Uji isolasi data antar sekolah mitra (Firestore & Storage Rules) di Firebase Emulator — 52 skenario lulus.
+  - [x] Uji E2E browser 3 peran di emulator (seeder, secondaryAuth, wajib ganti sandi, presensi, izin, jurnal, validasi, kendala, rekap PDF).
+  - [ ] Uji kompresi foto & mode offline di HP nyata (sinyal lemah) pada branch `dev`.
+  - [ ] Uji cetak PDF Portofolio (foto, stempel; butuh CORS bucket) dan Excel di HP & laptop.
+  - [ ] Deploy Worker + secrets Service Account, lalu uji Reset Sandi ke Default di `dev`.
+  - [x] Sinkronisasi seluruh dokumen `docs/*.md` dengan kode akhir.
+
+- [ ] **Fase 9 (Usulan): Penguatan & Fitur Lanjutan** (ide dari audit Oktober 2026).
+  - [x] Penegakan kuota guru di sisi server (counter + batch + Security Rules, tanpa Cloud Functions).
+  - [x] Halaman Riwayat Aktivitas (audit trail) untuk Kepsek (`/kepsek/riwayat`).
+  - [x] PWA Service Worker (offline shell) + fallback cache profil pada sinyal lemah.
+  - [x] Uji: 52 skenario rules, 16 unit test, 24 langkah E2E (build produksi + emulator).

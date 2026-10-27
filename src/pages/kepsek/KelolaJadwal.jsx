@@ -29,9 +29,11 @@ import {
 import { db } from '../../config/firebase';
 import { useAuth } from '../../context/AuthContext';
 import { logActivity } from '../../utils/auditLogger';
+import { getKelompokOptions, normalizeKelompok, KELOMPOK_SEMUA, toMinutes } from '../../utils/schoolConfig';
+import PengaturanJamSekolah from '../../components/kepsek/PengaturanJamSekolah';
 
 const DAYS = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
-const KELOMPOK_OPTIONS = ['Semua Kelompok', 'TK A', 'TK B', 'Kelompok Bermain (KB)'];
+const PIC_SEMUA = 'all';
 
 // Template Aktivitas Khas PAUD untuk Cepat Isi
 const TEMPLATE_AKTIVITAS = [
@@ -45,7 +47,8 @@ const TEMPLATE_AKTIVITAS = [
 ];
 
 export default function KelolaJadwal() {
-  const { userData } = useAuth();
+  const { userData, schoolData } = useAuth();
+  const kelompokOptions = getKelompokOptions(schoolData);
 
   const [schedules, setSchedules] = useState([]);
   const [teachers, setTeachers] = useState([]);
@@ -63,7 +66,7 @@ export default function KelolaJadwal() {
   const [formHari, setFormHari] = useState('Senin');
   const [formJamMulai, setFormJamMulai] = useState('07:30');
   const [formJamSelesai, setFormJamSelesai] = useState('09:30');
-  const [formKelompok, setFormKelompok] = useState('TK A');
+  const [formKelompok, setFormKelompok] = useState(kelompokOptions[0] || KELOMPOK_SEMUA);
   const [formKegiatan, setFormKegiatan] = useState('');
   const [formPicId, setFormPicId] = useState('');
   const [formKeterangan, setFormKeterangan] = useState('');
@@ -89,10 +92,8 @@ export default function KelolaJadwal() {
       const list = snap.docs
         .map((d) => ({ id: d.id, ...d.data() }))
         .filter((t) => t.status_akun === 'aktif');
+      list.sort((a, b) => (a.nama || '').localeCompare(b.nama || ''));
       setTeachers(list);
-      if (list.length > 0 && !formPicId) {
-        setFormPicId(list[0].id);
-      }
     });
 
     // Ambil Jadwal Sekolah
@@ -102,7 +103,7 @@ export default function KelolaJadwal() {
     );
 
     const unsubSchedules = onSnapshot(qSchedules, (snap) => {
-      const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      const list = snap.docs.map((d) => ({ id: d.id, ...d.data(), kelompok: normalizeKelompok(d.data().kelompok) }));
       // Urutkan berdasarkan jam mulai
       list.sort((a, b) => (a.jam_mulai || '').localeCompare(b.jam_mulai || ''));
       setSchedules(list);
@@ -125,12 +126,10 @@ export default function KelolaJadwal() {
     setFormHari(selectedDay);
     setFormJamMulai('07:30');
     setFormJamSelesai('09:30');
-    setFormKelompok('TK A');
+    setFormKelompok(filterKelompok !== 'Semua' ? filterKelompok : (kelompokOptions[0] || KELOMPOK_SEMUA));
     setFormKegiatan('');
     setFormKeterangan('');
-    if (teachers.length > 0) {
-      setFormPicId(teachers[0].id);
-    }
+    setFormPicId(PIC_SEMUA);
     setIsModalOpen(true);
   };
 
@@ -139,9 +138,9 @@ export default function KelolaJadwal() {
     setFormHari(item.hari || 'Senin');
     setFormJamMulai(item.jam_mulai || '07:30');
     setFormJamSelesai(item.jam_selesai || '09:30');
-    setFormKelompok(item.kelompok || 'TK A');
+    setFormKelompok(normalizeKelompok(item.kelompok) || KELOMPOK_SEMUA);
     setFormKegiatan(item.kegiatan || '');
-    setFormPicId(item.pic_guru_id || (teachers[0]?.id || ''));
+    setFormPicId(item.pic_guru_id || PIC_SEMUA);
     setFormKeterangan(item.keterangan || '');
     setIsModalOpen(true);
   };
@@ -159,12 +158,31 @@ export default function KelolaJadwal() {
       showNotification('error', 'Nama kegiatan wajib diisi');
       return;
     }
+    if (toMinutes(formJamSelesai) <= toMinutes(formJamMulai)) {
+      showNotification('error', 'Jam selesai harus setelah jam mulai');
+      return;
+    }
+
+    // Peringatan bentrok: kelompok yang sama di hari & rentang jam yang beririsan
+    const mulai = toMinutes(formJamMulai);
+    const selesai = toMinutes(formJamSelesai);
+    const bentrok = schedules.find((sch) =>
+      sch.id !== editingId &&
+      sch.hari === formHari &&
+      (sch.kelompok === formKelompok || sch.kelompok === KELOMPOK_SEMUA || formKelompok === KELOMPOK_SEMUA) &&
+      toMinutes(sch.jam_mulai) < selesai && mulai < toMinutes(sch.jam_selesai)
+    );
+    if (bentrok && !window.confirm(
+      `Jadwal ini beririsan dengan "${bentrok.kegiatan}" (${bentrok.jam_mulai}-${bentrok.jam_selesai}, ${bentrok.kelompok}). Tetap simpan?`
+    )) {
+      return;
+    }
 
     setIsSubmitting(true);
 
     try {
       const selectedTeacherObj = teachers.find((t) => t.id === formPicId);
-      const picNama = selectedTeacherObj?.nama || 'Guru Pengampu';
+      const picNama = formPicId === PIC_SEMUA ? 'Semua Guru' : (selectedTeacherObj?.nama || 'Guru Pengampu');
 
       const payload = {
         school_id: userData.school_id,
@@ -181,17 +199,27 @@ export default function KelolaJadwal() {
 
       if (editingId) {
         await updateDoc(doc(db, 'schedules', editingId), payload);
-        await logActivity(userData.school_id, userData.uid, userData.nama, 'update_jadwal', {
-          jadwalId: editingId,
-          kegiatan: formKegiatan,
+        logActivity({
+          schoolId: userData.school_id,
+          actorId: userData.uid,
+          actorNama: userData.nama,
+          action: 'UPDATE_JADWAL',
+          recordType: 'schedules',
+          recordId: editingId,
+          detail: { kegiatan: formKegiatan.trim() },
         });
         showNotification('success', 'Jadwal berhasil diperbarui!');
       } else {
         payload.created_at = serverTimestamp();
         const docRef = await addDoc(collection(db, 'schedules'), payload);
-        await logActivity(userData.school_id, userData.uid, userData.nama, 'tambah_jadwal', {
-          jadwalId: docRef.id,
-          kegiatan: formKegiatan,
+        logActivity({
+          schoolId: userData.school_id,
+          actorId: userData.uid,
+          actorNama: userData.nama,
+          action: 'ADD_JADWAL',
+          recordType: 'schedules',
+          recordId: docRef.id,
+          detail: { kegiatan: formKegiatan.trim() },
         });
         showNotification('success', 'Jadwal baru berhasil ditambahkan!');
       }
@@ -208,8 +236,13 @@ export default function KelolaJadwal() {
   const handleDeleteSchedule = async (id) => {
     try {
       await deleteDoc(doc(db, 'schedules', id));
-      await logActivity(userData.school_id, userData.uid, userData.nama, 'hapus_jadwal', {
-        jadwalId: id,
+      logActivity({
+        schoolId: userData.school_id,
+        actorId: userData.uid,
+        actorNama: userData.nama,
+        action: 'DELETE_JADWAL',
+        recordType: 'schedules',
+        recordId: id,
       });
       showNotification('success', 'Jadwal berhasil dihapus!');
       setDeleteConfirmId(null);
@@ -222,7 +255,7 @@ export default function KelolaJadwal() {
   // Filter Jadwal berdasarkan Hari & Kelompok
   const filteredSchedules = schedules.filter((s) => {
     const matchDay = selectedDay === 'Semua' ? true : s.hari === selectedDay;
-    const matchKelompok = filterKelompok === 'Semua' ? true : s.kelompok === filterKelompok;
+    const matchKelompok = filterKelompok === 'Semua' ? true : (s.kelompok === filterKelompok || s.kelompok === KELOMPOK_SEMUA);
     return matchDay && matchKelompok;
   });
 
@@ -273,6 +306,9 @@ export default function KelolaJadwal() {
         </div>
       )}
 
+      {/* Pengaturan Jam Masuk/Pulang Sekolah */}
+      <PengaturanJamSekolah onSaved={() => showNotification('success', 'Pengaturan jam sekolah tersimpan!')} />
+
       {/* Tab Navigasi Hari */}
       <div className="flex items-center space-x-2 overflow-x-auto pb-2 scrollbar-none">
         {DAYS.map((day) => {
@@ -320,7 +356,7 @@ export default function KelolaJadwal() {
           </span>
         </div>
         <div className="flex items-center space-x-1.5 w-full md:w-auto overflow-x-auto scrollbar-none">
-          {['Semua', 'TK A', 'TK B', 'Kelompok Bermain (KB)'].map((klp) => (
+          {['Semua', ...kelompokOptions].map((klp) => (
             <button
               key={klp}
               onClick={() => setFilterKelompok(klp)}
@@ -502,10 +538,10 @@ export default function KelolaJadwal() {
                     onChange={(e) => setFormKelompok(e.target.value)}
                     className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
                   >
-                    <option value="TK A">TK A (4-5 Tahun)</option>
-                    <option value="TK B">TK B (5-6 Tahun)</option>
-                    <option value="Kelompok Bermain (KB)">Kelompok Bermain (KB)</option>
-                    <option value="Semua Kelompok">Semua Rombel</option>
+                    {kelompokOptions.map((k) => (
+                      <option key={k} value={k}>{k}</option>
+                    ))}
+                    <option value={KELOMPOK_SEMUA}>Semua Rombel (Kegiatan Bersama)</option>
                   </select>
                 </div>
               </div>
@@ -555,16 +591,16 @@ export default function KelolaJadwal() {
                 <label className="block text-xs font-bold text-slate-700 mb-1">
                   Guru Pengampu (PIC)
                 </label>
-                {teachers.length === 0 ? (
-                  <p className="text-xs text-rose-500 font-medium">
-                    Belum ada guru aktif. Daftarkan guru terlebih dahulu di menu Kelola Guru.
-                  </p>
-                ) : (
+                {(
                   <select
                     value={formPicId}
                     onChange={(e) => setFormPicId(e.target.value)}
                     className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
                   >
+                    <option value={PIC_SEMUA}>Semua Guru (bergantian / bersama)</option>
+                    {formPicId !== PIC_SEMUA && !teachers.some((t) => t.id === formPicId) && (
+                      <option value={formPicId}>(Guru nonaktif)</option>
+                    )}
                     {teachers.map((t) => (
                       <option key={t.id} value={t.id}>
                         {t.nama} ({t.kelompok_kelas || 'Umum'})

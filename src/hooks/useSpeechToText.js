@@ -6,7 +6,10 @@ import { useState, useEffect, useRef, useCallback } from 'react';
  */
 export const useSpeechToText = (options = {}) => {
   const [isListening, setIsListening] = useState(false);
+  // `transcript` hanya berisi potongan kalimat FINAL terbaru (bukan akumulasi), sehingga
+  // komponen cukup menambahkannya ke field lalu memanggil resetTranscript().
   const [transcript, setTranscript] = useState('');
+  const [interimTranscript, setInterimTranscript] = useState('');
   const [error, setError] = useState(null);
   const recognitionRef = useRef(null);
 
@@ -28,11 +31,18 @@ export const useSpeechToText = (options = {}) => {
     recognition.lang = options.lang || 'id-ID'; // Bahasa Indonesia
 
     recognition.onresult = (event) => {
-      let currentTranscript = '';
-      for (let i = 0; i < event.results.length; i++) {
-        currentTranscript += event.results[i][0].transcript;
+      let finalChunk = '';
+      let interimChunk = '';
+      // Mulai dari resultIndex: hasil sebelumnya sudah pernah dikirim ke komponen
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const text = event.results[i][0].transcript;
+        if (event.results[i].isFinal) finalChunk += text;
+        else interimChunk += text;
       }
-      setTranscript(currentTranscript);
+      setInterimTranscript(interimChunk);
+      if (finalChunk.trim()) {
+        setTranscript((prev) => (prev ? `${prev} ${finalChunk.trim()}` : finalChunk.trim()));
+      }
     };
 
     recognition.onerror = (event) => {
@@ -49,6 +59,7 @@ export const useSpeechToText = (options = {}) => {
 
     recognition.onend = () => {
       setIsListening(false);
+      setInterimTranscript('');
     };
 
     recognitionRef.current = recognition;
@@ -90,6 +101,7 @@ export const useSpeechToText = (options = {}) => {
   return {
     isListening,
     transcript,
+    interimTranscript,
     error,
     isSupported,
     startListening,

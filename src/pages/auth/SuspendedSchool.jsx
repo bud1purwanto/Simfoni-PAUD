@@ -1,11 +1,19 @@
 import React from 'react';
 import { ShieldAlert, LogOut, PhoneCall } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
+import { getDashboardPath } from '../../components/layout/ProtectedRoute';
+import { isLanggananKedaluwarsa } from '../../utils/schoolConfig';
+import { formatTanggalIndo } from '../../utils/formatters';
 
 export default function SuspendedSchool() {
-  const { schoolData, logout } = useAuth();
+  const { currentUser, userData, schoolData, isSuspended, loading, logout } = useAuth();
   const navigate = useNavigate();
+
+  if (!loading && !currentUser) return <Navigate to="/login" replace />;
+  if (!loading && userData && !isSuspended) return <Navigate to={getDashboardPath(userData.role)} replace />;
+
+  const isExpired = isLanggananKedaluwarsa(schoolData);
 
   const handleLogout = async () => {
     await logout();
@@ -26,7 +34,11 @@ export default function SuspendedSchool() {
         </div>
 
         <p className="text-sm text-slate-600 leading-relaxed mb-6">
-          Masa aktif langganan aplikasi <strong>SIMFONI PAUD</strong> untuk sekolah Anda sedang tidak aktif atau ditangguhkan sementara.
+          {isExpired ? (
+            <>Masa aktif layanan <strong>SIMFONI PAUD</strong> untuk sekolah Anda telah berakhir pada <strong>{formatTanggalIndo(schoolData?.berlaku_hingga)}</strong>. Silakan hubungi Administrator Sistem.</>
+          ) : (
+            <>Masa aktif langganan aplikasi <strong>SIMFONI PAUD</strong> untuk sekolah Anda sedang tidak aktif atau ditangguhkan sementara.</>
+          )}
         </p>
 
         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-left text-xs text-amber-800 space-y-2 mb-6">
