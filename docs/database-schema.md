@@ -42,6 +42,8 @@ Menyimpan informasi tenant, kuota paket, dan data kop surat resmi.
   "paket_langganan": "trial | basic | pro",
   "status_langganan": "aktif | masa_tenggang | nonaktif",
   "kuota_guru": "number (Batas maksimum akun guru, misal: 5 atau 20)",
+  "total_foto_terunggah": "number (Counter agregat jumlah foto untuk estimasi kuota)",
+  "estimasi_storage_mb": "number (Estimasi akumulasi storage dalam MB)",
   "berlaku_hingga": "string (Format: YYYY-MM-DD)",
   "kelompok_tersedia": [
     "TK A",
@@ -71,6 +73,7 @@ Menyimpan profil seluruh pengguna di dalam platform.
   "nama_sekolah": "string | null",
   "kelompok_kelas": "string | null (Contoh: 'TK A', 'TK B', atau 'Semua')",
   "status_akun": "aktif | nonaktif",
+  "wajib_ganti_password": "boolean (true jika baru direset oleh Kepsek/Admin, default: false)",
   "created_at": "Timestamp (ServerTimestamp)",
   "updated_at": "Timestamp (ServerTimestamp)"
 }
@@ -92,9 +95,12 @@ Mencatat jam datang, pulang, izin, sakit, dan permohonan koreksi presensi.
   "user_id": "string (UID guru)",
   "nama_guru": "string",
   "tanggal": "string (YYYY-MM-DD)",
-  "jam_datang": "Timestamp | null (ServerTimestamp)",
-  "jam_pulang": "Timestamp | null (ServerTimestamp)",
+  "jam_datang_server": "Timestamp | null (ServerTimestamp)",
+  "jam_datang_device": "string (HH:mm:ss) | null (Waktu lokal HP guru saat tombol ditekan, aman dari delay offline sync)",
+  "jam_pulang_server": "Timestamp | null (ServerTimestamp)",
+  "jam_pulang_device": "string (HH:mm:ss) | null",
   "status": "hadir | terlambat | izin | sakit",
+  "status_pulang": "selesai | belum_absen | lupa_absen (Otomatis ditandai 'lupa_absen' jika >18:00 belum checkout)",
   "catatan": "string (Alasan izin, sakit, atau keterlambatan)",
   "lokasi": {
     "lat": "number | null",

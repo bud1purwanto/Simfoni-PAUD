@@ -101,6 +101,12 @@ Seluruh rancangan spesifikasi teknis telah dipecah secara modular ke dalam direk
    Tampilkan *floating badge* `DEV ENVIRONMENT` saat `VITE_APP_ENV !== 'production'`.
 7. **Pintu Masuk Login Tunggal & Dashboard Terpisah:**  
    Superadmin, Kepsek, dan Guru login melalui 1 form `/login` yang identik tanpa ada dropdown/tanda role agar tidak terdeteksi publik. Sistem otomatis me-redirect ke dashboard terpisah masing-masing (`/superadmin/dashboard`, `/kepsek/dashboard`, atau `/guru/dashboard`) berdasarkan field `role` di Firestore.
+8. **Presensi Dual Timestamp (Anti-Trap Offline):**  
+   Catat waktu lokal perangkat (`jam_datang_device`) dan jam server (`jam_datang_server`) agar saat guru absen di zona sinyal lemah lalu tersinkron belakangan, guru tidak dirugikan sebagai terlambat.
+9. **Solusi Lupa Password Guru (Tanpa Buka Email):**  
+   Kepsek memiliki tombol "Reset Password ke Default" (`Guru1234!`) di panel guru dengan flag `wajib_ganti_password: true`.
+10. **Multi-Format Export & Bulk Approval:**  
+    Sediakan PDF Ringkas (ramah HP), PDF Lengkap Portofolio, Ekspor Excel (`.xlsx`) untuk rekap honor/transport guru, serta tombol "Setujui Sekaligus" (*Bulk Approval*) pada dashboard Kepsek.
 
 ---
 
@@ -111,15 +117,15 @@ Saat diminta membangun atau menyempurnakan fitur, ikuti urutan langkah terstrukt
 - [ ] **Fase 1: Setup Lingkungan & Dual Environment**  
   Inisialisasi Vite + React + Tailwind + Lucide Icons. Siapkan `.gitignore` (proteksi `.env.*`), `.env.example`, `public/_redirects`, dan `public/manifest.json`.
 - [ ] **Fase 2: Konfigurasi Firebase Modular & Layanan Inti**  
-  Bangun `src/config/firebase.js` (Primary & Secondary App), `imageCompressor.js`, `useSpeechToText.js`, `pdfExporter.js` (dinamis), dan `auditLogger.js`.
+  Bangun `src/config/firebase.js` (Primary & Secondary App), `imageCompressor.js`, `useSpeechToText.js`, `pdfExporter.js` (dinamis), `excelExporter.js` (rekap honor), dan `auditLogger.js`.
 - [ ] **Fase 3: Autentikasi, Context Multi-Tenant & Pilot Seeder**  
-  Bangun `AuthContext.jsx` (memuat profil user + `schoolData`), `Login.jsx`, dan fitur cerdas *Initial Seeding SaaS (Setup Superadmin & Sekolah Pilot Pertama)* jika database masih kosong.
+  Bangun `AuthContext.jsx` (memuat profil user + `schoolData`), `Login.jsx` (pintu masuk tunggal), dan fitur cerdas *Initial Seeding SaaS (Setup Superadmin & Sekolah Pilot Pertama)* jika database masih kosong.
 - [ ] **Fase 4: Shell Layout Adaptif & Dynamic Branding**  
   Bangun `AppLayout.jsx` dengan identitas dinamis (logo & nama sekolah), *Bottom Navigation* untuk HP, *Sidebar* untuk laptop, dan badge `DEV ENVIRONMENT`.
 - [ ] **Fase 5: Modul Guru (`/guru/*`)**  
-  Bangun Dashboard Guru, Presensi Cepat, Jurnal Mengajar (Form, Draf, Voice-to-Text, Kompresi Foto, Duplikasi), dan Laporan Tambahan/Kendala.
+  Bangun Dashboard Guru, Presensi Cepat Dual Timestamp (Anti-Trap Offline), Jurnal Mengajar (Form, Draf, Voice-to-Text, Kompresi Foto, Duplikasi), dan Laporan Tambahan/Kendala.
 - [ ] **Fase 6: Modul Kepala Sekolah (`/kepsek/*`)**  
-  Bangun Dashboard Monitoring Live, Manajemen Akun Guru (dengan validasi `kuota_guru` via Secondary Auth), Validasi Jurnal & Koreksi Absen, serta Rekapitulasi & Cetak PDF dinamis.
+  Bangun Dashboard Monitoring Live (dengan deteksi lupa absen pulang), Manajemen Akun Guru (validasi `kuota_guru` & tombol reset password default), Validasi Jurnal (dengan fitur *Bulk Approval*), serta Rekapitulasi & Cetak PDF/Excel dinamis.
 - [ ] **Fase 7: Modul Superadmin (`/superadmin/*`)**  
   Bangun Dashboard Metrik SaaS Global, Kelola Sekolah Mitra (CRUD, kuota, suspend langganan), dan Kelola Akun Kepala Sekolah.
 - [ ] **Fase 8: Verifikasi & Sinkronisasi Dokumen Akhir**  

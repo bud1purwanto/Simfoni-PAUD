@@ -195,6 +195,7 @@ simfoni-paud/
 │   ├── utils/
 │   │   ├── imageCompressor.js   # Kompresi gambar client-side (<300KB)
 │   │   ├── pdfExporter.js       # Generator PDF Dinamis (Kop Surat & Nama Kepsek dari schoolData)
+│   │   ├── excelExporter.js     # Ekspor rekapitulasi kehadiran ke Excel (.xlsx) untuk honor guru
 │   │   ├── auditLogger.js       # Helper logging aktivitas penting per school_id
 │   │   └── formatters.js        # Format tanggal WIB & string utilities
 │   ├── components/

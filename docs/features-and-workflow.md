@@ -74,6 +74,7 @@ Masing-masing peran memiliki dashboard eksklusif yang dirancang spesifik sesuai 
 
 ### 3.1. Dashboard Superadmin (`/superadmin/dashboard`)
 * **Kartu Ringkasan Metrik SaaS:** Total Sekolah Mitra, Sekolah Aktif vs Nonaktif, Total Guru Terdaftar di seluruh sekolah, dan Peringatan Sekolah yang Masa Langganannya Segera Habis (< 30 hari).
+* **Monitoring Storage Meter SaaS:** Indikator total akumulasi foto terunggah dan estimasi penggunaan memori Firebase Storage per sekolah serta agregat global untuk deteksi dini batas 5 GB Spark Plan.
 * **Pintasan Cepat:** Tombol **"+ Tambah Sekolah & Kepsek Baru"** untuk onboarding sekolah mitra secara instan.
 
 ### 3.2. Kelola Sekolah / Tenant (`/superadmin/sekolah`)
@@ -86,7 +87,7 @@ Masing-masing peran memiliki dashboard eksklusif yang dirancang spesifik sesuai 
 ### 3.3. Kelola Akun Kepala Sekolah (`/superadmin/kepsek`)
 * Pendaftaran akun Kepala Sekolah baru menggunakan **Secondary Firebase App Instance** (`secondaryAuth`) sehingga sesi login Superadmin tidak terganggu.
 * Form pendaftaran: Pilih Sekolah Mitra (`school_id`), Nama Lengkap Kepala Sekolah, Email Login, dan Password Default.
-* Pengaturan reset status akun (`aktif` / `nonaktif`) dan ganti password.
+* **Fitur Reset Password Kepala Sekolah:** Tombol reset instan password Kepala Sekolah ke default (`Kepsek1234!`) tanpa perlu buka email.
 
 ---
 
@@ -94,34 +95,47 @@ Masing-masing peran memiliki dashboard eksklusif yang dirancang spesifik sesuai 
 
 ### 4.1. Dashboard Monitoring Live
 * Pemantauan real-time guru yang telah absen datang/pulang hari ini di sekolahnya.
+* **Deteksi Lupa Absen Pulang:** Kartu status otomatis menandai guru yang sudah absen datang namun belum checkout setelah pukul 18:00.
 * Notifikasi antrean jurnal mengajar baru berstatus `dikirim` yang siap diperiksa.
 * Notifikasi pengajuan koreksi absen dan kendala sarpras yang butuh tindak lanjut.
 
-### 4.2. Kelola Akun Guru & Validasi Kuota
+### 4.2. Kelola Akun Guru, Validasi Kuota & Reset Password
 * **Pengecekan Kuota Otomatis:** Saat Kepala Sekolah menekan tombol **"Tambah Guru Baru"**, sistem menghitung jumlah akun guru aktif di sekolah tersebut.
   * Jika jumlah guru aktif < `schoolData.kuota_guru`: Form pendaftaran via `secondaryAuth` terbuka.
   * Jika kuota telah penuh: Sistem menampilkan modal dialog peringatan:  
     *"Kuota akun guru untuk paket sekolah Anda telah penuh (X/X Guru). Silakan hubungi Administrator Sistem (Superadmin) untuk menambah kuota."*
+* **Tombol Reset Password Guru ke Default (Solusi Lupa Sandi):**  
+  Kepsek dapat mereset sandi guru yang lupa langsung dari daftar guru menjadi password default (`Guru1234!`) dan menandai `wajib_ganti_password: true`. Guru tidak perlu repot membuka email inbox.
 * Fitur Edit Profil Guru dan Nonaktifkan Akun (*Soft Delete*) saat guru mutasi atau berhenti bertugas.
 
-### 4.3. Validasi Jurnal & Koreksi Presensi
-* Memberikan status `disetujui` atau `perlu_revisi` (dengan kolom catatan revisi terperinci).
+### 4.3. Validasi Jurnal & Fitur "Setujui Sekaligus" (Bulk Approval)
+* Memberikan status `disetujui` atau `perlu_revisi` (dengan kolom catatan revisi terperinci) per dokumen.
+* **Fitur "Setujui Sekaligus" (*Bulk Approval*):** Checkbox multi-select dan tombol sekali klik untuk menyetujui seluruh jurnal yang telah memenuhi syarat secara serentak, menghemat waktu Kepsek saat mereview puluhan laporan mingguan.
 * Memberikan keputusan pada pengajuan koreksi jam presensi guru (`disetujui` / `ditolak`).
 
-### 4.4. Dynamic Branding & Cetak PDF Kop Surat Otomatis
-* Seluruh data identitas sekolah (Nama Sekolah, Alamat, Logo, dan Nama Kepala Sekolah) dimuat secara dinamis dari `schoolData` pada `AuthContext`.
-* Generator PDF (`pdfExporter.js`) mencetak Kop Surat resmi dan kolom tanda tangan Kepala Sekolah yang **sepenuhnya otomatis mengikuti data sekolah yang sedang aktif**, tanpa ada teks sekolah yang di-*hardcode*.
+### 4.4. Rekapitulasi Laporan Multi-Format (PDF Ringkas, Portofolio & Excel)
+* **1. Cetak Rekap PDF Ringkas (Format Administrasi/Dinas):**  
+  Menghasilkan PDF tabel presensi dan ringkasan topik KBM dengan Kop Surat resmi dan tanda tangan. Ringan (< 500 KB), render instan, dan 100% aman dibuka di HP tanpa risiko browser *crash*.
+* **2. Cetak Rekap PDF Lengkap (Portofolio Foto):**  
+  Menghasilkan dokumen lengkap beserta lampiran foto dokumentasi pembelajaran resolusi tinggi untuk arsip akreditasi BAN-PDM (direkomendasikan diunduh via laptop).
+* **3. Ekspor Data Excel (`.xlsx`):**  
+  Ekspor rekapitulasi presensi (total kehadiran, menit keterlambatan, izin, sakit) ke format Spreadsheet Excel untuk keperluan **perhitungan gaji / uang transport / honorarium guru** oleh Kepala Sekolah dan Bendahara.
 
 ---
 
 ## 5. Rincian Modul Guru (`/guru/*`)
 
-1. **Presensi Cepat & Geotagging:** Tombol datang/pulang satu ketukan dengan pencatatan jam server presisi serta koordinat GPS opsional.
-2. **Jurnal KBM Harian:** Form terstruktur mencakup Topik, Capaian Pembelajaran Kurikulum Merdeka, Kegiatan Pembuka-Inti-Penutup, Refleksi, dan Kendala.
-3. **Voice-to-Text (`id-ID`):** Menggunakan Web Speech API agar guru PAUD dapat mendiktekan narasi kegiatan langsung menggunakan mikrofon smartphone.
-4. **Kompresi Foto Klien (< 300 KB):** Foto dari kamera smartphone otomatis dikompresi di browser sebelum proses unggah untuk menghemat kuota guru.
-5. **Tagging Kurikulum Merdeka & Salin Jurnal:** Checkbox cepat Capaian Pembelajaran dan tombol duplikasi jurnal dari hari sebelumnya.
-6. **Laporan Tugas Tambahan & Kendala:** Form pelaporan rapat gugus, lomba anak, administrasi RPPH, dan sarana yang rusak.
+1. **Presensi Cepat Dual Timestamp (Anti-Trap Offline):**  
+   Mencatat `jam_datang_device` (waktu lokal saat tombol ditekan) dan `jam_datang_server`. Jika sinkronisasi tertunda karena sinyal drop, guru tidak akan dirugikan sebagai terlambat.
+2. **Penanganan Lupa Absen Pulang:**  
+   Jika jam telah melewati 18:00 dan guru lupa checkout, sistem otomatis menyajikan tombol pengajuan koreksi absen pulang keesokan harinya.
+3. **Modal Wajib Ganti Password:**  
+   Jika akun guru baru saja direset oleh Kepsek (`wajib_ganti_password: true`), sistem langsung memunculkan modal pembuatan kata sandi baru saat login pertama berhasil.
+4. **Jurnal KBM Harian:** Form terstruktur mencakup Topik, Capaian Pembelajaran Kurikulum Merdeka, Kegiatan Pembuka-Inti-Penutup, Refleksi, dan Kendala.
+5. **Voice-to-Text (`id-ID`):** Menggunakan Web Speech API agar guru PAUD dapat mendiktekan narasi kegiatan langsung menggunakan mikrofon smartphone.
+6. **Kompresi Foto Klien (< 300 KB):** Foto dari kamera smartphone otomatis dikompresi di browser sebelum proses unggah untuk menghemat kuota guru.
+7. **Tagging Kurikulum Merdeka & Salin Jurnal:** Checkbox cepat Capaian Pembelajaran dan tombol duplikasi jurnal dari hari sebelumnya.
+8. **Laporan Tugas Tambahan & Kendala:** Form pelaporan rapat gugus, lomba anak, administrasi RPPH, dan sarana yang rusak.
 
 ---
 
