@@ -39,6 +39,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useSpeechToText } from '../../hooks/useSpeechToText';
 import { uploadCompressedImage } from '../../utils/imageCompressor';
 import { logActivity } from '../../utils/auditLogger';
+import ModalKonfirmasi from '../../components/ui/ModalKonfirmasi';
 
 const KATEGORI_OPTIONS = [
   { 
@@ -87,6 +88,8 @@ export default function LaporanLainGuru() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [activeSpeechField, setActiveSpeechField] = useState(null); // 'deskripsi' | 'hasil'
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Speech to Text hook
   const { isListening, transcript, error: speechError, startListening, stopListening, resetTranscript } = useSpeechToText();
@@ -241,12 +244,20 @@ export default function LaporanLainGuru() {
   };
 
   // Hapus Laporan (hanya jika masih berstatus dilaporkan)
-  const handleDelete = async (reportId) => {
-    if (!window.confirm('Apakah Anda yakin ingin menghapus laporan ini?')) return;
+  const handleDelete = (reportId) => {
+    setDeleteConfirmId(reportId);
+  };
+
+  const executeDelete = async () => {
+    if (!deleteConfirmId) return;
+    setIsDeleting(true);
     try {
-      await deleteDoc(doc(db, 'tasks_and_issues', reportId));
+      await deleteDoc(doc(db, 'tasks_and_issues', deleteConfirmId));
+      setDeleteConfirmId(null);
     } catch (err) {
-      alert('Gagal menghapus laporan: ' + err.message);
+      console.error('Error deleting report:', err);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -807,6 +818,18 @@ export default function LaporanLainGuru() {
         </div>,
         document.body
       )}
+
+      {/* Modal Konfirmasi Hapus Laporan */}
+      <ModalKonfirmasi
+        isOpen={!!deleteConfirmId}
+        title="Hapus Laporan Kegiatan"
+        message="Apakah Anda yakin ingin menghapus laporan ini? Laporan yang dihapus tidak dapat dipulihkan kembali."
+        confirmText="Ya, Hapus"
+        type="danger"
+        loading={isDeleting}
+        onConfirm={executeDelete}
+        onClose={() => setDeleteConfirmId(null)}
+      />
     </div>
   );
 }

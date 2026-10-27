@@ -35,6 +35,7 @@ import { db, storage } from '../../config/firebase';
 import { useAuth } from '../../context/AuthContext';
 import { formatTanggalIndo } from '../../utils/formatters';
 import { logActivity } from '../../utils/auditLogger';
+import ModalKonfirmasi from '../../components/ui/ModalKonfirmasi';
 
 export default function KelolaSekolah() {
   const { userData } = useAuth();
@@ -50,6 +51,7 @@ export default function KelolaSekolah() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSchoolId, setEditingSchoolId] = useState(null);
   const [deleteConfirmSchool, setDeleteConfirmSchool] = useState(null);
+  const [suspendConfirmSchool, setSuspendConfirmSchool] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
   // Form Fields
@@ -232,29 +234,30 @@ export default function KelolaSekolah() {
   };
 
   // Toggle Suspend Langganan Sekolah
-  const handleToggleSuspend = async (s) => {
+  const handleToggleSuspend = (s) => {
+    setSuspendConfirmSchool(s);
+  };
+
+  const executeToggleSuspend = async () => {
+    if (!suspendConfirmSchool) return;
+    const s = suspendConfirmSchool;
     const nextStatus = s.status_langganan === 'aktif' ? 'nonaktif' : 'aktif';
     const actionLabel = nextStatus === 'nonaktif' ? 'menonaktifkan (suspend)' : 'mengaktifkan kembali';
-
-    if (!window.confirm(`Apakah Anda yakin ingin ${actionLabel} layanan untuk "${s.nama_sekolah}"?`)) {
-      return;
-    }
-
     try {
       await updateDoc(doc(db, 'schools', s.id), {
         status_langganan: nextStatus,
         updated_at: serverTimestamp(),
       });
-
       await logActivity(s.id, userData.uid, userData.nama, 'toggle_suspend_sekolah', {
         statusBaru: nextStatus,
         namaSekolah: s.nama_sekolah,
       });
-
       showNotification('success', `Status langganan ${s.nama_sekolah} berhasil diubah ke: ${nextStatus.toUpperCase()}`);
     } catch (err) {
       console.error('Error toggling suspend:', err);
       showNotification('error', 'Gagal mengubah status: ' + err.message);
+    } finally {
+      setSuspendConfirmSchool(null);
     }
   };
 
@@ -866,6 +869,19 @@ export default function KelolaSekolah() {
         </div>,
         document.body
       )}
+
+      {/* Modal Konfirmasi Suspend Sekolah */}
+      <ModalKonfirmasi
+        isOpen={!!suspendConfirmSchool}
+        title={suspendConfirmSchool?.status_langganan === 'aktif' ? 'Nonaktifkan (Suspend) Sekolah' : 'Aktifkan Kembali Layanan'}
+        message={suspendConfirmSchool?.status_langganan === 'aktif'
+          ? `Apakah Anda yakin ingin menonaktifkan layanan untuk "${suspendConfirmSchool?.nama_sekolah}"? Kepala Sekolah dan seluruh Guru tidak akan dapat mengakses sistem hingga diaktifkan kembali.`
+          : `Aktifkan kembali akses layanan SIMFONI PAUD untuk "${suspendConfirmSchool?.nama_sekolah}"?`}
+        confirmText={suspendConfirmSchool?.status_langganan === 'aktif' ? 'Ya, Nonaktifkan' : 'Ya, Aktifkan'}
+        type={suspendConfirmSchool?.status_langganan === 'aktif' ? 'danger' : 'success'}
+        onConfirm={executeToggleSuspend}
+        onClose={() => setSuspendConfirmSchool(null)}
+      />
     </div>
   );
 }

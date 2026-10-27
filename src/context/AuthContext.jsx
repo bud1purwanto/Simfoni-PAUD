@@ -92,6 +92,9 @@ export const AuthProvider = ({ children }) => {
       updated_at: serverTimestamp(),
     });
 
+  };
+
+  const finishPasswordChange = () => {
     setNeedsPasswordChange(false);
     setUserData((prev) => (prev ? { ...prev, wajib_ganti_password: false } : null));
   };
@@ -251,6 +254,7 @@ export const AuthProvider = ({ children }) => {
     login,
     logout,
     changePassword,
+    finishPasswordChange,
     reloadUserData,
     checkIfInitialSetupNeeded,
     runInitialSaaSSeeder,

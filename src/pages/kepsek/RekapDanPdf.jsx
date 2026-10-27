@@ -43,6 +43,7 @@ export default function RekapDanPdf() {
   const [journals, setJournals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [exportingType, setExportingType] = useState(null); // 'ringkas' | 'portofolio' | 'excel' | 'wa'
+  const [notification, setNotification] = useState(null);
 
   // String prefix periode YYYY-MM
   const monthStr = String(selectedMonth + 1).padStart(2, '0');
@@ -173,7 +174,7 @@ export default function RekapDanPdf() {
       });
     } catch (err) {
       console.error('Error generating Ringkas PDF:', err);
-      alert('Gagal membuat PDF Ringkas: ' + err.message);
+      setNotification({ type: 'error', text: 'Gagal membuat PDF Ringkas: ' + err.message });
     } finally {
       setExportingType(null);
     }
@@ -184,7 +185,7 @@ export default function RekapDanPdf() {
     try {
       setExportingType('portofolio');
       if (filteredData.monthJournals.length === 0) {
-        alert('Belum ada data jurnal pada periode ini untuk dijadikan Portofolio.');
+        setNotification({ type: 'warning', text: 'Belum ada data jurnal pada periode ini untuk dijadikan Portofolio.' });
         return;
       }
       await exportLengkapPortofolioPdf({
@@ -194,7 +195,7 @@ export default function RekapDanPdf() {
       });
     } catch (err) {
       console.error('Error generating Portofolio PDF:', err);
-      alert('Gagal membuat Portofolio PDF: ' + err.message);
+      setNotification({ type: 'error', text: 'Gagal membuat Portofolio PDF: ' + err.message });
     } finally {
       setExportingType(null);
     }
@@ -211,7 +212,7 @@ export default function RekapDanPdf() {
       });
     } catch (err) {
       console.error('Error exporting Excel:', err);
-      alert('Gagal mengunduh Excel: ' + err.message);
+      setNotification({ type: 'error', text: 'Gagal mengunduh Excel: ' + err.message });
     } finally {
       setExportingType(null);
     }
@@ -237,6 +238,18 @@ export default function RekapDanPdf() {
 
   return (
     <div className="space-y-6 pb-20 md:pb-6">
+      {notification && (
+        <div className={`p-4 rounded-2xl text-xs font-bold flex items-center justify-between animate-fadeIn border ${
+          notification.type === 'error' ? 'bg-rose-50 border-rose-200 text-rose-700' : 'bg-amber-50 border-amber-200 text-amber-800'
+        }`}>
+          <div className="flex items-center space-x-2">
+            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            <span>{notification.text}</span>
+          </div>
+          <button onClick={() => setNotification(null)} className="text-slate-400 hover:text-slate-600 font-bold ml-2">?</button>
+        </div>
+      )}
+
       {/* Header Banner */}
       <div className="bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 rounded-3xl p-6 md:p-8 text-white shadow-lg shadow-orange-500/20 relative overflow-hidden">
         <div className="absolute right-0 top-0 translate-x-8 -translate-y-8 w-48 h-48 bg-white/10 rounded-full blur-2xl pointer-events-none" />

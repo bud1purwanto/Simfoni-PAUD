@@ -36,6 +36,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { formatTanggalIndo } from '../../utils/formatters';
 import { logActivity } from '../../utils/auditLogger';
+import ModalKonfirmasi from '../../components/ui/ModalKonfirmasi';
 
 export default function KelolaAkunKepsek() {
   const { userData } = useAuth();
@@ -61,6 +62,9 @@ export default function KelolaAkunKepsek() {
 
   // Form Edit Kepsek
   const [editNama, setEditNama] = useState('');
+
+  // Modal Konfirmasi Kustom Elegan
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', confirmText: 'Ya, Lanjutkan', type: 'warning', onConfirm: () => {}, loading: false });
 
   // 1. Ambil Data Real-Time
   useEffect(() => {
@@ -204,62 +208,73 @@ export default function KelolaAkunKepsek() {
   };
 
   // Reset Password Kepsek ke Default (Kepsek1234!)
-  const handleResetPassword = async (k) => {
-    const confirm = window.confirm(
-      `Reset kata sandi untuk Kepala Sekolah "${k.nama}" (${k.email}) ke password default "Kepsek1234!"?\n\nKepala Sekolah akan diwajibkan mengganti kata sandi baru saat login berikutnya.`
-    );
-    if (!confirm) return;
+  const handleResetPassword = (k) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Reset Kata Sandi Kepala Sekolah',
+      message: `Reset kata sandi untuk Kepala Sekolah "${k.nama}" (${k.email}) ke password default "Kepsek1234!"? Kepala Sekolah akan diwajibkan mengganti kata sandi baru saat login berikutnya.`,
+      confirmText: 'Ya, Reset Sandi',
+      type: 'warning',
+      loading: false,
+      onConfirm: async () => {
+        setConfirmModal((prev) => ({ ...prev, loading: true }));
+        try {
+          await markPasswordResetByAdmin(k.id);
+          try {
+            await sendPasswordResetEmail(auth, k.email);
+          } catch (e) {}
 
-    try {
-      await markPasswordResetByAdmin(k.id);
+          await logActivity(k.school_id, userData.uid, userData.nama, 'reset_password_kepsek', {
+            kepsekUid: k.id,
+            email: k.email,
+          });
 
-      // Coba kirim link reset email juga sebagai backup
-      try {
-        await sendPasswordResetEmail(auth, k.email);
-      } catch (e) {
-        // Abaikan jika offline / email tidak valid
-      }
-
-      await logActivity(k.school_id, userData.uid, userData.nama, 'reset_password_kepsek', {
-        kepsekUid: k.id,
-        email: k.email,
-      });
-
-      showNotification(
-        'success',
-        `Kata sandi ${k.nama} berhasil direset ke default (Kepsek1234!). Akun ditandai wajib ganti kata sandi.`
-      );
-    } catch (err) {
-      console.error('Error resetting password:', err);
-      showNotification('error', 'Gagal mereset kata sandi: ' + err.message);
-    }
+          setConfirmModal((prev) => ({ ...prev, isOpen: false, loading: false }));
+          showNotification('success', `Kata sandi ${k.nama} berhasil direset ke default (Kepsek1234!).`);
+        } catch (err) {
+          console.error('Error resetting password:', err);
+          setConfirmModal((prev) => ({ ...prev, isOpen: false, loading: false }));
+          showNotification('error', 'Gagal mereset kata sandi: ' + err.message);
+        }
+      },
+    });
   };
 
   // Toggle Status Akun (Aktif vs Nonaktif)
-  const handleToggleStatus = async (k) => {
+  const handleToggleStatus = (k) => {
     const nextStatus = k.status_akun === 'aktif' ? 'nonaktif' : 'aktif';
-    const actionLabel = nextStatus === 'nonaktif' ? 'menonaktifkan' : 'mengaktifkan kembali';
+    const isDeactivating = nextStatus === 'nonaktif';
+    const actionLabel = isDeactivating ? 'menonaktifkan' : 'mengaktifkan kembali';
 
-    if (!window.confirm(`Apakah Anda yakin ingin ${actionLabel} akun "${k.nama}"?`)) {
-      return;
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: `${isDeactivating ? 'Nonaktifkan' : 'Aktifkan'} Akun Kepala Sekolah`,
+      message: `Apakah Anda yakin ingin ${actionLabel} akun "${k.nama}"? ${isDeactivating ? 'Kepala Sekolah tidak akan dapat mengakses sistem sekolah hingga diaktifkan kembali.' : 'Kepala Sekolah akan dapat kembali mengakses sistem sekolah.'}`,
+      confirmText: isDeactivating ? 'Ya, Nonaktifkan' : 'Ya, Aktifkan',
+      type: isDeactivating ? 'danger' : 'success',
+      loading: false,
+      onConfirm: async () => {
+        setConfirmModal((prev) => ({ ...prev, loading: true }));
+        try {
+          await updateDoc(doc(db, 'users', k.id), {
+            status_akun: nextStatus,
+            updated_at: serverTimestamp(),
+          });
 
-    try {
-      await updateDoc(doc(db, 'users', k.id), {
-        status_akun: nextStatus,
-        updated_at: serverTimestamp(),
-      });
+          await logActivity(k.school_id, userData.uid, userData.nama, 'toggle_status_kepsek', {
+            kepsekUid: k.id,
+            statusBaru: nextStatus,
+          });
 
-      await logActivity(k.school_id, userData.uid, userData.nama, 'toggle_status_kepsek', {
-        kepsekUid: k.id,
-        statusBaru: nextStatus,
-      });
-
-      showNotification('success', `Status akun ${k.nama} berhasil diubah ke: ${nextStatus.toUpperCase()}`);
-    } catch (err) {
-      console.error('Error toggling kepsek status:', err);
-      showNotification('error', 'Gagal mengubah status akun: ' + err.message);
-    }
+          setConfirmModal((prev) => ({ ...prev, isOpen: false, loading: false }));
+          showNotification('success', `Status akun "${k.nama}" berhasil diubah ke: ${nextStatus.toUpperCase()}`);
+        } catch (err) {
+          console.error('Error toggling kepsek status:', err);
+          setConfirmModal((prev) => ({ ...prev, isOpen: false, loading: false }));
+          showNotification('error', 'Gagal mengubah status: ' + err.message);
+        }
+      },
+    });
   };
 
   // Filter Data
@@ -637,6 +652,18 @@ export default function KelolaAkunKepsek() {
         </div>,
         document.body
       )}
+
+      {/* MODAL KONFIRMASI ELEGAN */}
+      <ModalKonfirmasi
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        confirmText={confirmModal.confirmText}
+        type={confirmModal.type}
+        loading={confirmModal.loading}
+        onConfirm={confirmModal.onConfirm}
+        onClose={() => setConfirmModal((prev) => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 }

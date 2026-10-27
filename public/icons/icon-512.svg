@@ -1,7 +1,37 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <rect width="512" height="512" rx="100" fill="#4f46e5"/>
-  <circle cx="256" cy="256" r="160" fill="#ffffff" fill-opacity="0.15"/>
-  <path d="M190 320 V192 C190 182 200 176 208 180 L320 244 C328 248 328 264 320 268 L208 332 C200 336 190 330 190 320 Z" fill="#ffffff"/>
-  <circle cx="330" cy="180" r="26" fill="#facc15"/>
-</svg>
+  <defs>
+    <linearGradient id="simfoniGrad-512" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FBBF24"/>
+      <stop offset="40%" stop-color="#F97316"/>
+      <stop offset="100%" stop-color="#EA580C"/>
+    </linearGradient>
+    <filter id="softShadow-512" x="-10%" y="-10%" width="125%" height="125%">
+      <feDropShadow dx="0" dy="8" stdDeviation="8" flood-opacity="0.25" flood-color="#7C2D12"/>
+    </filter>
+  </defs>
 
+  <!-- Background Squircle with Warm Honey Theme -->
+  <rect width="512" height="512" rx="123" fill="url(#simfoniGrad-512)"/>
+
+  <!-- Subtle Ambient Glow -->
+  <circle cx="256" cy="256" r="170.66666666666666" fill="#ffffff" fill-opacity="0.12"/>
+
+  <!-- Beamed Music Note (Solid & Crisp for any resolution) -->
+  <g fill="#ffffff" filter="url(#softShadow-512)" transform="scale(2.6666666666666665)">
+    <!-- Left Notehead (Tilted Oval) -->
+    <ellipse cx="54" cy="132" rx="22" ry="16" transform="rotate(-18 54 132)"/>
+    <!-- Right Notehead (Tilted Oval) -->
+    <ellipse cx="128" cy="116" rx="22" ry="16" transform="rotate(-18 128 116)"/>
+    <!-- Left Vertical Stem -->
+    <rect x="68" y="52" width="10" height="80" rx="3"/>
+    <!-- Right Vertical Stem -->
+    <rect x="142" y="36" width="10" height="80" rx="3"/>
+    <!-- Beamed Top Connecting Bar -->
+    <path d="M68 52 L152 36 C153.5 36 155 37.5 155 39.5 L155 52 C155 53.5 153.5 54.5 152 55 L68 71 C66.5 71.5 65 70 65 68 L65 55.5 C65 53.5 66.5 52.3 68 52 Z"/>
+    <!-- Secondary Beamed Bar (Simfoni Style) -->
+    <path d="M68 76 L152 60 C153.5 60 155 61.5 155 63.5 L155 71 C155 72.5 153.5 73.5 152 74 L68 90 C66.5 90.5 65 89 65 87 L65 79.5 C65 77.5 66.5 76.3 68 76 Z"/>
+  </g>
+
+  <!-- Cute Sparkle Accent -->
+  <circle cx="421.3333333333333" cy="90.66666666666666" r="12" fill="#FEF3C7"/>
+</svg>

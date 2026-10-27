@@ -114,3 +114,5 @@ gitGraph
    File `.env`, `.env.local`, `.env.development`, dan `.env.production` **DILARANG** di-commit ke Git. Hanya berkas `.env.example` yang boleh tersimpan di repositori.
 5. **Indikator DEV Mode:**  
    Komponen `DevBadge.jsx` wajib terpasang di layout aplikasi untuk menampilkan label peringatan visual saat berjalan di luar mode production.
+6. **Larangan Mutlak Dialog Browser Bawaan (No Native Popups):**  
+   **DILARANG KERAS** menggunakan `window.alert()`, `window.confirm()`, atau `window.prompt()`. Seluruh dialog interaktif (konfirmasi hapus, penonaktifan akun, reset sandi, notifikasi galat) **WAJIB** menggunakan komponen modal kustom elegan ([`src/components/ui/ModalKonfirmasi.jsx`](../src/components/ui/ModalKonfirmasi.jsx)) dengan backdrop blur, transisi halus, badge ikon tematik, dan tata letak ramah pengguna PAUD (tidak memunculkan teks kaku seperti *"localhost:3000 says"*).

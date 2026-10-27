@@ -22,6 +22,7 @@ import { sendPasswordResetEmail } from 'firebase/auth';
 import { db, auth, createGuruAccountByKepsek, updateGuruByKepsek, toggleStatusGuruByKepsek, markPasswordResetByAdmin } from '../../config/firebase';
 import { useAuth } from '../../context/AuthContext';
 import { logActivity } from '../../utils/auditLogger';
+import ModalKonfirmasi from '../../components/ui/ModalKonfirmasi';
 
 export default function KelolaGuru() {
   const { userData, schoolData } = useAuth();
@@ -48,6 +49,7 @@ export default function KelolaGuru() {
   // Form Edit Guru
   const [editNama, setEditNama] = useState('');
   const [editKelompok, setEditKelompok] = useState('TK A');
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', confirmText: 'Ya, Lanjutkan', type: 'warning', onConfirm: () => {}, loading: false });
 
   // Ambil Data Guru dari Firestore
   useEffect(() => {
@@ -190,17 +192,16 @@ export default function KelolaGuru() {
       });
       setEditModalOpen(false);
     } catch (err) {
-      alert('Gagal memperbarui profil guru: ' + err.message);
+      setNotification({ type: 'error', text: 'Gagal memperbarui profil guru: ' + err.message });
     }
   };
 
   // Toggle Status Akun (Aktif vs Nonaktif)
-  const handleToggleStatus = async (teacher) => {
+  const handleToggleStatus = (teacher) => {
     const isCurrentlyActive = teacher.status_akun === 'aktif';
     const newStatus = isCurrentlyActive ? 'nonaktif' : 'aktif';
+    const isDeactivating = isCurrentlyActive;
     const actionDesc = isCurrentlyActive ? 'menonaktifkan' : 'mengaktifkan kembali';
-
-    if (!window.confirm(`Apakah Anda yakin ingin ${actionDesc} akun "${teacher.nama}"?`)) return;
 
     // Jika ingin mengaktifkan tapi kuota sudah penuh
     if (newStatus === 'aktif' && isQuotaFull) {
@@ -208,62 +209,81 @@ export default function KelolaGuru() {
       return;
     }
 
-    try {
-      await toggleStatusGuruByKepsek(teacher.uid || teacher.id, newStatus);
+    setConfirmModal({
+      isOpen: true,
+      title: `${isDeactivating ? 'Nonaktifkan' : 'Aktifkan'} Akun Guru`,
+      message: `Apakah Anda yakin ingin ${actionDesc} akun guru "${teacher.nama}"? ${isDeactivating ? 'Guru ini tidak akan dapat login atau mengisi jurnal hingga diaktifkan kembali.' : 'Guru ini akan dapat kembali melakukan presensi dan mengisi jurnal.'}`,
+      confirmText: isDeactivating ? 'Ya, Nonaktifkan' : 'Ya, Aktifkan',
+      type: isDeactivating ? 'danger' : 'success',
+      loading: false,
+      onConfirm: async () => {
+        setConfirmModal((prev) => ({ ...prev, loading: true }));
+        try {
+          await toggleStatusGuruByKepsek(teacher.uid || teacher.id, newStatus);
 
-      await logActivity({
-        schoolId: userData.school_id,
-        actorId: userData.uid,
-        actorNama: userData.nama,
-        action: 'TOGGLE_STATUS_GURU',
-        recordType: 'users',
-        recordId: teacher.uid || teacher.id,
-      });
+          await logActivity({
+            schoolId: userData.school_id,
+            actorId: userData.uid,
+            actorNama: userData.nama,
+            action: 'TOGGLE_STATUS_GURU',
+            recordType: 'users',
+            recordId: teacher.uid || teacher.id,
+          });
 
-      setNotification({
-        type: 'success',
-        text: `Status akun guru "${teacher.nama}" diubah menjadi ${newStatus}.`,
-      });
-    } catch (err) {
-      alert('Gagal mengubah status guru: ' + err.message);
-    }
+          setConfirmModal((prev) => ({ ...prev, isOpen: false, loading: false }));
+          setNotification({
+            type: 'success',
+            text: `Status akun guru "${teacher.nama}" diubah menjadi ${newStatus}.`,
+          });
+        } catch (err) {
+          setConfirmModal((prev) => ({ ...prev, isOpen: false, loading: false }));
+          setNotification({ type: 'error', text: 'Gagal mengubah status guru: ' + err.message });
+        }
+      },
+    });
   };
 
   // Reset Password Guru
-  const handleResetPassword = async (teacher) => {
-    if (!window.confirm(`Reset kata sandi guru "${teacher.nama}"? Tautan pembuatan sandi baru akan dikirimkan ke email ${teacher.email} dan guru wajib membuat sandi baru.`)) return;
+  const handleResetPassword = (teacher) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Reset Kata Sandi Guru',
+      message: `Reset kata sandi untuk guru "${teacher.nama}" (${teacher.email})? Guru akan diminta membuat kata sandi baru saat pertama kali login kembali.`,
+      confirmText: 'Ya, Reset Sandi',
+      type: 'warning',
+      loading: false,
+      onConfirm: async () => {
+        setConfirmModal((prev) => ({ ...prev, loading: true }));
+        try {
+          // 1. Set flag wajib ganti password di Firestore
+          await markPasswordResetByAdmin(teacher.uid || teacher.id);
 
-    try {
-      // 1. Set flag wajib ganti password di Firestore
-      await markPasswordResetByAdmin(teacher.uid || teacher.id);
+          // 2. Kirim email reset password resmi dari Firebase Auth
+          try {
+            await sendPasswordResetEmail(auth, teacher.email);
+          } catch (e) {}
 
-      // 2. Kirim email reset password resmi dari Firebase Auth
-      await sendPasswordResetEmail(auth, teacher.email);
+          await logActivity({
+            schoolId: userData.school_id,
+            actorId: userData.uid,
+            actorNama: userData.nama,
+            action: 'RESET_PASSWORD_GURU',
+            recordType: 'users',
+            recordId: teacher.uid || teacher.id,
+          });
 
-      await logActivity({
-        schoolId: userData.school_id,
-        actorId: userData.uid,
-        actorNama: userData.nama,
-        action: 'RESET_PASSWORD_GURU',
-        recordType: 'users',
-        recordId: teacher.uid || teacher.id,
-      });
-
-      setNotification({
-        type: 'success',
-        text: `Tautan reset sandi telah dikirim ke ${teacher.email}. Flag wajib ganti sandi telah diaktifkan untuk guru "${teacher.nama}".`,
-      });
-    } catch (err) {
-      console.warn('Gagal reset sandi:', err);
-      // Fallback tetap tandai flag
-      await markPasswordResetByAdmin(teacher.uid || teacher.id);
-      setNotification({
-        type: 'success',
-        text: `Flag wajib ganti password berhasil diaktifkan untuk "${teacher.nama}". Guru dapat menggunakan tombol lupa sandi saat login.`,
-      });
-    }
+          setConfirmModal((prev) => ({ ...prev, isOpen: false, loading: false }));
+          setNotification({
+            type: 'success',
+            text: `Kata sandi guru "${teacher.nama}" berhasil direset. Guru wajib mengganti sandi saat login berikutnya.`,
+          });
+        } catch (err) {
+          setConfirmModal((prev) => ({ ...prev, isOpen: false, loading: false }));
+          setNotification({ type: 'error', text: 'Gagal mereset kata sandi: ' + err.message });
+        }
+      },
+    });
   };
-
   // Filter Search
   const filteredTeachers = teachers.filter((t) => {
     const q = searchQuery.toLowerCase();
@@ -664,6 +684,17 @@ export default function KelolaGuru() {
         document.body
       )}
 
+      {/* MODAL KONFIRMASI ELEGAN */}
+      <ModalKonfirmasi
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        confirmText={confirmModal.confirmText}
+        type={confirmModal.type}
+        loading={confirmModal.loading}
+        onConfirm={confirmModal.onConfirm}
+        onClose={() => setConfirmModal((prev) => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 }

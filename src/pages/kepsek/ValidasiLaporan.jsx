@@ -32,6 +32,7 @@ import { db } from '../../config/firebase';
 import { useAuth } from '../../context/AuthContext';
 import { formatTanggalIndo, formatJamMenit } from '../../utils/formatters';
 import { logActivity } from '../../utils/auditLogger';
+import ModalKonfirmasi from '../../components/ui/ModalKonfirmasi';
 
 export default function ValidasiLaporan() {
   const { userData, schoolData } = useAuth();
@@ -49,6 +50,7 @@ export default function ValidasiLaporan() {
   // Multi-Select Bulk Approval
   const [selectedJournalIds, setSelectedJournalIds] = useState([]);
   const [bulkProcessing, setBulkProcessing] = useState(false);
+  const [bulkApproveConfirmOpen, setBulkApproveConfirmOpen] = useState(false);
 
   // Modal Review Jurnal
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
@@ -128,10 +130,12 @@ export default function ValidasiLaporan() {
   };
 
   // EKSEKUSI BULK APPROVAL (Setujui Sekaligus)
-  const handleBulkApprove = async () => {
+  const handleBulkApprove = () => {
     if (selectedJournalIds.length === 0) return;
-    if (!window.confirm(`Setujui sekaligus ${selectedJournalIds.length} jurnal KBM terpilih?`)) return;
+    setBulkApproveConfirmOpen(true);
+  };
 
+  const executeBulkApprove = async () => {
     setBulkProcessing(true);
     try {
       const batch = writeBatch(db);
@@ -152,25 +156,24 @@ export default function ValidasiLaporan() {
         schoolId: userData.school_id,
         actorId: userData.uid,
         actorNama: userData.nama,
-        action: 'BULK_APPROVE_JOURNALS',
+        action: 'BULK_APPROVE_JURNAL',
         recordType: 'journals',
-        recordId: `${selectedJournalIds.length}_DOCS`,
-      });
-
-      setNotification({
-        type: 'success',
-        text: `Berhasil menyetujui ${selectedJournalIds.length} jurnal mengajar secara serentak!`,
+        recordId: 'multiple',
+        details: { count: selectedJournalIds.length },
       });
 
       setSelectedJournalIds([]);
+      setNotification({
+        type: 'success',
+        text: `Berhasil menyetujui ${selectedJournalIds.length} jurnal KBM sekaligus.`,
+      });
     } catch (err) {
-      console.error('Gagal bulk approval:', err);
-      alert('Gagal menyetujui sekaligus: ' + err.message);
+      setNotification({ type: 'error', text: 'Gagal menyetujui sekaligus: ' + err.message });
     } finally {
       setBulkProcessing(false);
+      setBulkApproveConfirmOpen(false);
     }
   };
-
   // Setujui Jurnal Tunggal
   const handleApproveSingle = async (journal) => {
     try {
@@ -197,7 +200,7 @@ export default function ValidasiLaporan() {
 
       setReviewModalOpen(false);
     } catch (err) {
-      alert('Gagal menyetujui jurnal: ' + err.message);
+      setNotification({ type: 'error', text: 'Gagal menyetujui jurnal: ' + err.message });
     }
   };
 
@@ -232,7 +235,7 @@ export default function ValidasiLaporan() {
       setReviewModalOpen(false);
       setRevisionNote('');
     } catch (err) {
-      alert('Gagal mengirim revisi: ' + err.message);
+      setNotification({ type: 'error', text: 'Gagal mengirim revisi: ' + err.message });
     } finally {
       setSubmittingReview(false);
     }
@@ -278,7 +281,7 @@ export default function ValidasiLaporan() {
       setCorrectionModalOpen(false);
       setCorrectionNote('');
     } catch (err) {
-      alert('Gagal memproses koreksi: ' + err.message);
+      setNotification({ type: 'error', text: 'Gagal memproses koreksi: ' + err.message });
     }
   };
 

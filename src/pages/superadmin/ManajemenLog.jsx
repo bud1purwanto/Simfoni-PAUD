@@ -148,11 +148,7 @@ export default function ManajemenLog() {
   const handleExecutePurge = async () => {
     const toDeleteCount = getLogsToPurgeCount(purgeDaysOption);
     if (toDeleteCount === 0) {
-      alert('Tidak ada dokumen log yang memenuhi kriteria untuk dihapus.');
-      return;
-    }
-
-    if (!window.confirm(`Yakin ingin menghapus secara permanen ${toDeleteCount} dokumen log? Tindakan ini tidak dapat dibatalkan.`)) {
+      showNotification('error', 'Tidak ada dokumen log yang memenuhi kriteria untuk dihapus.');
       return;
     }
 

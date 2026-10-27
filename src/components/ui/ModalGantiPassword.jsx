@@ -4,7 +4,7 @@ import { KeyRound, Eye, EyeOff, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 export default function ModalGantiPassword({ isOpen, isMandatory = true, onClose }) {
-  const { changePassword } = useAuth();
+  const { changePassword, finishPasswordChange } = useAuth();
   const [passwordBaru, setPasswordBaru] = useState('');
   const [konfirmasiPassword, setKonfirmasiPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -33,8 +33,9 @@ export default function ModalGantiPassword({ isOpen, isMandatory = true, onClose
       await changePassword(passwordBaru);
       setSuccess(true);
       setTimeout(() => {
+        if (finishPasswordChange) finishPasswordChange();
         if (onClose) onClose();
-      }, 1500);
+      }, 1400);
     } catch (err) {
       console.error(err);
       setError('Gagal memperbarui kata sandi. Silakan coba kembali.');
@@ -72,7 +73,7 @@ export default function ModalGantiPassword({ isOpen, isMandatory = true, onClose
         {success && (
           <div className="mb-4 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs flex items-center space-x-2">
             <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
-            <span>Kata sandi berhasil diperbarui!</span>
+            <span>Kata sandi berhasil diperbarui! Mengalihkan ke Dashboard...</span>
           </div>
         )}
 

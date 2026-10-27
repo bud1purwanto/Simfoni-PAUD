@@ -131,9 +131,10 @@ Sistem SIMFONI PAUD dilengkapi dengan spesialisasi Subagent dinamis dan Workspac
     Sediakan PDF Ringkas (ramah HP), PDF Lengkap Portofolio, Ekspor Excel (`.xlsx`) untuk rekap honor/transport guru, serta tombol "Setujui Sekaligus" (*Bulk Approval*) pada dashboard Kepsek.
 11. **Pembersihan Log & Job Retensi Berkala:**  
     Untuk menghemat kuota Firestore, Superadmin memiliki kontrol pembersihan `audit_logs` baik manual (rentang 30/60/90 hari) maupun otomatis melalui background job retensi periodik (`system_settings`).
-12. **Ekosistem Ramah Lapangan (WA Share, Banner Offline, Bank KBM & Stempel Digital):**  
+12. **Ekosistem Ramah Lapangan (WA Share, Banner Offline, Bank KBM & Stempel Digital):**
     Sediakan tombol bagikan ringkasan KBM ke WhatsApp (`wa.me`), banner visual status online/offline (`NetworkStatusBanner.jsx`), bank template KBM siap pakai (`kbmTemplates.js`), serta stempel/cap digital sekolah transparan pada rekap PDF.
-
+13. **Larangan Mutlak Pop-up Dialog Browser Native (`window.alert` / `window.confirm`):**
+    Dilarang keras memakai dialog bawaan browser yang memunculkan teks kaku seperti *"localhost:3000 says"* atau *"app.simfoni-paud.workers.dev says"*. Seluruh dialog konfirmasi, peringatan aksi berbahaya, dan notifikasi wajib menggunakan komponen modal kustom elegan (`ModalKonfirmasi.jsx`) dengan backdrop blur, sudut membulat empuk (`rounded-3xl`), animasi halus, dan badge tematik agar tampilan selalu berkelas dan ramah bagi pengguna PAUD.
 ---
 
 ## 📋 Roadmap & Tahapan Eksekusi untuk AI Agent

@@ -93,16 +93,39 @@ Pada perangkat smartphone (`< 768px`), navigasi bawah dilarang menempel kaku di 
 
 ---
 
-## 📐 6. Checklist Verifikasi Desain untuk Pengembang & AI Agent
+## 🪟 6. Standar Desain Pop-up & Modal Dialog Elegan (Anti-Native Dialogs)
+
+> [!CAUTION]
+> ### ⛔ ATURAN BAKU: DILARANG MENGGUNAKAN POPUP DEFAULT BROWSER!
+> **Dilarang keras memakai `window.alert()`, `window.confirm()`, atau `window.prompt()`.**  
+> Dialog native browser menampilkan teks kaku (seperti *"localhost:3000 says"* atau *"app.simfoni-paud.workers.dev says"*), memutus kesinambungan estetika visual, membekukan thread browser, dan tampak tidak profesional bagi guru PAUD.
+
+### ✨ Karakteristik Modal Elegan yang Wajib Dipenuhi:
+1. **Latar Belakang Redup Berkabut (*Backdrop Blur*):** Menggunakan `fixed inset-0 z-[120] bg-slate-900/60 backdrop-blur-sm` dengan animasi `fade-in`.
+2. **Kartu Empuk & Membulat (*Puffy Card*):** `rounded-3xl` dengan padding lega (`p-6`), border halus `border-slate-100`, dan bayangan mendalam `shadow-2xl`.
+3. **Badge Ikon Tematik Semantik:**
+   * 🛑 **Bahaya / Nonaktif / Hapus:** Latar `bg-rose-100 text-rose-600 border-rose-200` dengan ikon `AlertCircle`.
+   * ⚠️ **Peringatan / Konfirmasi:** Latar `bg-amber-100 text-amber-700 border-amber-200` dengan ikon `AlertTriangle`.
+   * ℹ️ **Informasi Penting:** Latar `bg-blue-100 text-blue-600 border-blue-200` dengan ikon `Info`.
+   * ✅ **Sukses / Berhasil:** Latar `bg-emerald-100 text-emerald-700 border-emerald-200` dengan ikon `CheckCircle2`.
+4. **Tipografi & Microcopy yang Ramah:** Judul menggunakan `font-brand` (Nunito Bold), teks penjelasan menggunakan bahasa Indonesia yang santun, jelas, dan empatik.
+5. **Tombol Aksi Berkualitas Tinggi:**
+   * Tombol Batal: Berlatar netral `bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-2xl`.
+   * Tombol Aksi Utama: Berwarna tegas sesuai konteks (merah rose untuk hapus/nonaktifkan, gradien oranye-amber untuk aksi penting) dengan efek sentuh `active:scale-98` dan status spinner animasi saat memproses (`loading`).
+6. **Komponen Standar:** Selalu gunakan komponen [`src/components/ui/ModalKonfirmasi.jsx`](../src/components/ui/ModalKonfirmasi.jsx).
+
+---
+
+## 📐 7. Checklist Verifikasi Desain untuk Pengembang & AI Agent
 
 Sebelum menyelesaikan pembuatan layar atau komponen baru, pastikan telah memenuhi checklist ini:
 
 - [ ] Menggunakan font `Nunito` (`font-brand`) untuk judul/heading dan `Plus Jakarta Sans` untuk body text.
 - [ ] Sudut komponen menggunakan `rounded-2xl` atau `rounded-3xl` (tidak ada kotak siku 90 derajat).
+- [ ] **Tidak menggunakan `window.alert` atau `window.confirm` bawaan browser; seluruh dialog menggunakan `ModalKonfirmasi.jsx`.**
 - [ ] Tombol aksi sentuh jempol berukuran minimal 44px tinggi dengan jarak antar tombol yang lega.
 - [ ] Border menggunakan warna pastel lembut (`border-slate-200/80`, `border-orange-200/60`, `border-amber-200/70`).
 - [ ] Bayangan menggunakan warm/soft shadow (`shadow-sm`, `shadow-orange-500/20`, bukan bayangan hitam pekat).
 - [ ] Formulir menyediakan tombol aksi cepat (seperti Dikte Suara atau Bank Template) untuk meminimalkan beban ketik manual guru.
 - [ ] Tampilan teruji rapi pada layar selebar 360px - 414px (smartphone standar guru).
 - [ ] Desain selaras dengan prototipe acuan di [`docs/mockup-ui-paud-guru.html`](mockup-ui-paud-guru.html).
-
