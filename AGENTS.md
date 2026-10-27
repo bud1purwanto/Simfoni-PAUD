@@ -140,19 +140,19 @@ Saat diminta membangun atau menyempurnakan fitur, ikuti urutan langkah terstrukt
   - [x] Bangun `src/components/ui/ModalGantiPassword.jsx` (modal wajib bagi user yang baru di-reset oleh Kepsek/Admin).
   - [x] Bangun `src/pages/auth/SuspendedSchool.jsx` (layanan diblokir jika status langganan nonaktif).
 
-- [ ] **Fase 4: Shell Layout Adaptif, Dynamic Branding & Network Awareness**
-  - [ ] Bangun `src/components/layout/AppLayout.jsx` dengan identitas dinamis (logo & nama sekolah dari context).
-  - [ ] Bangun navigasi adaptif: *Bottom Navigation* untuk HP (`< 768px`) & *Sidebar* untuk laptop (`>= 768px`).
-  - [ ] Bangun `src/components/layout/NetworkStatusBanner.jsx` (indikator visual status jaringan Online / Offline).
-  - [ ] Bangun `src/components/layout/DevBadge.jsx` (floating badge indikator lingkungan pengujian).
-  - [ ] Bangun `src/components/layout/ProtectedRoute.jsx` (pengamanan rute 3-tier: Superadmin, Kepsek, Guru).
+- [x] **Fase 4: Shell Layout Adaptif, Dynamic Branding & Network Awareness**
+  - [x] Bangun `src/components/layout/AppLayout.jsx` dengan identitas dinamis (logo & nama sekolah dari context).
+  - [x] Bangun navigasi adaptif: *Bottom Navigation* untuk HP (`< 768px`) & *Sidebar* untuk laptop (`>= 768px`).
+  - [x] Bangun `src/components/layout/NetworkStatusBanner.jsx` (indikator visual status jaringan Online / Offline).
+  - [x] Bangun `src/components/layout/DevBadge.jsx` (floating badge indikator lingkungan pengujian).
+  - [x] Bangun `src/components/layout/ProtectedRoute.jsx` (pengamanan rute 3-tier: Superadmin, Kepsek, Guru).
 
-- [ ] **Fase 5: Modul Guru PAUD (`/guru/*`)**
-  - [ ] `DashboardGuru.jsx`: Absen datang/pulang instan, status kelengkapan jurnal hari ini, dan jadwal KBM aktif.
-  - [ ] `PresensiGuru.jsx`: Dual Timestamp (`jam_datang_device` vs `jam_datang_server`), riwayat presensi, form pengajuan koreksi, deteksi lupa absen pulang (> 18:00).
-  - [ ] `JurnalGuru.jsx`: Form KBM Kurikulum Merdeka, Bank Template KBM (`kbmTemplates.js`), Voice-to-Text (`id-ID`), kompresi foto kamera, salin jurnal kemarin, simpan draf vs kirim, dan tombol *Share to WhatsApp* (`wa.me`).
-  - [ ] `JadwalGuru.jsx`: Tampilan jadwal mingguan kelas.
-  - [ ] `LaporanLainGuru.jsx`: Pelaporan tugas tambahan (rapat/lomba), administrasi guru, dan laporan kendala sarpras.
+- [x] **Fase 5: Modul Guru PAUD (`/guru/*`)**
+  - [x] `DashboardGuru.jsx`: Absen datang/pulang instan, status kelengkapan jurnal hari ini, dan jadwal KBM aktif.
+  - [x] `PresensiGuru.jsx`: Dual Timestamp (`jam_datang_device` vs `jam_datang_server`), riwayat presensi, form pengajuan koreksi, deteksi lupa absen pulang (> 18:00).
+  - [x] `JurnalGuru.jsx`: Form KBM Kurikulum Merdeka, Bank Template KBM (`kbmTemplates.js`), Voice-to-Text (`id-ID`), kompresi foto kamera, salin jurnal kemarin, simpan draf vs kirim, dan tombol *Share to WhatsApp* (`wa.me`).
+  - [x] `JadwalGuru.jsx`: Tampilan jadwal mingguan kelas.
+  - [x] `LaporanLainGuru.jsx`: Pelaporan tugas tambahan (rapat/lomba), administrasi guru, dan laporan kendala sarpras.
 
 - [ ] **Fase 6: Modul Kepala Sekolah (`/kepsek/*`)**
   - [ ] `DashboardKepsek.jsx`: Monitoring live kehadiran guru hari ini, antrean review jurnal KBM, notifikasi kendala.
