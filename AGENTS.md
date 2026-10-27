@@ -99,6 +99,8 @@ Seluruh rancangan spesifikasi teknis telah dipecah secara modular ke dalam direk
    Dilarang melakukan *hardcode* nama sekolah. Gunakan data dinamis dari `schoolData` pada `AuthContext` untuk header aplikasi dan Kop Surat di `pdfExporter.js`.
 6. **Indikator DEV Mode:**  
    Tampilkan *floating badge* `DEV ENVIRONMENT` saat `VITE_APP_ENV !== 'production'`.
+7. **Pintu Masuk Login Tunggal & Dashboard Terpisah:**  
+   Superadmin, Kepsek, dan Guru login melalui 1 form `/login` yang identik tanpa ada dropdown/tanda role agar tidak terdeteksi publik. Sistem otomatis me-redirect ke dashboard terpisah masing-masing (`/superadmin/dashboard`, `/kepsek/dashboard`, atau `/guru/dashboard`) berdasarkan field `role` di Firestore.
 
 ---
 
