@@ -725,6 +725,34 @@ export default function KelolaSekolah() {
                     className="w-full px-3 py-2 text-xs font-bold rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
                   />
                 </div>
+
+                {formPaket === 'trial' && (
+                  <div className="col-span-3 p-3 bg-amber-50/60 rounded-2xl border border-amber-200/70 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-amber-900">
+                        ⚡ Set Durasi Trial Dinamis (Hitung Otomatis Masa Berlaku):
+                      </span>
+                      <span className="text-[10px] text-amber-700 font-medium">Bisa diatur bebas oleh Admin</span>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {[7, 14, 30, 60].map((days) => (
+                        <button
+                          key={days}
+                          type="button"
+                          onClick={() => {
+                            const targetDate = new Date();
+                            targetDate.setDate(targetDate.getDate() + days);
+                            setFormBerlakuHingga(targetDate.toISOString().split('T')[0]);
+                            setFormKuotaGuru(3);
+                          }}
+                          className="px-2.5 py-1 text-xs font-bold rounded-lg bg-white border border-amber-300 text-amber-800 hover:bg-amber-100 transition shadow-xs"
+                        >
+                          +{days} Hari (Kuota: 3)
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Upload Logo & Stempel PNG Transparan */}

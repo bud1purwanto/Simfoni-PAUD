@@ -15,7 +15,8 @@ import {
   ExternalLink,
   BookOpen,
   Image as ImageIcon,
-  CheckSquare
+  CheckSquare,
+  Lock
 } from 'lucide-react';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../../config/firebase';
@@ -428,14 +429,26 @@ export default function RekapDanPdf() {
             </p>
           </div>
 
-          <button
-            onClick={handleExportPortofolioPdf}
-            disabled={exportingType === 'portofolio' || filteredData.monthJournals.length === 0}
-            className="mt-6 w-full py-3 px-4 rounded-2xl font-extrabold text-xs text-white bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 active:scale-95 shadow-md shadow-teal-500/20 transition flex items-center justify-center space-x-2 font-brand disabled:opacity-50"
-          >
-            <Download className="w-4 h-4 stroke-[2.5]" />
-            <span>{exportingType === 'portofolio' ? 'Menyusun Portofolio...' : 'Unduh Portofolio BAN-PDM'}</span>
-          </button>
+          {schoolData?.paket_langganan === 'pro' ? (
+            <button
+              onClick={handleExportPortofolioPdf}
+              disabled={exportingType === 'portofolio' || filteredData.monthJournals.length === 0}
+              className="mt-6 w-full py-3 px-4 rounded-2xl font-extrabold text-xs text-white bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 active:scale-95 shadow-md shadow-teal-500/20 transition flex items-center justify-center space-x-2 font-brand disabled:opacity-50"
+            >
+              <Download className="w-4 h-4 stroke-[2.5]" />
+              <span>{exportingType === 'portofolio' ? 'Menyusun Portofolio...' : 'Unduh Portofolio BAN-PDM'}</span>
+            </button>
+          ) : (
+            <div className="mt-6 p-3 rounded-2xl bg-amber-50/70 border border-amber-200/80 text-center flex flex-col items-center justify-center space-y-1">
+              <div className="flex items-center space-x-1.5 text-amber-900 font-extrabold text-xs font-brand">
+                <Lock className="w-4 h-4 text-amber-600 stroke-[2.5]" />
+                <span>Terkunci (Khusus Paket PRO)</span>
+              </div>
+              <p className="text-[10px] text-amber-700 font-medium">
+                Hubungi Superadmin SIMFONI untuk aktivasi Paket PRO
+              </p>
+            </div>
+          )}
         </div>
 
         {/* 3. Spreadsheet Excel (.xlsx) untuk Honorarium */}
@@ -455,14 +468,26 @@ export default function RekapDanPdf() {
             </p>
           </div>
 
-          <button
-            onClick={handleExportExcel}
-            disabled={exportingType === 'excel'}
-            className="mt-6 w-full py-3 px-4 rounded-2xl font-extrabold text-xs text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 active:scale-95 shadow-md shadow-emerald-500/20 transition flex items-center justify-center space-x-2 font-brand disabled:opacity-50"
-          >
-            <Download className="w-4 h-4 stroke-[2.5]" />
-            <span>{exportingType === 'excel' ? 'Mengolah Excel...' : 'Unduh Excel Honor (.xlsx)'}</span>
-          </button>
+          {schoolData?.paket_langganan === 'pro' ? (
+            <button
+              onClick={handleExportExcel}
+              disabled={exportingType === 'excel'}
+              className="mt-6 w-full py-3 px-4 rounded-2xl font-extrabold text-xs text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 active:scale-95 shadow-md shadow-emerald-500/20 transition flex items-center justify-center space-x-2 font-brand disabled:opacity-50"
+            >
+              <Download className="w-4 h-4 stroke-[2.5]" />
+              <span>{exportingType === 'excel' ? 'Mengolah Excel...' : 'Unduh Excel Honor (.xlsx)'}</span>
+            </button>
+          ) : (
+            <div className="mt-6 p-3 rounded-2xl bg-amber-50/70 border border-amber-200/80 text-center flex flex-col items-center justify-center space-y-1">
+              <div className="flex items-center space-x-1.5 text-amber-900 font-extrabold text-xs font-brand">
+                <Lock className="w-4 h-4 text-amber-600 stroke-[2.5]" />
+                <span>Terkunci (Khusus Paket PRO)</span>
+              </div>
+              <p className="text-[10px] text-amber-700 font-medium">
+                Hubungi Superadmin SIMFONI untuk aktivasi Paket PRO
+              </p>
+            </div>
+          )}
         </div>
       </div>
 

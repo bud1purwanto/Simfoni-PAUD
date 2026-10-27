@@ -81,8 +81,16 @@ Masing-masing peran memiliki dashboard eksklusif yang dirancang spesifik sesuai 
 * **Tabel & Kartu Sekolah Mitra:** Menampilkan Nama Sekolah, Kota, Paket Langganan (`trial`, `basic`, `pro`), Pemakaian Kuota Guru (contoh: `4 / 5 Guru`), Masa Berlaku, dan Status Akun.
 * **Modal Tambah / Edit Sekolah:**
   * Input field: Nama Sekolah, NPSN, Alamat Lengkap, Kota, Telepon, Nama Kepala Sekolah Resmi (untuk penandatangan dokumen PDF), NIP/NUPTK, Paket Langganan, Kuota Maksimum Guru, Tanggal Akhir Masa Berlaku, Unggah Logo Sekolah, dan **Unggah Stempel/Cap Digital Sekolah (PNG Transparan)**.
+  * **Fitur Durasi Trial Dinamis (Dynamic Days by Admin):** Saat paket `trial` dipilih, Superadmin memiliki preset durasi cepat (+7, +14, +30, +60 hari) yang secara dinamis menghitung tanggal kedaluwarsa `berlaku_hingga` dan kuota guru otomatis.
+* **Sistem Gating Fitur Berdasarkan Paket (*Plan Feature Gating*):**
+  * **Paket Trial:** Presensi dan Jurnal KBM dasar dengan durasi dinamis oleh Admin. Menampilkan banner floating trial reminder di dashboard sekolah.
+  * **Paket Basic (Standard):** Kuota hingga 10 Guru, Presensi Dual Timestamp, Jurnal Kurikulum Merdeka + Dikte Suara (Voice-to-Text `id-ID`), kompresi foto kamera HP (< 300 KB), Ekspor PDF Ringkas Kop Resmi & Stempel Transparan, serta Share to WhatsApp.
+  * **Paket Pro (Full Akreditasi):** Seluruh fitur Basic ditambah fitur eksklusif:
+    1. **Ekspor Portofolio Foto BAN-PDM:** Bukti fisik akreditasi PAUD lengkap dengan foto dan capaian pembelajaran.
+    2. **Ekspor Spreadsheet Excel (.xlsx):** Rekapitulasi presensi bulanan untuk honorarium / uang transport guru.
+    3. **Fitur "Setujui Sekaligus" (*Bulk Approval*):** Review dan persetujuan massal jurnal KBM sekali klik.
 * **Fitur Suspend / Nonaktifkan Sekolah:**
-  * Superadmin dapat menonaktifkan status langganan sekolah (`status_langganan: "nonaktif"`). Seluruh staf (Kepsek dan Guru) sekolah tersebut otomatis tidak dapat mengakses sistem dan diarahkan ke layar penangguhan layanan.
+  * Superadmin dapat menonaktifkan status langganan sekolah (`status_langganan: "nonaktif"`), atau sistem otomatis menonaktifkan sekolah jika tanggal `berlaku_hingga` telah terlewati. Seluruh staf (Kepsek dan Guru) sekolah tersebut otomatis tidak dapat mengakses sistem dan diarahkan ke layar penangguhan layanan.
 
 ### 3.3. Kelola Akun Kepala Sekolah (`/superadmin/kepsek`)
 * Pendaftaran akun Kepala Sekolah baru menggunakan **Secondary Firebase App Instance** (`secondaryAuth`) sehingga sesi login Superadmin tidak terganggu.

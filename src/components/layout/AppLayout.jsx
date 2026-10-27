@@ -17,7 +17,8 @@ import {
   X,
   User,
   ShieldCheck,
-  GraduationCap
+  GraduationCap,
+  Sparkles
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import NetworkStatusBanner from './NetworkStatusBanner';
@@ -181,6 +182,19 @@ export default function AppLayout() {
 
         {/* Main Content Area (Responsif, ruang bawah disesuaikan untuk BottomNav mobile) */}
         <main className="flex-1 p-4 md:p-6 pb-28 md:pb-12 max-w-full overflow-x-hidden">
+          {schoolData?.paket_langganan === 'trial' && userData?.role !== 'superadmin' && (
+            <div className="mb-4 p-3 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/80 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-xs">
+              <div className="flex items-center space-x-2 text-amber-950 text-xs font-semibold">
+                <Sparkles className="w-4 h-4 text-amber-600 shrink-0" />
+                <span>
+                  Sekolah Anda berada pada <strong>Masa Uji Coba (Trial)</strong> hingga {schoolData?.berlaku_hingga || 'segera berakhir'}.
+                </span>
+              </div>
+              <span className="px-2 py-0.5 bg-amber-200/80 text-amber-950 font-black text-[10px] rounded-lg shrink-0 self-start sm:self-auto font-brand">
+                AKSES TRIAL
+              </span>
+            </div>
+          )}
           <Outlet />
         </main>
       </div>

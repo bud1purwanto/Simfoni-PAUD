@@ -15,7 +15,8 @@ import {
   Calendar,
   Layers,
   ArrowRight,
-  Send
+  Send,
+  Lock
 } from 'lucide-react';
 import { 
   collection, 
@@ -33,7 +34,8 @@ import { formatTanggalIndo, formatJamMenit } from '../../utils/formatters';
 import { logActivity } from '../../utils/auditLogger';
 
 export default function ValidasiLaporan() {
-  const { userData } = useAuth();
+  const { userData, schoolData } = useAuth();
+  const isProPlan = schoolData?.paket_langganan === 'pro';
 
   const [activeTab, setActiveTab] = useState('jurnal'); // 'jurnal' | 'koreksi'
   const [journals, setJournals] = useState([]);
@@ -376,25 +378,32 @@ export default function ValidasiLaporan() {
 
               {/* FITUR SETUJUI SEKALIGUS (BULK APPROVAL BUTTON) */}
               {journalStatusFilter === 'dikirim' && pendingJournals.length > 0 && (
-                <div className="flex items-center space-x-2 shrink-0">
-                  <button
-                    onClick={handleSelectAllPending}
-                    className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition"
-                  >
-                    {selectedJournalIds.length === pendingJournals.length ? 'Batal Pilih Semua' : 'Pilih Semua'}
-                  </button>
+                isProPlan ? (
+                  <div className="flex items-center space-x-2 shrink-0">
+                    <button
+                      onClick={handleSelectAllPending}
+                      className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition"
+                    >
+                      {selectedJournalIds.length === pendingJournals.length ? 'Batal Pilih Semua' : 'Pilih Semua'}
+                    </button>
 
-                  <button
-                    onClick={handleBulkApprove}
-                    disabled={selectedJournalIds.length === 0 || bulkProcessing}
-                    className="inline-flex items-center space-x-1.5 px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-xl text-xs font-extrabold transition shadow-md shadow-emerald-500/20 disabled:opacity-50"
-                  >
-                    <Check className="w-4 h-4 stroke-[3]" />
-                    <span>
-                      {bulkProcessing ? 'Memproses...' : `Setujui Sekaligus (${selectedJournalIds.length})`}
-                    </span>
-                  </button>
-                </div>
+                    <button
+                      onClick={handleBulkApprove}
+                      disabled={selectedJournalIds.length === 0 || bulkProcessing}
+                      className="inline-flex items-center space-x-1.5 px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-xl text-xs font-extrabold transition shadow-md shadow-emerald-500/20 disabled:opacity-50"
+                    >
+                      <Check className="w-4 h-4 stroke-[3]" />
+                      <span>
+                        {bulkProcessing ? 'Memproses...' : `Setujui Sekaligus (${selectedJournalIds.length})`}
+                      </span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center space-x-1.5 px-3 py-2 bg-amber-50/70 border border-amber-200/80 rounded-xl text-amber-900 text-xs font-bold shrink-0">
+                    <Lock className="w-3.5 h-3.5 text-amber-600 stroke-[2.5]" />
+                    <span>Setujui Sekaligus (Khusus Paket PRO)</span>
+                  </div>
+                )
               )}
             </div>
           </div>
