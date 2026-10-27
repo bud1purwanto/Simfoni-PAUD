@@ -118,10 +118,10 @@ Seluruh rancangan spesifikasi teknis telah dipecah secara modular ke dalam direk
 
 Saat diminta membangun atau menyempurnakan fitur, ikuti urutan langkah terstruktur ini:
 
-- [ ] **Fase 1: Setup Lingkungan, Dependensi & Dual Environment**
-  - [ ] Scaffold React 18+ dengan Vite & Tailwind CSS.
-  - [ ] Pasang dependensi inti: `firebase`, `browser-image-compression`, `jspdf`, `jspdf-autotable`, `xlsx`, `date-fns`, `lucide-react`, `react-router-dom`.
-  - [ ] Konfigurasi `.gitignore` (proteksi `.env.*`), `.env.example`, `public/_redirects` (`/* /index.html 200`), dan `public/manifest.json`.
+- [x] **Fase 1: Setup Lingkungan, Dependensi & Dual Environment**
+  - [x] Scaffold React 18+ dengan Vite & Tailwind CSS.
+  - [x] Pasang dependensi inti: `firebase`, `browser-image-compression`, `jspdf`, `jspdf-autotable`, `xlsx`, `date-fns`, `lucide-react`, `react-router-dom`.
+  - [x] Konfigurasi `.gitignore` (proteksi `.env.*`), `.env.example`, `public/_redirects` (`/* /index.html 200`), dan `public/manifest.json`.
 
 - [ ] **Fase 2: Konfigurasi Firebase Modular & Layanan Inti**
   - [ ] Bangun `src/config/firebase.js` (*Primary App* untuk sesi aktif + *Secondary App* untuk pendaftaran user bertingkat tanpa ter-*logout*).
