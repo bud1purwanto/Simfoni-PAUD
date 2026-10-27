@@ -303,31 +303,33 @@ export default function JurnalGuru() {
   };
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
+    <div className="space-y-6 max-w-5xl mx-auto pb-6">
       
       {/* Header Halaman */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-slate-900">Jurnal Mengajar KBM</h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Dokumentasi harian Kurikulum Merdeka PAUD dengan Voice-to-Text & Kompresi Foto.
+          <h1 className="text-xl md:text-2xl font-extrabold text-slate-900 font-brand">
+            Jurnal Mengajar KBM 📖
+          </h1>
+          <p className="text-xs text-slate-500 mt-0.5 font-medium">
+            Dokumentasi harian Kurikulum Merdeka PAUD dengan Voice-to-Text & Kompresi Foto Kamera.
           </p>
         </div>
 
         {viewMode === 'list' ? (
           <button
             onClick={handleNewJournal}
-            className="inline-flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs shadow-sm transition self-start sm:self-auto"
+            className="inline-flex items-center space-x-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-extrabold text-xs shadow-md shadow-orange-500/20 active:scale-98 transition self-start sm:self-auto font-brand"
           >
-            <Plus className="w-4 h-4" />
-            <span>Tulis Jurnal Baru</span>
+            <Plus className="w-4 h-4 stroke-[3]" />
+            <span>Tulis Jurnal Ceria Baru</span>
           </button>
         ) : (
           <button
             onClick={() => setViewMode('list')}
-            className="inline-flex items-center space-x-2 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-semibold text-xs hover:bg-slate-100 transition self-start sm:self-auto"
+            className="inline-flex items-center space-x-2 px-5 py-3 rounded-2xl border border-orange-200 text-slate-700 bg-white hover:bg-amber-50 font-extrabold text-xs transition self-start sm:self-auto"
           >
-            <span>Kembali ke Daftar</span>
+            <span>Kembali ke Riwayat</span>
           </button>
         )}
       </div>

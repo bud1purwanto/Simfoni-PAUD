@@ -71,13 +71,13 @@ export default function AppLayout() {
     : (schoolData?.nama_sekolah || userData?.nama_sekolah || 'TK Dharma Wanita Persatuan 8');
 
   const roleBadge = {
-    superadmin: { label: 'SUPERADMIN', color: 'bg-purple-100 text-purple-700 border-purple-200' },
-    kepsek: { label: 'KEPALA SEKOLAH', color: 'bg-blue-100 text-blue-700 border-blue-200' },
-    guru: { label: 'GURU PAUD', color: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
+    superadmin: { label: 'SUPERADMIN', color: 'bg-purple-100 text-purple-800 border-purple-200' },
+    kepsek: { label: 'KEPALA SEKOLAH', color: 'bg-blue-100 text-blue-800 border-blue-200' },
+    guru: { label: 'GURU PAUD 🌸', color: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
   }[role] || { label: 'USER', color: 'bg-slate-100 text-slate-700 border-slate-200' };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col antialiased">
+    <div className="min-h-screen bg-amber-50/30 flex flex-col antialiased">
       {/* 1. Indikator Status Jaringan Online/Offline */}
       <NetworkStatusBanner />
 
@@ -85,7 +85,7 @@ export default function AppLayout() {
       <DevBadge />
 
       {/* 3. Header Atas Responsif */}
-      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 py-3 md:px-6">
+      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-orange-200/60 px-4 py-3 md:px-6 shadow-xs">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           
           {/* Identitas Sekolah Dinamis */}
@@ -94,32 +94,34 @@ export default function AppLayout() {
               <img
                 src={schoolData.logo_url}
                 alt="Logo Sekolah"
-                className="w-9 h-9 rounded-xl object-contain border border-slate-200 p-0.5 bg-white shadow-sm"
+                className="w-10 h-10 rounded-2xl object-contain border border-orange-200 p-0.5 bg-white shadow-sm"
               />
             ) : (
-              <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-lg shadow-sm shadow-indigo-600/30">
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-400 via-orange-500 to-amber-500 text-white flex items-center justify-center font-bold text-lg shadow-md shadow-orange-500/20 font-brand">
                 {role === 'superadmin' ? '👑' : '🎶'}
               </div>
             )}
             
             <div className="truncate max-w-[200px] sm:max-w-xs md:max-w-md">
-              <h1 className="text-sm md:text-base font-bold text-slate-900 truncate tracking-tight">
+              <h1 className="text-sm md:text-base font-extrabold text-slate-900 truncate tracking-tight font-brand">
                 {dynamicSchoolName}
               </h1>
-              <p className="text-[11px] text-slate-500 font-medium truncate">
-                {role === 'superadmin' ? 'Project Owner Portal' : `Kelompok: ${userData?.kelompok_kelas || 'Umum'}`}
+              <p className="text-[11px] text-slate-500 font-semibold truncate flex items-center space-x-1.5">
+                <span>{role === 'superadmin' ? 'Project Owner Portal' : `Kelompok: ${userData?.kelompok_kelas || 'Umum'}`}</span>
+                <span>•</span>
+                <span className="text-emerald-600 font-bold">Aktif</span>
               </p>
             </div>
           </div>
 
           {/* User Profile & Logout Header */}
           <div className="flex items-center space-x-2 sm:space-x-3">
-            <span className={`hidden sm:inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border ${roleBadge.color}`}>
+            <span className={`hidden sm:inline-flex items-center px-3 py-1 rounded-full text-[10px] font-extrabold border ${roleBadge.color}`}>
               {roleBadge.label}
             </span>
 
             <div className="hidden md:flex flex-col text-right">
-              <span className="text-xs font-bold text-slate-800 leading-tight">
+              <span className="text-xs font-extrabold text-slate-800 leading-tight">
                 {userData?.nama || 'Pengguna'}
               </span>
               <span className="text-[10px] text-slate-400">
@@ -130,7 +132,7 @@ export default function AppLayout() {
             <button
               onClick={handleLogout}
               title="Keluar Akun"
-              className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition"
+              className="p-2.5 rounded-2xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 active:scale-95 transition"
             >
               <LogOut className="w-4 h-4 md:w-5 md:h-5" />
             </button>
@@ -143,9 +145,9 @@ export default function AppLayout() {
         
         {/* Desktop Sidebar (Hanya tampil di >= 768px) */}
         <aside className="hidden md:flex flex-col w-64 bg-transparent p-4 shrink-0">
-          <div className="bg-white rounded-2xl border border-slate-200/80 p-3 shadow-sm sticky top-20 space-y-1">
-            <div className="px-3 py-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-              Menu Navigasi
+          <div className="bg-white rounded-3xl border border-orange-200/60 p-4 shadow-sm sticky top-20 space-y-1.5">
+            <div className="px-3 py-2 text-[11px] font-extrabold text-orange-400 uppercase tracking-wider font-brand">
+              Menu Utama
             </div>
 
             {currentNavItems.map((item) => {
@@ -155,36 +157,36 @@ export default function AppLayout() {
                   key={item.path}
                   to={item.path}
                   className={({ isActive }) =>
-                    `flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition ${
+                    `flex items-center space-x-3 px-3.5 py-3 rounded-2xl text-xs font-bold transition ${
                       isActive
-                        ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/20'
-                        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                        ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md shadow-orange-500/25'
+                        : 'text-slate-600 hover:bg-amber-50/70 hover:text-orange-950'
                     }`
                   }
                 >
-                  <Icon className="w-4 h-4" />
+                  <Icon className="w-4 h-4 stroke-[2.2]" />
                   <span>{item.label}</span>
                 </NavLink>
               );
             })}
 
-            <div className="pt-4 border-t border-slate-100 mt-4 px-3">
-              <div className="text-[10px] text-slate-400">
-                SIMFONI PAUD v1.0 (SaaS)<br />
-                Multi-Tenant Edition
+            <div className="pt-4 border-t border-orange-100 mt-4 px-3">
+              <div className="text-[10px] text-slate-400 leading-relaxed">
+                <span className="font-bold text-orange-900/60">SIMFONI PAUD v1.0</span><br />
+                SaaS Multi-Tenant Edition
               </div>
             </div>
           </div>
         </aside>
 
         {/* Main Content Area (Responsif, ruang bawah disesuaikan untuk BottomNav mobile) */}
-        <main className="flex-1 p-4 md:p-6 pb-24 md:pb-12 max-w-full overflow-x-hidden">
+        <main className="flex-1 p-4 md:p-6 pb-28 md:pb-12 max-w-full overflow-x-hidden">
           <Outlet />
         </main>
       </div>
 
-      {/* 5. Bottom Navigation Bar Mobile (Hanya tampil di < 768px) */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200/80 z-30 px-2 py-1.5 shadow-lg">
+      {/* 5. Bottom Navigation Bar Mobile (Floating Pill Ramah Jempol di < 768px) */}
+      <nav className="md:hidden fixed bottom-3 left-4 right-4 bg-white/95 backdrop-blur-md border border-orange-200/70 shadow-2xl shadow-orange-950/10 rounded-3xl z-30 px-2 py-1.5">
         <div className="flex items-center justify-around">
           {currentNavItems.slice(0, 5).map((item) => {
             const Icon = item.icon;
@@ -193,19 +195,19 @@ export default function AppLayout() {
                 key={item.path}
                 to={item.path}
                 className={({ isActive }) =>
-                  `flex flex-col items-center justify-center py-1 px-2 rounded-xl text-[10px] font-semibold transition min-w-[56px] ${
+                  `flex flex-col items-center justify-center py-1 px-2 rounded-2xl text-[10px] font-bold transition min-w-[56px] ${
                     isActive
-                      ? 'text-indigo-600 font-bold'
+                      ? 'text-orange-600'
                       : 'text-slate-400 hover:text-slate-600'
                   }`
                 }
               >
                 {({ isActive }) => (
                   <>
-                    <div className={`p-1 rounded-xl transition ${isActive ? 'bg-indigo-50' : ''}`}>
+                    <div className={`p-1.5 rounded-xl transition ${isActive ? 'bg-orange-100 text-orange-600 shadow-xs' : ''}`}>
                       <Icon className={`w-5 h-5 ${isActive ? 'stroke-[2.5]' : 'stroke-[1.8]'}`} />
                     </div>
-                    <span className="mt-0.5 truncate max-w-[64px]">{item.label}</span>
+                    <span className="mt-0.5 truncate max-w-[64px] font-brand">{item.label}</span>
                   </>
                 )}
               </NavLink>

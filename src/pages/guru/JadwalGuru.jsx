@@ -83,27 +83,30 @@ export default function JadwalGuru() {
   return (
     <div className="space-y-6 max-w-5xl mx-auto pb-12">
       {/* Header & Subtitle */}
-      <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 rounded-3xl p-6 md:p-8 text-white shadow-xl shadow-emerald-900/10">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div className="bg-gradient-to-r from-amber-400 via-orange-400 to-rose-400 rounded-3xl p-6 md:p-8 text-white shadow-xl shadow-orange-500/15 relative overflow-hidden">
+        <div className="absolute right-2 -bottom-4 opacity-20 text-8xl md:text-9xl pointer-events-none select-none font-brand">
+          📅
+        </div>
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <div className="inline-flex items-center space-x-2 px-3 py-1 bg-white/15 backdrop-blur-md rounded-full text-xs font-semibold mb-3">
+            <div className="inline-flex items-center space-x-2 px-3.5 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-bold mb-3 border border-white/20">
               <CalendarDays className="w-3.5 h-3.5" />
-              <span>Jadwal Pembelajaran Kurikulum Merdeka</span>
+              <span>Roster Sentra & Pembelajaran PAUD</span>
             </div>
-            <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">
-              Jadwal Mengajar KBM
+            <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight font-brand">
+              Jadwal Mengajar KBM ☀️
             </h1>
-            <p className="text-emerald-100 text-sm mt-1">
-              {schoolData?.nama_sekolah || 'PAUD'} • Roster kegiatan mingguan kelas dan sentra
+            <p className="text-amber-50 text-sm mt-1 font-medium">
+              {schoolData?.nama_sekolah || 'PAUD'} • Roster kegiatan mingguan kelas dan sentra bermain
             </p>
           </div>
 
-          <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-white/20 text-xs">
-            <Sparkles className="w-4 h-4 text-amber-300 shrink-0" />
+          <div className="flex items-center space-x-2.5 bg-white/20 backdrop-blur-md px-4 py-3 rounded-2xl border border-white/30 text-xs">
+            <Sparkles className="w-4 h-4 text-amber-200 shrink-0" />
             <div>
-              <div className="font-semibold text-white">Hari Ini: {hariIni}</div>
-              <div className="text-emerald-200">
-                {schedules.filter((s) => s.hari === hariIni).length} kegiatan terjadwal
+              <div className="font-extrabold text-white font-brand">Hari Ini: {hariIni}</div>
+              <div className="text-amber-100 font-medium">
+                {schedules.filter((s) => s.hari === hariIni).length} kegiatan aktif
               </div>
             </div>
           </div>
@@ -111,9 +114,9 @@ export default function JadwalGuru() {
       </div>
 
       {/* Navigasi Filter Hari (Pill Horizontal Scrollable) */}
-      <div className="bg-white rounded-3xl p-4 md:p-5 border border-slate-200/80 shadow-sm space-y-4">
+      <div className="bg-white rounded-3xl p-4 md:p-5 border border-orange-200/70 shadow-sm space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div className="flex items-center space-x-2 text-xs font-bold text-slate-500 uppercase tracking-wider">
+          <div className="flex items-center space-x-2 text-xs font-extrabold text-orange-400 uppercase tracking-wider font-brand">
             <Filter className="w-3.5 h-3.5" />
             <span>Pilih Hari</span>
           </div>
@@ -122,10 +125,10 @@ export default function JadwalGuru() {
           <button
             type="button"
             onClick={() => setFilterSaya(!filterSaya)}
-            className={`inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+            className={`inline-flex items-center space-x-2 px-4 py-2 rounded-2xl text-xs font-extrabold transition-all ${
               filterSaya
-                ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md shadow-orange-500/20'
+                : 'bg-amber-50 text-amber-900 border border-amber-200 hover:bg-amber-100'
             }`}
           >
             <User className="w-3.5 h-3.5" />
@@ -147,19 +150,19 @@ export default function JadwalGuru() {
                 key={hari}
                 type="button"
                 onClick={() => setSelectedHari(hari)}
-                className={`px-4 py-2 rounded-2xl text-xs font-bold transition-all whitespace-nowrap flex items-center space-x-2 ${
+                className={`px-4 py-2.5 rounded-2xl text-xs font-extrabold transition-all whitespace-nowrap flex items-center space-x-2 ${
                   isActive
-                    ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/25 ring-2 ring-emerald-600/30'
-                    : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200/60'
+                    ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md shadow-orange-500/25 ring-2 ring-orange-300'
+                    : 'bg-amber-50/40 text-slate-700 hover:bg-amber-100/60 border border-orange-200/60'
                 }`}
               >
                 <span>{hari}</span>
                 {isToday && (
-                  <span className={`w-2 h-2 rounded-full ${isActive ? 'bg-amber-300' : 'bg-emerald-500'}`} />
+                  <span className={`w-2 h-2 rounded-full ${isActive ? 'bg-amber-200' : 'bg-orange-500'}`} />
                 )}
                 <span
                   className={`px-1.5 py-0.5 rounded-full text-[10px] ${
-                    isActive ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-600'
+                    isActive ? 'bg-white/20 text-white' : 'bg-orange-100 text-orange-800'
                   }`}
                 >
                   {count}

@@ -73,22 +73,24 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-amber-50/80 via-orange-50/40 to-rose-50/30 flex flex-col justify-center py-12 sm:px-6 lg:px-8 px-4">
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 mb-4 animate-bounce">
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-3xl bg-gradient-to-tr from-amber-400 via-orange-500 to-amber-500 text-white shadow-lg shadow-orange-500/25 mb-4 animate-bounce font-brand">
           <span className="text-3xl">🎶</span>
         </div>
-        <h2 className="text-2xl font-bold tracking-tight text-slate-900">SIMFONI PAUD</h2>
-        <p className="mt-1 text-xs text-slate-500 font-medium">
+        <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight text-slate-900 font-brand">
+          SIMFONI PAUD 🌸
+        </h2>
+        <p className="mt-1 text-xs text-slate-600 font-semibold max-w-sm mx-auto">
           Sistem Informasi Monitoring & Pelaporan Terintegrasi PAUD
         </p>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-6 shadow-sm border border-slate-200/80 rounded-3xl sm:px-10">
+        <div className="bg-white py-8 px-6 shadow-xl shadow-orange-500/5 border border-orange-200/80 rounded-3xl sm:px-10">
 
           {error && (
-            <div className="mb-5 p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center space-x-2.5 animate-shake">
+            <div className="mb-5 p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold flex items-center space-x-2.5 animate-shake">
               <AlertCircle className="w-4 h-4 flex-shrink-0" />
               <span>{error}</span>
             </div>
@@ -96,7 +98,7 @@ export default function Login() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+              <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">
                 Alamat Email
               </label>
               <div className="relative">
@@ -109,13 +111,13 @@ export default function Login() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="nama@sekolah.sch.id"
-                  className="w-full pl-10 pr-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition"
+                  className="w-full pl-10 pr-3.5 py-3 text-sm rounded-2xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition font-medium"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+              <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">
                 Kata Sandi
               </label>
               <div className="relative">
@@ -128,7 +130,7 @@ export default function Login() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full pl-10 pr-10 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition"
+                  className="w-full pl-10 pr-10 py-3 text-sm rounded-2xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition font-medium"
                 />
                 <button
                   type="button"
@@ -143,20 +145,20 @@ export default function Login() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full mt-2 py-3 px-4 rounded-xl font-semibold text-sm text-white bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 shadow-sm shadow-indigo-600/30 transition flex items-center justify-center space-x-2"
+              className="w-full mt-2 py-3.5 px-4 rounded-2xl font-extrabold text-sm text-white bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:to-orange-600 active:scale-98 shadow-md shadow-orange-500/25 transition flex items-center justify-center space-x-2 font-brand"
             >
               {loading ? (
                 <span>Memverifikasi Akun...</span>
               ) : (
                 <>
                   <span>Masuk ke SIMFONI</span>
-                  <ArrowRight className="w-4 h-4" />
+                  <ArrowRight className="w-4 h-4 stroke-[2.5]" />
                 </>
               )}
             </button>
           </form>
 
-          <div className="mt-6 text-center text-xs text-slate-400">
+          <div className="mt-6 text-center text-xs text-slate-400 font-medium">
             Jika lupa kata sandi, hubungi Kepala Sekolah di sekolah Anda.
           </div>
         </div>

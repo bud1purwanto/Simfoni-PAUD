@@ -258,17 +258,20 @@ export default function LaporanLainGuru() {
   return (
     <div className="space-y-6 max-w-5xl mx-auto pb-12">
       {/* Header Banner */}
-      <div className="bg-gradient-to-r from-teal-700 via-emerald-700 to-teal-800 rounded-3xl p-6 md:p-8 text-white shadow-xl shadow-teal-950/10">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div className="bg-gradient-to-r from-amber-400 via-orange-400 to-rose-400 rounded-3xl p-6 md:p-8 text-white shadow-xl shadow-orange-500/15 relative overflow-hidden">
+        <div className="absolute right-2 -bottom-4 opacity-20 text-8xl md:text-9xl pointer-events-none select-none font-brand">
+          📋
+        </div>
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <div className="inline-flex items-center space-x-2 px-3 py-1 bg-white/15 backdrop-blur-md rounded-full text-xs font-semibold mb-3">
+            <div className="inline-flex items-center space-x-2 px-3.5 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-bold mb-3 border border-white/20">
               <Layers className="w-3.5 h-3.5" />
-              <span>Non-KBM & Sarana Prasarana</span>
+              <span>Aktivitas Non-KBM & Sarana Prasarana</span>
             </div>
-            <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">
-              Tugas Tambahan & Kendala
+            <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight font-brand">
+              Tugas Tambahan & Kendala 🌻
             </h1>
-            <p className="text-teal-100 text-sm mt-1">
+            <p className="text-amber-50 text-sm mt-1 font-medium">
               Catatan rapat dinas, administrasi guru, dan pelaporan sarana sekolah
             </p>
           </div>
@@ -279,9 +282,9 @@ export default function LaporanLainGuru() {
               resetForm();
               setModalOpen(true);
             }}
-            className="inline-flex items-center justify-center space-x-2 px-5 py-3 bg-white text-teal-800 hover:bg-teal-50 active:scale-95 rounded-2xl text-xs font-bold transition-all shadow-lg shadow-black/10 shrink-0"
+            className="inline-flex items-center justify-center space-x-2 px-5 py-3.5 bg-white text-orange-700 hover:bg-orange-50 active:scale-95 rounded-2xl text-xs font-extrabold transition-all shadow-md shadow-black/10 shrink-0 font-brand"
           >
-            <Plus className="w-4 h-4 text-teal-600 stroke-[3]" />
+            <Plus className="w-4 h-4 text-orange-600 stroke-[3]" />
             <span>Buat Laporan Baru</span>
           </button>
         </div>

@@ -130,33 +130,35 @@ export default function PresensiGuru() {
   };
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
+    <div className="space-y-6 max-w-5xl mx-auto pb-6">
       {/* Header Halaman */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-slate-900">Riwayat & Koreksi Presensi</h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Presensi dual timestamp dengan proteksi sinkronisasi sinyal offline.
+          <h1 className="text-xl md:text-2xl font-extrabold text-slate-900 font-brand">
+            Riwayat & Koreksi Presensi 🌸
+          </h1>
+          <p className="text-xs text-slate-500 mt-0.5 font-medium">
+            Presensi dual timestamp anti-trap: jam kehadiran Anda aman saat sinyal drop.
           </p>
         </div>
 
         {/* Filter Bulan */}
-        <div className="flex items-center space-x-2 bg-white px-3 py-1.5 rounded-2xl border border-slate-200/80 shadow-sm">
-          <Calendar className="w-4 h-4 text-slate-400" />
+        <div className="flex items-center space-x-2 bg-white px-3.5 py-2 rounded-2xl border border-orange-200/80 shadow-xs">
+          <Calendar className="w-4 h-4 text-orange-500" />
           <input
             type="month"
             value={selectedMonth}
             onChange={(e) => setSelectedMonth(e.target.value)}
-            className="text-xs font-semibold text-slate-700 bg-transparent focus:outline-none"
+            className="text-xs font-bold text-slate-700 bg-transparent focus:outline-none"
           />
         </div>
       </div>
 
       {notification && (
-        <div className={`p-4 rounded-2xl text-xs flex items-center space-x-2.5 animate-fadeIn ${
+        <div className={`p-4 rounded-3xl text-xs font-bold flex items-center space-x-2.5 animate-fadeIn shadow-sm ${
           notification.type === 'success' 
-            ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' 
-            : 'bg-rose-50 text-rose-800 border border-rose-200'
+            ? 'bg-emerald-50 text-emerald-800 border-2 border-emerald-200' 
+            : 'bg-rose-50 text-rose-800 border-2 border-rose-200'
         }`}>
           {notification.type === 'success' ? <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" /> : <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />}
           <span>{notification.text}</span>
@@ -164,12 +166,12 @@ export default function PresensiGuru() {
       )}
 
       {/* Info Card: Dual Timestamp Explanation */}
-      <div className="p-4 rounded-2xl bg-indigo-50/70 border border-indigo-100 text-indigo-900 text-xs flex items-start space-x-3">
-        <HelpCircle className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
+      <div className="p-4 rounded-3xl bg-amber-50/70 border border-amber-200/80 text-amber-950 text-xs flex items-start space-x-3 shadow-xs">
+        <HelpCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
         <div className="space-y-0.5">
-          <p className="font-bold">Keamanan Catatan Jam Guru:</p>
-          <p className="text-indigo-800 leading-relaxed text-[11px]">
-            Sistem merekam <strong>Jam Perangkat HP</strong> saat tombol absen ditekan. Jika sinyal internet sekolah sedang mati dan data baru tersinkron belakangan, jam kehadiran Anda tetap dihitung berdasarkan waktu asli tombol ditekan, sehingga tidak dirugikan sebagai terlambat.
+          <p className="font-extrabold font-brand text-amber-900 text-sm">Proteksi Jam Hadir Guru (Anti-Trap Offline):</p>
+          <p className="text-amber-800 leading-relaxed text-[11px]">
+            Sistem merekam <strong>Jam Perangkat HP Anda</strong> saat tombol absen ditekan. Jika sinyal internet sekolah sedang padam dan data baru tersinkron belakangan, jam kehadiran Anda tetap dihitung berdasarkan waktu asli tombol ditekan, sehingga tidak dirugikan sebagai terlambat.
           </p>
         </div>
       </div>
