@@ -1,108 +1,121 @@
-# 🚀 Panduan Deployment: Cloudflare Pages & Firebase
+# 🚀 Panduan Deployment: Cloudflare Pages & Firebase CI/CD Pipeline
 
-Dokumen ini memuat panduan langkah demi langkah untuk melakukan build, deployment, dan konfigurasi lingkungan produksi **SIMFONI PAUD** menggunakan **Cloudflare Pages** dan **Firebase Console**.
-
----
-
-## 1. Ikhtisar Arsitektur Hosting
-
-* **Frontend SPA:** Cloudflare Pages (Gratis, CDN edge global, proteksi DDoS, sertifikat SSL otomatis).
-* **Backend BaaS:** Firebase (Authentication, Cloud Firestore, Cloud Storage).
-* **Domain Produksi:** Subdomain Cloudflare (misal: `simfoni-paud.pages.dev`) atau Custom Domain sekolah.
+Dokumen ini memuat panduan lengkap untuk melakukan konfigurasi pipeline CI/CD, deployment multi-environment (**DEV vs PROD**), dan pengaturan variabel lingkungan **SIMFONI PAUD (SaaS Edition)** menggunakan **Cloudflare Pages** dan dua proyek **Firebase**.
 
 ---
 
-## 2. Persyaratan Routing SPA (`_redirects`)
+## 1. Arsitektur Dual Environment (DEV & PROD)
 
-Aplikasi React Router v6 menggunakan *client-side routing*. Ketika pengguna di HP me-refresh browser pada URL seperti `/guru/jurnal` atau `/kepsek/validasi`, server web statis biasa akan mencari file fisik `guru/jurnal.html` dan mengembalikan galat **404 Not Found**.
+Untuk mencegah uji coba fitur baru merusak data sekolah aktif, platform menggunakan dua konfigurasi terpisah:
 
-### Solusi Wajib:
-Buat file `public/_redirects` dengan konten persis satu baris:
-```text
-/* /index.html 200
-```
-File ini menginstruksikan edge worker Cloudflare Pages untuk selalu menyajikan file `index.html` dengan kode status HTTP 200 untuk seluruh request path yang tidak cocok dengan aset statis.
+```mermaid
+flowchart LR
+    DevGit["Git Branch: dev"] -->|Push / PR| CF_Prev["Cloudflare Preview<br/>dev.simfoni-paud.pages.dev"]
+    CF_Prev -->|API Calls| FB_Dev[("Firebase DEV Project<br/>simfoni-paud-dev")]
 
----
-
-## 3. Konfigurasi Variabel Lingkungan (Environment Variables)
-
-Aplikasi membutuhkan konfigurasi Firebase yang disuplai melalui environment variables berawalan `VITE_`.
-
-### A. Berkas `.env.example` (Lokal)
-Simpan file `.env.example` di root proyek:
-```bash
-VITE_FIREBASE_API_KEY=AIzaSy...
-VITE_FIREBASE_AUTH_DOMAIN=simfoni-paud.firebaseapp.com
-VITE_FIREBASE_PROJECT_ID=simfoni-paud
-VITE_FIREBASE_STORAGE_BUCKET=simfoni-paud.appspot.com
-VITE_FIREBASE_MESSAGING_SENDER_ID=123456789012
-VITE_FIREBASE_APP_ID=1:123456789012:web:abcdef...
+    MainGit["Git Branch: main"] -->|Merge Release| CF_Prod["Cloudflare Production<br/>simfoni-paud.pages.dev"]
+    CF_Prod -->|API Calls| FB_Prod[("Firebase PROD Project<br/>simfoni-paud-prod")]
 ```
 
-Untuk pengembangan lokal, salin file tersebut menjadi `.env` dan isi dengan nilai API Key asli dari Firebase Project TK DWP 8:
-```powershell
-cp .env.example .env
-```
-*(Catatan: File `.env` wajib dimasukkan ke dalam `.gitignore` agar kredensial tidak bocor ke repositori git).*
-
-### B. Konfigurasi di Dashboard Cloudflare Pages
-1. Buka dashboard Cloudflare: **Workers & Pages** > Pilih proyek aplikasi.
-2. Masuk ke tab **Settings** > **Environment variables**.
-3. Tambahkan seluruh pasangan kunci dan nilai dari berkas `.env` untuk environment **Production** dan **Preview**.
+| Komponen | Environment DEVELOPMENT 🟡 | Environment PRODUCTION 🟢 |
+| :--- | :--- | :--- |
+| **Branch Git** | `dev` | `main` |
+| **Proyek Firebase** | `simfoni-paud-dev` | `simfoni-paud-prod` |
+| **Cloudflare Environment** | Preview Deployments | Production Deployment |
+| **URL Akses** | `https://dev.simfoni-paud.pages.dev` | `https://simfoni-paud.pages.dev` |
+| **Peruntukan** | Uji coba fitur baru, QA, dan eksperimen | Sekolah mitra aktif (TK DWP 8, dll.) |
 
 ---
 
-## 4. Konfigurasi Build di Cloudflare Pages
+## 2. Pengaturan Variabel Lingkungan (Environment Variables)
 
-Saat menghubungkan repositori Git (GitHub/GitLab) ke Cloudflare Pages, atur pengaturan build sebagai berikut:
+### 2.1. Berkas `.env.example`
+File ini tersimpan di Git sebagai cetak biru struktur variabel yang dibutuhkan:
+```env
+VITE_APP_ENV=development
+VITE_FIREBASE_API_KEY=your_api_key
+VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=your_project_id
+VITE_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
+VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+VITE_FIREBASE_APP_ID=your_app_id
+```
 
-| Parameter Pengaturan | Nilai Konfigurasi |
+### 2.2. Pengembangan Lokal (Laptop)
+Buat file `.env.local` pada direktori root proyek dan isi dengan kredensial dari proyek Firebase **`simfoni-paud-dev`**.  
+File ini otomatis diabaikan oleh Git via `.gitignore`.
+
+### 2.3. Pengaturan di Cloudflare Pages Dashboard
+1. Buka dashboard Cloudflare: **Workers & Pages** -> Pilih proyek `simfoni-paud`.
+2. Masuk ke **Settings** -> **Environment variables**.
+3. Masukkan variabel untuk masing-masing tab:
+   * **Tab Production (Branch `main`):**
+     * `VITE_APP_ENV` = `production`
+     * `VITE_FIREBASE_API_KEY` = *(API Key `simfoni-paud-prod`)*
+     * `VITE_FIREBASE_PROJECT_ID` = `simfoni-paud-prod`
+     * *(dan parameter Firebase PROD lainnya)*
+   * **Tab Preview (Branch `dev`):**
+     * `VITE_APP_ENV` = `development`
+     * `VITE_FIREBASE_API_KEY` = *(API Key `simfoni-paud-dev`)*
+     * `VITE_FIREBASE_PROJECT_ID` = `simfoni-paud-dev`
+     * *(dan parameter Firebase DEV lainnya)*
+
+---
+
+## 3. Pengaturan Build & Branch di Cloudflare Pages
+
+Atur konfigurasi build pada menu **Settings -> Builds & deployments**:
+
+| Parameter | Nilai Konfigurasi |
 | :--- | :--- |
 | **Framework Preset** | `Vite` |
 | **Build Command** | `npm run build` |
 | **Build Output Directory** | `dist` |
-| **Root Directory** | `/` (atau direktori root proyek Anda) |
-| **Node.js Version** | `18` atau `20` (diset via environment variable `NODE_VERSION=20`) |
+| **Production Branch** | `main` |
+| **Preview Branches** | Pilih *All non-production branches* atau spesifik branch `dev` |
+| **Node.js Version** | `20` (diset via variabel `NODE_VERSION=20`) |
+
+### Wajib Routing SPA (`_redirects`):
+Pastikan file `public/_redirects` berisi satu baris berikut agar tidak muncul 404 saat navigasi browser di-refresh:
+```text
+/* /index.html 200
+```
 
 ---
 
-## 5. Konfigurasi Wajib di Firebase Console
+## 4. Konfigurasi Wajib di Firebase Console
 
-Setelah aplikasi berhasil ter-deploy dan memiliki URL publik di Cloudflare Pages, lakukan langkah integrasi berikut:
+### 4.1. Authorized Domains (Firebase Authentication)
+Wajib mendaftarkan domain Cloudflare di masing-masing project Firebase agar proses autentikasi tidak ditolak:
+* **Pada `simfoni-paud-dev`:**
+  * Tambahkan `localhost`
+  * Tambahkan `dev.simfoni-paud.pages.dev`
+* **Pada `simfoni-paud-prod`:**
+  * Tambahkan `simfoni-paud.pages.dev` (serta custom domain sekolah jika ada).
 
-### 5.1. Tambahkan Authorized Domains (Firebase Authentication)
-1. Buka **Firebase Console** -> Masuk ke proyek Anda.
-2. Navigasi ke menu **Authentication** -> Tab **Settings** -> **Authorized domains**.
-3. Klik **Add domain**.
-4. Masukkan domain Cloudflare Anda, contoh: `simfoni-paud.pages.dev` (dan custom domain sekolah jika ada).
-> [!IMPORTANT]
-> Jika domain Cloudflare tidak ditambahkan ke daftar *Authorized Domains*, proses login dan pendaftaran pengguna baru via Firebase Auth akan diblokir dengan pesan galat `auth/unauthorized-domain`.
-
-### 5.2. Deploy Aturan Keamanan (Firestore & Storage Rules)
-Gunakan Firebase CLI dari komputer lokal untuk menerapkan berkas aturan keamanan yang telah dibuat:
+### 4.2. Penerapan Rules & Indeks
+Terapkan aturan keamanan multi-tenant ke kedua proyek Firebase menggunakan Firebase CLI:
 ```powershell
-# Login ke Firebase CLI jika belum
-firebase login
+# 1. Terapkan ke lingkungan DEV
+firebase use simfoni-paud-dev
+firebase deploy --only firestore:rules,storage
 
-# Inisialisasi target proyek
-firebase use <project-id-anda>
-
-# Terapkan firestore.rules dan storage.rules
+# 2. Terapkan ke lingkungan PROD
+firebase use simfoni-paud-prod
 firebase deploy --only firestore:rules,storage
 ```
 
 ---
 
-## 6. Verifikasi Fitur PWA (Progressive Web App)
+## 5. Verifikasi Fitur PWA (Progressive Web App)
 
-Pastikan file `public/manifest.json` telah terdaftar di `<head>` file `index.html`:
-```html
-<link rel="manifest" href="/manifest.json" />
-<meta name="theme-color" content="#2563eb" />
-```
+Pastikan file `public/manifest.json` memuat metadata aplikasi:
+* Nama: `SIMFONI PAUD`
+* Short Name: `SIMFONI`
+* Start URL: `/`
+* Display: `standalone`
+* Theme Color: `#2563eb`
 
-Uji kesiapan PWA di HP:
-* **Android (Chrome):** Buka link aplikasi, tunggu pop-up bar bawah *"Tambahkan SIMFONI PAUD ke Layar Utama"*, atau klik menu titik tiga -> **Tambahkan ke Layar Utama**.
-* **iOS (Safari):** Buka link aplikasi, klik ikon *Share* (kotak panah ke atas) -> pilih **Add to Home Screen**.
-
+Uji instalasi di smartphone:
+1. Akses link `https://dev.simfoni-paud.pages.dev` atau `https://simfoni-paud.pages.dev` dari Chrome Android / Safari iOS.
+2. Pastikan prompt *Add to Home Screen* muncul dan aplikasi dapat dibuka dalam mode layar penuh tanpa address bar browser.

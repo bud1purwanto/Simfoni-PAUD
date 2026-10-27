@@ -1,68 +1,85 @@
-# 🏛️ Arsitektur Sistem: SIMFONI PAUD
+# 🏛️ Arsitektur Sistem: SIMFONI PAUD (SaaS Multi-Tenant Edition)
 
-Dokumen ini menjelaskan arsitektur teknis, topologi sistem, integrasi layanan, dan struktur folder untuk aplikasi **SIMFONI PAUD (Sistem Informasi Monitoring dan Pelaporan Terintegrasi PAUD)** di **TK Dharma Wanita Persatuan 8**.
+Dokumen ini menjelaskan arsitektur teknis, topologi multi-tenant, lingkungan Dev vs Prod, integrasi layanan Firebase, dan struktur folder untuk platform **SIMFONI PAUD (SaaS Edition)**.
 
 ---
 
-## 1. Topologi & Desain Sistem
+## 1. Topologi Multi-Tenant & Desain Sistem
 
-SIMFONI PAUD dirancang dengan arsitektur **Mobile-First Progressive Web App (PWA)** berbasis Single Page Application (SPA) yang dihosting di jaringan edge global, berkomunikasi langsung dengan Backend-as-a-Service (BaaS) Firebase.
+SIMFONI PAUD menggunakan pendekatan arsitektur **Shared Database, Shared Schema dengan Tenant Identifier (`school_id`)**:
+* Seluruh sekolah mitra bernaung dalam satu proyek Firestore yang sama.
+* Setiap dokumen operasional (`attendance`, `journals`, `schedules`, `tasks_and_issues`, `audit_logs`) dan dokumen pengguna (`users`) diberi label `school_id`.
+* Isolasi data ditegakkan di tingkat backend oleh **Firestore Security Rules** dan di tingkat UI melalui *scoped state* pada `AuthContext`.
 
 ```mermaid
 graph TD
-    subgraph Client ["Client Device (Mobile / Tablet / Desktop)"]
-        UI["React 18 + Vite (Tailwind CSS)"]
-        PWA["Service Worker & Manifest (PWA)"]
-        Cache["IndexedDB (Firestore Offline Persistence)"]
-        Compression["Client-Side Image Compressor (< 300KB)"]
-        STT["Web Speech API (Voice-to-Text id-ID)"]
+    subgraph Clients ["Client Devices"]
+        SA["Superadmin (Project Owner)"]
+        KP["Kepala Sekolah (Tenant Admin)"]
+        GR["Guru PAUD (Tenant User)"]
     end
 
-    subgraph Hosting ["Edge Hosting"]
-        CF["Cloudflare Pages (SPA + _redirects)"]
+    subgraph Hosting ["Cloudflare Pages Edge"]
+        CF_DEV["Preview Edge (dev branch) -> dev.simfoni-paud.pages.dev"]
+        CF_PROD["Production Edge (main branch) -> simfoni-paud.pages.dev"]
     end
 
-    subgraph Firebase ["Firebase Backend (BaaS)"]
-        Auth["Firebase Authentication"]
-        SecAuth["Secondary Auth Instance (Admin User Creation)"]
-        FS["Cloud Firestore (Real-time DB)"]
-        Storage["Cloud Storage (Media & Dokumentasi)"]
+    subgraph Backend_Dev ["Firebase DEV Project (simfoni-paud-dev)"]
+        AuthDev["Auth Dev"]
+        FSDev["Firestore Dev (Dummy Data)"]
+        StorageDev["Storage Dev"]
     end
 
-    Client -->|Static Assets| CF
-    UI -->|Session Login & Auth State| Auth
-    UI -->|Admin Create Guru| SecAuth
-    UI <-->|CRUD Data & Real-time Listeners| FS
-    UI -->|Offline Sync| Cache
-    UI -->|Upload Foto Kompresi| Storage
+    subgraph Backend_Prod ["Firebase PROD Project (simfoni-paud-prod)"]
+        AuthProd["Auth Prod"]
+        FSProd["Firestore Prod (Live Schools: TK DWP 8, etc.)"]
+        StorageProd["Storage Prod"]
+    end
+
+    SA -->|Kelola Seluruh Sekolah & Kuota| CF_PROD
+    KP -->|Kelola Guru & Laporan Sekolah Sendiri| CF_PROD
+    GR -->|Input Absen & Jurnal Sekolah Sendiri| CF_PROD
+
+    CF_DEV --> Backend_Dev
+    CF_PROD --> Backend_Prod
 ```
 
 ---
 
-## 2. Tech Stack Utama
+## 2. Hierarki 3 Peran Pengguna (3-Tier RBAC)
 
-| Layer | Teknologi | Catatan Penggunaan |
-| :--- | :--- | :--- |
-| **Framework UI** | React 18+ | Library inti untuk antarmuka pengguna berbasis komponen deklaratif. |
-| **Build Tool** | Vite | Bundler modern berkecepatan tinggi dengan Hot Module Replacement (HMR). |
-| **Styling** | Tailwind CSS | Utility-first CSS untuk desain mobile-first responsif. |
-| **Icon Library** | `lucide-react` | Kumpulan ikon ringan, konsisten, dan fleksibel. |
-| **Routing** | `react-router-dom` v6 | Manajemen navigasi client-side SPA dengan protected routes per role. |
-| **Backend & Auth** | Firebase v10+ Modular SDK | Auth, Firestore, dan Storage tanpa server custom. |
-| **Kompresi Gambar** | `browser-image-compression` | Mereduksi foto 3-10 MB dari HP menjadi < 300 KB sebelum upload. |
-| **Export PDF** | `jspdf` & `jspdf-autotable` | Membuat dokumen laporan resmi berformat PDF lengkap dengan Kop Surat. |
-| **Manipulasi Waktu** | `date-fns` | Format tanggal Bahasa Indonesia dan penanganan zona waktu lokal (WIB). |
-| **Hosting** | Cloudflare Pages | Hosting static assets global cepat dan gratis dengan routing SPA. |
+```mermaid
+flowchart TD
+    SA["👑 superadmin (Project Owner)<br/>school_id: null | Global Master Access"]
+    KP["🏫 kepsek (School Tenant Admin)<br/>school_id: 'sch_xxxx' | Dibatasi Kuota Guru"]
+    GR["👩‍🏫 guru (School Tenant User)<br/>school_id: 'sch_xxxx' | Operasional Harian KBM"]
+
+    SA -->|Membuat Sekolah & Akun Kepsek| KP
+    KP -->|Mendaftarkan Akun Guru (Maks = kuota_guru)| GR
+```
+
+1. **`superadmin` (Project Owner):**
+   * Mengelola mitra sekolah (tambah, edit profil/kop surat/logo, suspend langganan, atur kuota guru).
+   * Mendaftarkan akun Kepala Sekolah baru via *Secondary Auth Instance*.
+   * Memantau analitik performa global SaaS.
+2. **`kepsek` (Kepala Sekolah / Tenant Admin):**
+   * Terikat pada satu `school_id`.
+   * Mengelola akun guru di sekolahnya sesuai batas `kuota_guru`.
+   * Memvalidasi jurnal KBM, menyetujui koreksi absen, mengatur jadwal, dan mengunduh rekap PDF resmi sekolahnya.
+3. **`guru` (Pengajar / Tenant User):**
+   * Terikat pada satu `school_id`.
+   * Melakukan presensi, mengisi jurnal mengajar dengan Voice-to-Text, mengunggah foto kompresi, dan menyampaikan kendala.
 
 ---
 
-## 3. Pola Kunci: Firebase Dual-App Instance
+## 3. Pola Kunci: Firebase Dual-App Instance (Secondary Auth)
 
-### Latar Belakang Masalah
-Pada Firebase Authentication Client SDK, memanggil `createUserWithEmailAndPassword()` pada instance default akan secara otomatis mengubah sesi aktif pengguna yang sedang login menjadi pengguna baru tersebut. Jika Kepala Sekolah sedang login dan membuat akun guru baru, Kepala Sekolah akan langsung ter-*logout*.
+Firebase Auth Client SDK secara default me-*logout* akun aktif saat fungsi `createUserWithEmailAndPassword()` dipanggil.
+Dalam arsitektur SaaS SIMFONI PAUD, terdapat dua tingkatan pendaftaran akun:
+1. `superadmin` mendaftarkan `kepsek` baru.
+2. `kepsek` mendaftarkan `guru` baru.
 
-### Solusi Arsitektural
-Sistem menginisialisasi **Secondary Firebase App Instance** terpisah khusus untuk operasi pembuatan akun oleh Kepala Sekolah.
+Keduanya wajib menggunakan **Secondary Firebase App Instance** (`secondaryAuth`) agar sesi pengguna aktif tidak terputus:
 
 ```javascript
 // src/config/firebase.js
@@ -86,34 +103,58 @@ export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
 
-// Aktifkan Offline Persistence agar draf jurnal tetap tersimpan di lokal
+// Aktifkan Offline Persistence
 enableIndexedDbPersistence(db).catch((err) => {
   console.warn("Firestore offline persistence unavailable:", err.code);
 });
 
-// 2. Secondary App (Khusus pendaftaran guru baru oleh Kepala Sekolah)
+// 2. Secondary App (Khusus pendaftaran user baru tanpa me-logout admin aktif)
 const secondaryApp = initializeApp(firebaseConfig, "SecondaryApp");
 export const secondaryAuth = getAuth(secondaryApp);
 
 /**
- * Membuat akun guru baru tanpa me-logout sesi Kepala Sekolah
+ * Superadmin mendaftarkan Kepala Sekolah baru
  */
-export const createGuruAccountByAdmin = async (email, password, nama, kelompokKelas) => {
-  const userCredential = await createUserWithEmailAndPassword(secondaryAuth, email, password);
-  const newUid = userCredential.user.uid;
+export const createKepsekAccountBySuperadmin = async (email, password, nama, schoolId, namaSekolah) => {
+  const credential = await createUserWithEmailAndPassword(secondaryAuth, email, password);
+  const newUid = credential.user.uid;
 
   await setDoc(doc(db, "users", newUid), {
     uid: newUid,
-    nama: nama,
-    email: email,
+    nama,
+    email,
+    role: "kepsek",
+    school_id: schoolId,
+    nama_sekolah: namaSekolah,
+    status_akun: "aktif",
+    created_at: serverTimestamp(),
+    updated_at: serverTimestamp(),
+  });
+
+  await signOut(secondaryAuth);
+  return newUid;
+};
+
+/**
+ * Kepala Sekolah mendaftarkan Guru baru (dengan validasi kuota)
+ */
+export const createGuruAccountByKepsek = async (email, password, nama, schoolId, namaSekolah, kelompokKelas) => {
+  const credential = await createUserWithEmailAndPassword(secondaryAuth, email, password);
+  const newUid = credential.user.uid;
+
+  await setDoc(doc(db, "users", newUid), {
+    uid: newUid,
+    nama,
+    email,
     role: "guru",
+    school_id: schoolId,
+    nama_sekolah: namaSekolah,
     kelompok_kelas: kelompokKelas,
     status_akun: "aktif",
     created_at: serverTimestamp(),
-    updated_at: serverTimestamp()
+    updated_at: serverTimestamp(),
   });
 
-  // Segera sign out dari secondary instance agar tidak meninggalkan credential
   await signOut(secondaryAuth);
   return newUid;
 };
@@ -121,12 +162,17 @@ export const createGuruAccountByAdmin = async (email, password, nama, kelompokKe
 
 ---
 
-## 4. Strategi Offline & Keandalan Sinyal (Offline Persistence)
+## 4. Pemisahan Lingkungan: DEV vs PROD
 
-Aplikasi ditargetkan untuk lingkungan sekolah di mana konektivitas internet guru terkadang fluktuatif:
-1. **Firestore IndexedDb Persistence**: Memungkinkan pembacaan cache lokal dan pengantrian penulisan draf jurnal saat jaringan terputus.
-2. **PWA Service Worker & App Manifest**: Memungkinkan aplikasi dipasang di homescreen smartphone guru dan memuat shell aplikasi secara instan.
-3. **Local Draft Auto-save**: Formulir jurnal menyediakan status `draf` yang disimpan secara teratur untuk mencegah kehilangan data jika aplikasi tertutup tiba-tiba.
+Untuk menjaga kebersihan data sekolah mitra produksi, arsitektur memisahkan dua siklus lingkungan secara mutlak:
+
+| Aspek | Lingkungan Development (Uji Coba) 🟡 | Lingkungan Production (SaaS Live) 🟢 |
+| :--- | :--- | :--- |
+| **Branch Git** | `dev` | `main` |
+| **Firebase Project** | `simfoni-paud-dev` | `simfoni-paud-prod` |
+| **Domain Cloudflare** | `https://dev.simfoni-paud.pages.dev` | `https://simfoni-paud.pages.dev` |
+| **Database State** | Data dummy sekolah uji coba | Data sekolah riil (TK DWP 8, dll.) |
+| **Badge UI** | Tampil badge mengambang `DEV ENVIRONMENT` | Badge disembunyikan otomatis |
 
 ---
 
@@ -135,55 +181,61 @@ Aplikasi ditargetkan untuk lingkungan sekolah di mana konektivitas internet guru
 ```text
 simfoni-paud/
 ├── public/
-│   ├── _redirects               # Wajib untuk routing SPA di Cloudflare Pages (/* /index.html 200)
-│   ├── manifest.json            # Konfigurasi PWA Mobile Homescreen
-│   └── icons/                   # Ikon aplikasi PWA (192px, 512px)
+│   ├── _redirects               # SPA routing Cloudflare: /* /index.html 200
+│   ├── manifest.json            # PWA Web App Manifest
+│   └── icons/                   # Ikon PWA (192px, 512px)
 ├── src/
 │   ├── config/
-│   │   └── firebase.js          # Konfigurasi Primary & Secondary Firebase App
+│   │   └── firebase.js          # Primary & Secondary Firebase App Instances
 │   ├── context/
-│   │   └── AuthContext.jsx      # Context auth, sinkronisasi role & status user aktif
+│   │   └── AuthContext.jsx      # Auth state, role checking, schoolData loader, suspend detector
 │   ├── hooks/
 │   │   ├── useSpeechToText.js   # Voice-to-Text bahasa Indonesia via Web Speech API
-│   │   └── useFirestore.js      # Reusable listener / data query hooks
+│   │   └── useFirestore.js      # Scoped Firestore listener dengan filter school_id otomatis
 │   ├── utils/
 │   │   ├── imageCompressor.js   # Kompresi gambar client-side (<300KB)
-│   │   ├── pdfExporter.js       # Generator PDF Rekap Resmi dengan Kop Surat
-│   │   ├── auditLogger.js       # Helper logging aktivitas penting ke audit_logs
-│   │   └── formatters.js        # Format tanggal (WIB) & string helper
+│   │   ├── pdfExporter.js       # Generator PDF Dinamis (Kop Surat & Nama Kepsek dari schoolData)
+│   │   ├── auditLogger.js       # Helper logging aktivitas penting per school_id
+│   │   └── formatters.js        # Format tanggal WIB & string utilities
 │   ├── components/
 │   │   ├── layout/
-│   │   │   ├── AppLayout.jsx    # Layout adaptif: BottomNav (<768px) & Sidebar (>=768px)
-│   │   │   ├── Header.jsx       # Header identitas TK DWP 8 & Profil Pengguna
-│   │   │   ├── BottomNav.jsx    # Navigasi bawah ramah jempol untuk layar mobile
-│   │   │   ├── Sidebar.jsx      # Navigasi samping untuk desktop/laptop
-│   │   │   └── ProtectedRoute.jsx # Pelindung rute berdasarkan status login & role
-│   │   └── ui/                  # Komponen UI atomik & reusable (Modal, Button, Badge, Alert)
+│   │   │   ├── AppLayout.jsx    # Layout adaptif: BottomNav di HP, Sidebar di Laptop
+│   │   │   ├── Header.jsx       # Header identitas dinamis: Logo & Nama Sekolah dari context
+│   │   │   ├── BottomNav.jsx    # Bottom navigation mobile
+│   │   │   ├── Sidebar.jsx      # Sidebar desktop dengan navigasi per role
+│   │   │   ├── DevBadge.jsx     # Floating badge DEV ENVIRONMENT jika bukan mode production
+│   │   │   └── ProtectedRoute.jsx # Pelindung rute berdasarkan role (superadmin, kepsek, guru)
+│   │   └── ui/                  # Komponen UI (Modal, Button, Badge, Alert, Card)
 │   ├── pages/
 │   │   ├── auth/
-│   │   │   └── Login.jsx        # Halaman Login + Flow Initial Setup Akun Kepsek Pertama
+│   │   │   ├── Login.jsx        # Halaman Login + Flow Initial Seeding Superadmin & Pilot School
+│   │   │   └── SuspendedSchool.jsx # Layanan diblokir jika status_langganan == 'nonaktif'
+│   │   ├── superadmin/
+│   │   │   ├── DashboardSuperadmin.jsx # Ringkasan metrik SaaS global & statistik sekolah
+│   │   │   ├── KelolaSekolah.jsx       # CRUD Sekolah Mitra, atur kuota guru & paket langganan
+│   │   │   └── KelolaAkunKepsek.jsx    # Pembuatan & manajemen akun Kepala Sekolah
 │   │   ├── guru/
-│   │   │   ├── DashboardGuru.jsx   # Quick action: Absen Datang/Pulang & Jurnal Hari Ini
-│   │   │   ├── PresensiGuru.jsx    # Riwayat absen & form pengajuan koreksi
-│   │   │   ├── JurnalGuru.jsx      # List, Form, Upload Foto, STT, Duplikasi Jurnal
-│   │   │   ├── JadwalGuru.jsx      # Tampilan jadwal mengajar mingguan
-│   │   │   └── LaporanLainGuru.jsx # Tugas tambahan, administrasi, dan laporan kendala
+│   │   │   ├── DashboardGuru.jsx       # Absen datang/pulang cepat & status jurnal hari ini
+│   │   │   ├── PresensiGuru.jsx        # Riwayat presensi & form koreksi
+│   │   │   ├── JurnalGuru.jsx          # KBM Form, Draf, Voice-to-Text, Foto, Duplikasi
+│   │   │   ├── JadwalGuru.jsx          # Jadwal mengajar mingguan kelas
+│   │   │   └── LaporanLainGuru.jsx     # Tugas tambahan, administrasi & kendala KBM
 │   │   └── kepsek/
-│   │       ├── DashboardKepsek.jsx # Monitoring real-time seluruh aktivitas guru
-│   │       ├── KelolaGuru.jsx      # CRUD Akun Guru (Add, Edit, Soft-Delete/Nonaktif)
-│   │       ├── ValidasiLaporan.jsx # Verifikasi jurnal, koreksi presensi & kendala
-│   │       ├── KelolaJadwal.jsx    # Penataan jadwal mengajar mingguan
-│   │       └── RekapDanPdf.jsx     # Filter rekapitulasi, cetak PDF resmi, audit log
-│   ├── App.jsx                  # Konfigurasi router aplikasi
-│   ├── index.css                # Tailwind base styles
-│   └── main.jsx                 # Entry point React
-├── docs/                        # Dokumentasi terfragmentasi & aturan detail
-├── AGENTS.md                    # Panduan utama eksekusi AI Agent & sync policy
-├── .env.example                 # Template variabel lingkungan Firebase
-├── firestore.rules              # Aturan keamanan database Cloud Firestore
-├── storage.rules                # Aturan keamanan media Firebase Storage
+│   │       ├── DashboardKepsek.jsx     # Monitoring live presensi & jurnal sekolah
+│   │       ├── KelolaGuru.jsx          # CRUD Akun Guru (dengan validasi batas kuota_guru)
+│   │       ├── ValidasiLaporan.jsx     # Persetujuan & revisi jurnal KBM serta koreksi absen
+│   │       ├── KelolaJadwal.jsx        # Penataan jadwal kelas TK A & TK B
+│   │       └── RekapDanPdf.jsx         # Rekapitulasi & ekspor PDF kop surat dinamis
+│   ├── App.jsx                  # Router deklaratif dengan segmentasi rute 3 role
+│   ├── index.css                # Base Tailwind CSS styles
+│   └── main.jsx                 # Entrypoint React
+├── docs/                        # Dokumentasi teknis modular
+├── AGENTS.md                    # Master Blueprint AI Agent & Kebijakan Sinkronisasi Dokumen
+├── .env.example                 # Template variabel lingkungan
+├── .gitignore                   # Proteksi kredensial .env.local, .env.development, dist, dll.
+├── firestore.rules              # Aturan keamanan multi-tenant Cloud Firestore
+├── storage.rules                # Aturan isolasi direktori Firebase Storage per sekolah
 ├── package.json
 ├── tailwind.config.js
 └── vite.config.js
 ```
-

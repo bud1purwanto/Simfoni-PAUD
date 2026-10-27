@@ -1,184 +1,151 @@
-# 📱 Fitur Utama, Alur Kerja & Inovasi Pengguna
+# 📱 Fitur Utama, Alur Kerja & Inovasi Pengguna (SaaS Multi-Tenant)
 
-Dokumen ini menjelaskan 10 modul fungsional, alur kerja operasional harian (user workflow), serta fitur improvisasi kemudahan penggunaan aplikasi **SIMFONI PAUD** untuk guru dan Kepala Sekolah di **TK Dharma Wanita Persatuan 8**.
+Dokumen ini menjelaskan modul fungsional, alur kerja operasional (user workflow), modul Superadmin SaaS, serta inovasi kemudahan penggunaan aplikasi **SIMFONI PAUD** untuk Superadmin, Kepala Sekolah, dan Guru PAUD.
 
 ---
 
-## 1. Daftar 10 Modul Terintegrasi
+## 1. Modul Aplikasi Berdasarkan Peran
 
 ```mermaid
 mindmap
-  root((SIMFONI PAUD))
-    Dashboard Beranda
-      Quick Attendance
-      Status Jurnal Hari Ini
-      Statistik Live Kepsek
-    Presensi Guru
-      Absen Datang & Pulang
-      Izin / Sakit
-      Pengajuan Koreksi Absen
-      Geotagging Ringan
-    Jurnal Mengajar
-      Topik & Capaian Pembelajaran
-      Apersepsi, Inti, Penutup
-      Refleksi & Kendala KBM
-      Draf vs Kirim
-      Salin Jurnal Cepat
-      Voice-to-Text
-    Dokumentasi Kegiatan
-      Kompresi Klien < 300KB
-      Label Privasi Internal vs Publik
-    Jadwal Mengajar
-      Jadwal TK A & TK B
-      Alokasi Guru Pengampu
-    Laporan Tugas Tambahan
-      Rapat Dinas & Lomba
-      Kegiatan Sekolah & Parenting
-    Administrasi Guru
-      Monitoring Modul Ajar / RPPH
-      Kelengkapan Penilaian
-    Laporan Kendala
-      Sarpras Rusak
-      Hambatan Pembelajaran
-    Rekap & Cetak PDF
-      Filter Harian, Mingguan, Bulanan
-      Format PDF Resmi Kop TK DWP 8
-    Kelola Guru & Validasi
-      Secondary App CRUD Guru
-      Soft Delete Akun
-      Disposisi & Catatan Revisi
+  root((SIMFONI PAUD SaaS))
+    Modul Superadmin
+      Dashboard Metrik SaaS
+      Kelola Mitra Sekolah
+      Atur Kuota Guru & Paket
+      Suspend / Aktifkan Sekolah
+      Kelola Akun Kepala Sekolah
+    Modul Kepala Sekolah
+      Live Monitoring KBM
+      Validasi Jurnal & Catatan Revisi
+      Persetujuan Koreksi Presensi
+      Kelola Akun Guru (Cek Kuota)
+      Jadwal Mengajar KBM
+      Cetak PDF Kop Surat Dinamis
+    Modul Guru PAUD
+      Quick Absen Datang & Pulang
+      Form Koreksi Presensi
+      Jurnal Mengajar + Voice-to-Text
+      Dokumentasi Foto (<300KB)
+      Tagging Kurikulum Merdeka
+      Duplikasi Jurnal Cepat
+      Laporan Tugas & Kendala
 ```
-
-### 1.1. Dashboard Beranda
-* **Tampilan Guru:** Kartu status kehadiran hari ini (tombol cepat absen datang/pulang), pengingat status pengisian jurnal hari ini (belum diisi, draf, dikirim, atau revisi), dan jadwal mengajar hari aktif.
-* **Tampilan Kepala Sekolah:** Rekapitulasi real-time jumlah guru yang sudah hadir, jurnal masuk yang menunggu persetujuan, pengajuan koreksi presensi yang butuh konfirmasi, dan kendala sekolah yang belum terselesaikan.
-
-### 1.2. Presensi Guru
-* Pencatatan jam datang dan jam pulang dengan tombol sekali tekan (*one-tap*).
-* Status: `hadir`, `terlambat`, `izin`, atau `sakit`.
-* Opsi pengambilan lokasi GPS (latitude & longitude) secara non-intrusif sebagai informasi pelengkap untuk Kepala Sekolah.
-* Form pengajuan koreksi presensi jika guru lupa menekan tombol absen atau terkendala jaringan, lengkap dengan alasan dan input jam koreksi.
-
-### 1.3. Jurnal Mengajar
-* Pemilihan Kelompok: TK A atau TK B.
-* Penulisan Topik Pembelajaran dan Tujuan KBM.
-* Tiga tahapan kegiatan terstruktur: **Kegiatan Pembuka (Apersepsi)**, **Kegiatan Inti**, dan **Kegiatan Penutup**.
-* Kolom **Refleksi Guru** dan **Kendala KBM**.
-* Mode penyimpanan ganda: **"Simpan Draf"** (belum dikirim ke Kepsek) dan **"Kirim Laporan"** (masuk ke antrean verifikasi Kepsek).
-
-### 1.4. Dokumentasi Kegiatan
-* Terintegrasi langsung di dalam form Jurnal Mengajar.
-* Unggah foto aktivitas anak didik dengan kompresi otomatis di sisi browser.
-* Input keterangan (caption) per foto serta pemilihan label privasi: `internal` (arsip internal saja) atau `publik` (layak publikasi).
-
-### 1.5. Jadwal Mengajar
-* Matriks jadwal mingguan dari Senin sampai Sabtu.
-* Pengaturan alokasi kelompok (TK A / TK B / Bersama) dan PIC guru yang bertugas.
-* Kepala Sekolah memiliki akses modifikasi penuh; guru memiliki akses baca untuk panduan mengajar.
-
-### 1.6. Laporan Kegiatan & Tugas Tambahan
-* Wadah untuk mencatat kegiatan kedinasan di luar jam kelas rutin:
-  * Rapat koordinasi gugus / IGTKI / dinas pendidikan.
-  * Pendampingan lomba anak atau pentas seni.
-  * Pertemuan wali murid (parenting) dan rapat internal yayasan.
-
-### 1.7. Administrasi Guru
-* Monitoring digital kelengkapan perangkat ajar mingguan/semesteran (RPPH, modul ajar kurikulum merdeka, asesmen capaian perkembangan anak).
-* Guru dapat menandai progres dokumen dan Kepala Sekolah dapat memverifikasi status kelengkapannya.
-
-### 1.8. Laporan Kendala
-* Saluran pelaporan cepat jika ditemukan fasilitas sekolah rusak, kekurangan bahan ajar/alat peraga edukatif (APE), atau hambatan khusus pada anak didik.
-* Kepala Sekolah dapat memberikan tanggapan status (`dilaporkan` -> `diproses` -> `selesai`).
-
-### 1.9. Rekap Laporan & Cetak PDF Resmi
-* Filter data berdasarkan rentang tanggal, bulan, kelompok kelas, atau guru tertentu.
-* Fitur ekspor dokumen PDF formal menggunakan `jspdf` & `jspdf-autotable`:
-  * Dilengkapi Kop Surat resmi **TK Dharma Wanita Persatuan 8**.
-  * Kolom tanda tangan Kepala Sekolah dan Guru Kelas.
-  * Siap dicetak langsung untuk keperluan arsip akreditasi BAN-PDM / Pengawas Sekolah.
-
-### 1.10. Validasi Kepala Sekolah & Kelola Guru
-* Panel verifikasi terpadu untuk memeriksa jurnal guru: Kepala Sekolah dapat memberikan status `disetujui` atau mengembalikan dengan status `perlu_revisi` disertai catatan perbaikan yang jelas.
-* Panel persetujuan koreksi absen guru (`disetujui` / `ditolak`).
-* Panel Manajemen Akun Guru: Menambah guru baru, mengubah informasi guru, atau menonaktifkan akun (*soft delete*) tanpa me-*logout* Kepala Sekolah.
 
 ---
 
-## 2. Alur Penggunaan (User Journey & Lifecycle)
+## 2. Rincian Modul Superadmin (`/superadmin/*`)
+
+### 2.1. Dashboard Superadmin (`/superadmin/dashboard`)
+* **Kartu Ringkasan Metrik SaaS:** Total Sekolah Mitra, Sekolah Aktif vs Nonaktif, Total Guru Terdaftar di seluruh sekolah, dan Peringatan Sekolah yang Masa Langganannya Segera Habis (< 30 hari).
+* **Pintasan Cepat:** Tombol **"+ Tambah Sekolah & Kepsek Baru"** untuk onboarding sekolah mitra secara instan.
+
+### 2.2. Kelola Sekolah / Tenant (`/superadmin/sekolah`)
+* **Tabel & Kartu Sekolah Mitra:** Menampilkan Nama Sekolah, Kota, Paket Langganan (`trial`, `basic`, `pro`), Pemakaian Kuota Guru (contoh: `4 / 5 Guru`), Masa Berlaku, dan Status Akun.
+* **Modal Tambah / Edit Sekolah:**
+  * Input field: Nama Sekolah, NPSN, Alamat Lengkap, Kota, Telepon, Nama Kepala Sekolah Resmi (untuk penandatangan dokumen PDF), NIP/NUPTK, Paket Langganan, Kuota Maksimum Guru, Tanggal Akhir Masa Berlaku, dan Unggah Logo Sekolah.
+* **Fitur Suspend / Nonaktifkan Sekolah:**
+  * Superadmin dapat menonaktifkan status langganan sekolah (`status_langganan: "nonaktif"`). Seluruh staf (Kepsek dan Guru) sekolah tersebut otomatis tidak dapat mengakses sistem dan diarahkan ke layar penangguhan layanan.
+
+### 2.3. Kelola Akun Kepala Sekolah (`/superadmin/kepsek`)
+* Pendaftaran akun Kepala Sekolah baru menggunakan **Secondary Firebase App Instance** (`secondaryAuth`) sehingga sesi login Superadmin tidak terganggu.
+* Form pendaftaran: Pilih Sekolah Mitra (`school_id`), Nama Lengkap Kepala Sekolah, Email Login, dan Password Default.
+* Pengaturan reset status akun (`aktif` / `nonaktif`) dan ganti password.
+
+---
+
+## 3. Rincian Modul Kepala Sekolah (`/kepsek/*`)
+
+### 3.1. Dashboard Monitoring Live
+* Pemantauan real-time guru yang telah absen datang/pulang hari ini di sekolahnya.
+* Notifikasi antrean jurnal mengajar baru berstatus `dikirim` yang siap diperiksa.
+* Notifikasi pengajuan koreksi absen dan kendala sarpras yang butuh tindak lanjut.
+
+### 3.2. Kelola Akun Guru & Validasi Kuota
+* **Pengecekan Kuota Otomatis:** Saat Kepala Sekolah menekan tombol **"Tambah Guru Baru"**, sistem menghitung jumlah akun guru aktif di sekolah tersebut.
+  * Jika jumlah guru aktif < `schoolData.kuota_guru`: Form pendaftaran via `secondaryAuth` terbuka.
+  * Jika kuota telah penuh: Sistem menampilkan modal dialog peringatan:  
+    *"Kuota akun guru untuk paket sekolah Anda telah penuh (X/X Guru). Silakan hubungi Administrator Sistem (Superadmin) untuk menambah kuota."*
+* Fitur Edit Profil Guru dan Nonaktifkan Akun (*Soft Delete*) saat guru mutasi atau berhenti bertugas.
+
+### 3.3. Validasi Jurnal & Koreksi Presensi
+* Memberikan status `disetujui` atau `perlu_revisi` (dengan kolom catatan revisi terperinci).
+* Memberikan keputusan pada pengajuan koreksi jam presensi guru (`disetujui` / `ditolak`).
+
+### 3.4. Dynamic Branding & Cetak PDF Kop Surat Otomatis
+* Seluruh data identitas sekolah (Nama Sekolah, Alamat, Logo, dan Nama Kepala Sekolah) dimuat secara dinamis dari `schoolData` pada `AuthContext`.
+* Generator PDF (`pdfExporter.js`) mencetak Kop Surat resmi dan kolom tanda tangan Kepala Sekolah yang **sepenuhnya otomatis mengikuti data sekolah yang sedang aktif**, tanpa ada teks sekolah yang di-*hardcode*.
+
+---
+
+## 4. Rincian Modul Guru (`/guru/*`)
+
+1. **Presensi Cepat & Geotagging:** Tombol datang/pulang satu ketukan dengan pencatatan jam server presisi serta koordinat GPS opsional.
+2. **Jurnal KBM Harian:** Form terstruktur mencakup Topik, Capaian Pembelajaran Kurikulum Merdeka, Kegiatan Pembuka-Inti-Penutup, Refleksi, dan Kendala.
+3. **Voice-to-Text (`id-ID`):** Menggunakan Web Speech API agar guru PAUD dapat mendiktekan narasi kegiatan langsung menggunakan mikrofon smartphone.
+4. **Kompresi Foto Klien (< 300 KB):** Foto dari kamera smartphone otomatis dikompresi di browser sebelum proses unggah untuk menghemat kuota guru.
+5. **Tagging Kurikulum Merdeka & Salin Jurnal:** Checkbox cepat Capaian Pembelajaran dan tombol duplikasi jurnal dari hari sebelumnya.
+6. **Laporan Tugas Tambahan & Kendala:** Form pelaporan rapat gugus, lomba anak, administrasi RPPH, dan sarana yang rusak.
+
+---
+
+## 5. Alur Kerja Pengguna (User Journey & Lifecycle)
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Guru
-    actor Kepsek as Kepala Sekolah
+    actor SA as Superadmin
+    actor KP as Kepala Sekolah
+    actor GR as Guru PAUD
     participant App as Antarmuka SIMFONI
     participant DB as Cloud Firestore
     participant Storage as Firebase Storage
 
-    Note over Guru, Kepsek: ALUR HARIAN GURU & MONITORING KEPSEK
-    Guru->>App: Buka aplikasi & Login akun pribadi
-    Guru->>App: Presensi Datang (One-tap + Koordinat)
-    App->>DB: Catat presensi hari ini
-    
-    Guru->>App: Buka form Jurnal Mengajar
-    Guru->>App: Diktekan kegiatan via Mic (Voice-to-Text)
-    Guru->>App: Pilih foto kegiatan dari galeri / kamera HP
-    App->>App: Kompresi foto otomatis di browser (<300KB)
-    App->>Storage: Upload foto hasil kompresi
-    Guru->>App: Tekan 'Kirim Laporan'
-    App->>DB: Simpan jurnal dengan status 'dikirim'
+    Note over SA, App: FASE 1: ONBOARDING SEKOLAH (SUPERADMIN)
+    SA->>App: Login Superadmin
+    SA->>App: Tambah Sekolah Baru (Kuota: 5 Guru, Profil & Logo)
+    App->>DB: Buat dokumen di koleksi 'schools'
+    SA->>App: Buat Akun Kepala Sekolah (via Secondary Auth)
+    App->>DB: Buat dokumen di 'users' (role: kepsek, school_id)
 
-    Kepsek->>App: Pantau Dashboard dari HP / Laptop
-    App->>DB: Real-time query jurnal status 'dikirim'
-    Kepsek->>App: Periksa isi kegiatan & dokumentasi
-    alt Laporan sudah sesuai
-        Kepsek->>App: Klik 'Setujui'
-        App->>DB: Update status jurnal 'disetujui'
-    else Laporan butuh perbaikan
-        Kepsek->>App: Masukkan catatan revisi & Klik 'Minta Revisi'
-        App->>DB: Update status 'perlu_revisi' + review_note
-        Guru->>App: Muncul notifikasi badge revisi
-        Guru->>App: Perbaiki isian & kirim ulang
+    Note over KP, App: FASE 2: MANAJEMEN GURU (KEPALA SEKOLAH)
+    KP->>App: Login akun Kepala Sekolah
+    App->>DB: Ambil profil user & data sekolah (AuthContext)
+    KP->>App: Tambah Guru Baru
+    alt Kuota guru masih tersedia (< kuota_guru)
+        App->>DB: Buat akun guru di 'users' (via Secondary Auth)
+    else Kuota guru penuh
+        App-->>KP: Tampilkan Peringatan Kuota Penuh
     end
 
-    Guru->>App: Presensi Pulang sebelum meninggalkan sekolah
-    App->>DB: Update jam_pulang di dokumen hari ini
+    Note over GR, App: FASE 3: OPERASIONAL KBM HARIAN (GURU)
+    GR->>App: Login Guru (Header menampilkan nama sekolah sendiri)
+    GR->>App: Absen Datang (One-tap)
+    GR->>App: Dikte Jurnal KBM (Voice-to-Text) & Pilih Foto
+    App->>App: Kompresi foto di memori HP (<300KB)
+    App->>Storage: Simpan ke schools/{schoolId}/journals/{uid}/
+    GR->>App: Klik "Kirim Laporan"
+    App->>DB: Simpan jurnal dengan status 'dikirim'
 
-    Note over Kepsek: REKAPITULASI AKHIR BULAN
-    Kepsek->>App: Buka menu Rekap & Filter Bulan
-    Kepsek->>App: Klik 'Unduh Rekap PDF'
-    App->>App: Generate PDF dengan Kop Resmi TK DWP 8
+    Note over KP, App: FASE 4: VALIDASI & REKAPITULASI
+    KP->>App: Review jurnal masuk & Klik 'Setujui'
+    App->>DB: Update status jurnal 'disetujui'
+    KP->>App: Unduh Rekap Laporan Bulanan
+    App->>App: Generate PDF dinamis (Kop & Tanda Tangan Sekolah Terkait)
 ```
 
 ---
 
-## 3. Fitur Inovasi & Kemudahan Operasional
+## 6. Fitur Penunjang & Keandalan Operasional
 
-### 3.1. Antarmuka Mobile-First & Adaptif
-* **Layar Smartphone (`< 768px`):** Menggunakan *Bottom Navigation Bar* ergonomis yang mudah dijangkau dengan ibu jari satu tangan.
-* **Layar Tablet/Desktop (`>= 768px`):** Otomatis berpindah menjadi *Sidebar Navigation* yang lapang untuk kemudahan analisis Kepala Sekolah saat mengoperasikan laptop.
-* **PWA (Progressive Web App):** Dilengkapi `manifest.json` agar guru dapat memasang ikon aplikasi di layar utama (*Homescreen*) HP Android/iOS tanpa perlu mendownload dari Play Store.
+### 6.1. Inisialisasi Sistem SaaS Pertama (Pilot Seeder)
+Pada saat sistem baru pertama kali dipasang dan koleksi `users` di database masih kosong:
+* Halaman `Login.jsx` mendeteksi status kosong dan memunculkan tombol:  
+  **"Inisialisasi Sistem SaaS (Setup Superadmin & Sekolah Pertama)"**.
+* Wizard ini akan otomatis membuat:
+  1. Akun `superadmin` pertama untuk Project Owner.
+  2. Mitra sekolah pilot pertama di koleksi `schools` yaitu **"TK Dharma Wanita Persatuan 8"** dengan status `aktif` dan kuota `5 Guru`.
 
-### 3.2. Kompresi Foto Otomatis Sisi Klien (Client-Side Compression)
-* Foto dari kamera smartphone masa kini umumnya berukuran 3 MB hingga 10 MB per foto. Mengunggahnya langsung akan menghabiskan kuota guru dan memperlambat sistem.
-* Menggunakan library `browser-image-compression` untuk memproses gambar di memori browser sebelum request jaringan:
-  * Dimensi maksimum: `1280px`
-  * Format: `.webp` atau `.jpg` optimal
-  * Ukuran target: **< 300 KB** (reduksi ukuran hingga > 90% dengan ketajaman visual tetap jelas untuk laporan).
-
-### 3.3. Dikte Jurnal dengan Suara (Voice-to-Text)
-* Guru PAUD sering memiliki waktu terbatas untuk mengetik uraian kegiatan panjang di layar sentuh HP.
-* Menggunakan **Web Speech API** bawaan browser dengan konfigurasi bahasa `id-ID` pada kolom Kegiatan Pembuka, Inti, Penutup, dan Refleksi.
-* Guru cukup menekan tombol mikrofon dan berbicara santai, teks akan otomatis terisi secara *real-time*.
-
-### 3.4. Tagging Kurikulum Merdeka PAUD & Salin Jurnal Cepat
-* **Tagging Capaian Pembelajaran Cepat:** Checkbox satu klik untuk:
-  1. *Nilai Agama dan Budi Pekerti*
-  2. *Jati Diri*
-  3. *Dasar-dasar Literasi, Matematika, Sains, Teknologi, Rekayasa, dan Seni (STEAM)*
-* **Fitur "Salin Jurnal ke Jurnal Baru":** Tombol duplikasi dari entri jurnal sebelumnya sehingga guru tidak perlu mengetik ulang struktur modul ajar yang berkesinambungan.
-
-### 3.5. Initial Admin Setup Seeding
-* Pada instalasi pertama saat basis data `users` masih belum memiliki akun apa pun, halaman `Login.jsx` secara cerdas mendeteksi kondisi kosong ini dan menampilkan form khusus: **"Inisialisasi Akun Kepala Sekolah Pertama"**.
-* Ini memastikan deployment awal di Cloudflare Pages dapat langsung dioperasikan tanpa perlu konfigurasi manual via Firebase Console.
-
+### 6.2. Indikator Lingkungan (DEV Environment Badge)
+* Komponen `DevBadge.jsx` akan merender label mengambang berwarna oranye/kuning bertuliskan **`DEV ENVIRONMENT`** di sudut kanan atas layar saat `import.meta.env.VITE_APP_ENV !== 'production'`.
+* Ini mencegah Project Owner atau tester salah mengira lingkungan pengujian sebagai lingkungan produksi sekolah sungguhan.
