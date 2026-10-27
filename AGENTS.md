@@ -133,12 +133,12 @@ Saat diminta membangun atau menyempurnakan fitur, ikuti urutan langkah terstrukt
   - [x] Bangun `src/utils/auditLogger.js` (helper pencatatan audit log per `school_id`).
   - [x] Terapkan berkas aturan keamanan `firestore.rules` dan `storage.rules`.
 
-- [ ] **Fase 3: Autentikasi, Context Multi-Tenant & Pilot Seeder**
-  - [ ] Bangun `src/context/AuthContext.jsx` (manajemen sesi, pemuatan `schoolData`, penanganan suspensi sekolah, flag ganti password).
-  - [ ] Bangun `src/pages/auth/Login.jsx` (pintu masuk tunggal *stealth*, auto-redirect sesuai role tanpa dropdown peran).
-  - [ ] Bangun fitur cerdas *Initial SaaS Seeder* di halaman login jika koleksi `users` masih kosong (buat Superadmin & Sekolah Pilot TK DWP 8).
-  - [ ] Bangun `src/components/ui/ModalGantiPassword.jsx` (modal wajib bagi user yang baru di-reset oleh Kepsek/Admin).
-  - [ ] Bangun `src/pages/auth/SuspendedSchool.jsx` (layanan diblokir jika status langganan nonaktif).
+- [x] **Fase 3: Autentikasi, Context Multi-Tenant & Pilot Seeder**
+  - [x] Bangun `src/context/AuthContext.jsx` (manajemen sesi, pemuatan `schoolData`, penanganan suspensi sekolah, flag ganti password).
+  - [x] Bangun `src/pages/auth/Login.jsx` (pintu masuk tunggal *stealth*, auto-redirect sesuai role tanpa dropdown peran).
+  - [x] Bangun fitur cerdas *Initial SaaS Seeder* di halaman login jika koleksi `users` masih kosong (buat Superadmin & Sekolah Pilot TK DWP 8).
+  - [x] Bangun `src/components/ui/ModalGantiPassword.jsx` (modal wajib bagi user yang baru di-reset oleh Kepsek/Admin).
+  - [x] Bangun `src/pages/auth/SuspendedSchool.jsx` (layanan diblokir jika status langganan nonaktif).
 
 - [ ] **Fase 4: Shell Layout Adaptif, Dynamic Branding & Network Awareness**
   - [ ] Bangun `src/components/layout/AppLayout.jsx` dengan identitas dinamis (logo & nama sekolah dari context).
