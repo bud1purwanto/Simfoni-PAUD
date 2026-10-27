@@ -188,6 +188,21 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow write: if isSuperAdmin();
     }
+
+    // --- 9. ATURAN UNIVERSAL MULTI-TENANT (KOLEKSI BARU DI MASA DEPAN) ---
+    // Aturan wildcard ini otomatis mengamankan tabel baru apapun yang dibuat ke depannya
+    // (misal: inventaris, spp_siswa, raport, tabungan) selama memiliki atribut 'school_id'.
+    // Anda TIDAK PERLU lagi mengubah rules di Firebase Console setiap ada tabel baru!
+    match /{newCollection}/{docId} {
+      allow read: if isSuperAdmin() 
+                  || (resource.data.school_id != null && isSameSchool(resource.data.school_id));
+      allow create: if isSuperAdmin() 
+                  || (request.resource.data.school_id != null && isSameSchool(request.resource.data.school_id));
+      allow update: if isSuperAdmin() 
+                  || (resource.data.school_id != null && isSameSchool(resource.data.school_id));
+      allow delete: if isSuperAdmin() 
+                  || (resource.data.school_id != null && isSchoolKepsek(resource.data.school_id));
+    }
   }
 }
 ```
