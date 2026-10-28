@@ -24,6 +24,7 @@ import { logActivity } from '../../utils/auditLogger';
 import ModalKonfirmasi from '../../components/ui/ModalKonfirmasi';
 import { resetPasswordAkun } from '../../utils/adminApi';
 import { getKelompokOptions, normalizeKelompok, DEFAULT_PASSWORD, KELOMPOK_SEMUA } from '../../utils/schoolConfig';
+import ModalResetPassword from '../../components/ui/ModalResetPassword';
 
 export default function KelolaGuru() {
   const { userData, schoolData } = useAuth();
@@ -39,6 +40,9 @@ export default function KelolaGuru() {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [quotaExceededModalOpen, setQuotaExceededModalOpen] = useState(false);
   const [selectedTeacher, setSelectedTeacher] = useState(null);
+  const [resetModalOpen, setResetModalOpen] = useState(false);
+  const [targetGuruForReset, setTargetGuruForReset] = useState(null);
+  const [resetLoading, setResetLoading] = useState(false);
 
   // Form Tambah Guru
   const [namaGuru, setNamaGuru] = useState('');
@@ -263,48 +267,47 @@ export default function KelolaGuru() {
     });
   };
 
-  // Reset Password Guru ke Default (Guru1234!) tanpa perlu membuka email
+  // Buka Modal Reset Password Guru (Kepsek tentukan sandi baru)
   const handleResetPassword = (teacher) => {
-    const targetUid = teacher.uid || teacher.id;
-    setConfirmModal({
-      isOpen: true,
-      title: 'Reset Kata Sandi Guru',
-      message: `Reset kata sandi untuk guru "${teacher.nama}" (${teacher.email}) ke password default "${DEFAULT_PASSWORD.guru}"?\n\nGuru wajib membuat sandi baru saat pertama kali login kembali.`,
-      confirmText: 'Ya, Reset Sandi',
-      type: 'warning',
-      loading: false,
-      onConfirm: async () => {
-        setConfirmModal((prev) => ({ ...prev, loading: true }));
-        setResettingUid(targetUid);
-        try {
-          const result = await resetPasswordAkun({ targetUid, targetEmail: teacher.email });
-
-          logActivity({
-            schoolId: userData.school_id,
-            actorId: userData.uid,
-            actorNama: userData.nama,
-            action: 'RESET_PASSWORD_GURU',
-            recordType: 'users',
-            recordId: targetUid,
-            detail: { mode: result.mode },
-          });
-
-          setConfirmModal((prev) => ({ ...prev, isOpen: false, loading: false }));
-          setNotification({
-            type: 'success',
-            text: result.mode === 'default'
-              ? `Kata sandi "${teacher.nama}" telah direset ke "${result.defaultPassword}". Sampaikan langsung ke guru; sandi wajib diganti saat login.`
-              : `Layanan reset instan belum aktif di server, sehingga tautan reset sandi dikirim ke ${teacher.email} dan akun ditandai wajib ganti sandi.`,
-          });
-        } catch (err) {
-          setConfirmModal((prev) => ({ ...prev, isOpen: false, loading: false }));
-          setNotification({ type: 'error', text: `Gagal mereset sandi: ${err.message}` });
-        } finally {
-          setResettingUid(null);
-        }
-      },
-    });
+    setTargetGuruForReset(teacher);
+    setResetModalOpen(true);
   };
+
+  const handleConfirmResetPassword = async (newPassword) => {
+    if (!targetGuruForReset) return;
+    const targetUid = targetGuruForReset.uid || targetGuruForReset.id;
+    setResetLoading(true);
+    try {
+      const result = await resetPasswordAkun({
+        targetUid,
+        targetEmail: targetGuruForReset.email,
+        newPassword,
+      });
+
+      logActivity({
+        schoolId: userData.school_id,
+        actorId: userData.uid,
+        actorNama: userData.nama,
+        action: 'RESET_PASSWORD_GURU',
+        recordType: 'users',
+        recordId: targetUid,
+        detail: { mode: result.mode, sandiSementara: newPassword },
+      });
+
+      setResetModalOpen(false);
+      setNotification({
+        type: 'success',
+        text: result.mode === 'default'
+          ? `Kata sandi "${targetGuruForReset.nama}" telah direset ke "${newPassword}". Sampaikan langsung ke guru; sandi wajib diganti saat login.`
+          : `Layanan reset instan belum aktif di server, sehingga tautan reset sandi dikirim ke ${targetGuruForReset.email} dan akun ditandai wajib ganti sandi.`,
+      });
+    } catch (err) {
+      setNotification({ type: 'error', text: `Gagal mereset sandi: ${err.message}` });
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
   // Filter Search
   const filteredTeachers = teachers.filter((t) => {
     const q = searchQuery.toLowerCase();
@@ -708,6 +711,16 @@ export default function KelolaGuru() {
         </div>,
         document.body
       )}
+
+      {/* MODAL RESET KATA SANDI (KEPSEK TENTUKAN SANDI) */}
+      <ModalResetPassword
+        isOpen={resetModalOpen}
+        targetUser={targetGuruForReset}
+        defaultPassword="Guru1234!"
+        loading={resetLoading}
+        onClose={() => setResetModalOpen(false)}
+        onConfirm={handleConfirmResetPassword}
+      />
 
       {/* MODAL KONFIRMASI ELEGAN */}
       <ModalKonfirmasi

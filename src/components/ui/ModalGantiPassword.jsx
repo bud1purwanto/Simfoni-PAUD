@@ -29,7 +29,8 @@ export default function ModalGantiPassword({ isOpen, isMandatory = true, onClose
       return;
     }
 
-    if (passwordBaru === passwordLama) {
+    // Untuk ganti sandi sukarela, pastikan sandi baru beda dari sandi lama
+    if (!isMandatory && passwordLama && passwordBaru === passwordLama) {
       setError('Kata sandi baru harus berbeda dari kata sandi saat ini.');
       return;
     }
@@ -41,7 +42,8 @@ export default function ModalGantiPassword({ isOpen, isMandatory = true, onClose
 
     setLoading(true);
     try {
-      await changePassword(passwordBaru, passwordLama);
+      // Saat mandatory (baru login awal), sesi masih fresh sehingga tidak perlu passwordLama
+      await changePassword(passwordBaru, isMandatory ? undefined : passwordLama);
       setSuccess(true);
       setPasswordLama('');
       setPasswordBaru('');
@@ -73,16 +75,16 @@ export default function ModalGantiPassword({ isOpen, isMandatory = true, onClose
 
   return createPortal(
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
-      <div className="bg-white w-full max-w-md rounded-2xl shadow-xl border border-slate-100 p-6 overflow-hidden">
+      <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl border border-orange-200/80 p-6 sm:p-7 overflow-hidden animate-scaleUp">
         <div className="flex items-center space-x-3 mb-4">
-          <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
-            <KeyRound className="w-5 h-5" />
+          <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 shadow-xs">
+            <KeyRound className="w-6 h-6 stroke-[2.2]" />
           </div>
           <div>
-            <h3 className="text-lg font-bold text-slate-800">
+            <h3 className="text-base sm:text-lg font-extrabold text-slate-900 font-brand">
               {isMandatory ? 'Wajib Perbarui Kata Sandi' : 'Ganti Kata Sandi'}
             </h3>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-slate-500 font-medium">
               {isMandatory
                 ? 'Akun Anda baru saja di-reset atau pertama kali aktif. Silakan buat sandi pribadi.'
                 : 'Perbarui kata sandi login Anda secara berkala.'}
@@ -91,38 +93,41 @@ export default function ModalGantiPassword({ isOpen, isMandatory = true, onClose
         </div>
 
         {error && (
-          <div className="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center space-x-2">
+          <div className="mb-4 p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold flex items-center space-x-2">
             <AlertCircle className="w-4 h-4 flex-shrink-0" />
             <span>{error}</span>
           </div>
         )}
 
         {success && (
-          <div className="mb-4 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs flex items-center space-x-2">
+          <div className="mb-4 p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold flex items-center space-x-2">
             <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
             <span>Kata sandi berhasil diperbarui! Mengalihkan ke Dashboard...</span>
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-              Kata Sandi Saat Ini
-            </label>
-            <input
-              type={showPassword ? 'text' : 'password'}
-              required
-              autoComplete="current-password"
-              value={passwordLama}
-              onChange={(e) => setPasswordLama(e.target.value)}
-              placeholder={isMandatory ? 'Sandi yang baru saja dipakai untuk login' : 'Kata sandi lama'}
-              className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition"
-            />
-          </div>
+          {/* Kolom Kata Sandi Saat Ini HANYA muncul saat ganti sandi sukarela dari profil (bukan mandatory akun baru) */}
+          {!isMandatory && (
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">
+                Kata Sandi Saat Ini
+              </label>
+              <input
+                type={showPassword ? 'text' : 'password'}
+                required
+                autoComplete="current-password"
+                value={passwordLama}
+                onChange={(e) => setPasswordLama(e.target.value)}
+                placeholder="Kata sandi lama"
+                className="w-full px-3.5 py-3 text-sm rounded-2xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition font-medium"
+              />
+            </div>
+          )}
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-              Kata Sandi Baru
+            <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">
+              Kata Sandi Baru Pribadi
             </label>
             <div className="relative">
               <input
@@ -132,13 +137,13 @@ export default function ModalGantiPassword({ isOpen, isMandatory = true, onClose
                 value={passwordBaru}
                 onChange={(e) => setPasswordBaru(e.target.value)}
                 placeholder="Minimal 6 karakter"
-                className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition"
+                className="w-full pl-3.5 pr-10 py-3 text-sm rounded-2xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition font-medium"
               />
               <button
                 type="button"
                 aria-label={showPassword ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 rounded-lg"
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
@@ -146,7 +151,7 @@ export default function ModalGantiPassword({ isOpen, isMandatory = true, onClose
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+            <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">
               Ulangi Kata Sandi Baru
             </label>
             <input
@@ -156,16 +161,16 @@ export default function ModalGantiPassword({ isOpen, isMandatory = true, onClose
               value={konfirmasiPassword}
               onChange={(e) => setKonfirmasiPassword(e.target.value)}
               placeholder="Masukkan kembali sandi"
-              className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition"
+              className="w-full px-3.5 py-3 text-sm rounded-2xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition font-medium"
             />
           </div>
 
-          <div className="pt-2 flex items-center space-x-2">
+          <div className="pt-2 flex items-center space-x-2.5">
             {isMandatory && (
               <button
                 type="button"
                 onClick={() => logout()}
-                className="w-1/2 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-medium text-sm hover:bg-slate-50 transition"
+                className="w-1/2 py-3 rounded-2xl border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-50 transition"
               >
                 Keluar
               </button>
@@ -174,7 +179,7 @@ export default function ModalGantiPassword({ isOpen, isMandatory = true, onClose
               <button
                 type="button"
                 onClick={onClose}
-                className="w-1/2 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-medium text-sm hover:bg-slate-50 transition"
+                className="w-1/2 py-3 rounded-2xl border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-50 transition"
               >
                 Batal
               </button>
@@ -182,7 +187,7 @@ export default function ModalGantiPassword({ isOpen, isMandatory = true, onClose
             <button
               type="submit"
               disabled={loading || success}
-              className={`py-2.5 rounded-xl font-bold text-sm text-white bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 shadow-md shadow-orange-500/20 transition flex items-center justify-center ${
+              className={`py-3 rounded-2xl font-extrabold text-xs text-white bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:to-orange-600 active:scale-98 shadow-md shadow-orange-500/25 transition flex items-center justify-center font-brand disabled:opacity-50 ${
                 isMandatory || onClose ? 'w-1/2' : 'w-full'
               }`}
             >
@@ -195,4 +200,3 @@ export default function ModalGantiPassword({ isOpen, isMandatory = true, onClose
     document.body
   );
 }
-

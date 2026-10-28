@@ -95,7 +95,7 @@ Masing-masing peran memiliki dashboard eksklusif yang dirancang spesifik sesuai 
 ### 3.3. Kelola Akun Kepala Sekolah (`/superadmin/kepsek`)
 * Pendaftaran akun Kepala Sekolah baru menggunakan **Secondary Firebase App Instance** (`secondaryAuth`) sehingga sesi login Superadmin tidak terganggu.
 * Form pendaftaran: Pilih Sekolah Mitra (`school_id`), Nama Lengkap Kepala Sekolah, Email Login, dan Password Default.
-* **Fitur Reset Password Kepala Sekolah:** Tombol reset instan password Kepala Sekolah ke default (`Kepsek1234!`) tanpa perlu buka email, diproses Cloudflare Worker `/api/admin/reset-password`. Jika Worker belum dikonfigurasi, sistem mengirim tautan reset ke email sebagai alternatif dan memberi tahu Superadmin secara jujur.
+* **Fitur Reset Password Kepala Sekolah:** Modal reset interaktif di mana Superadmin dapat menentukan kata sandi sementara baru (default prefilled: `Kepsek1234!`), diproses aman via Cloudflare Worker `/api/admin/reset-password`. Status `wajib_ganti_password: true` tetap aktif agar Kepala Sekolah wajib membuat sandi pribadi saat login.
 * Peringatan bila sekolah yang dipilih sudah memiliki Kepala Sekolah aktif.
 
 ### 3.4. Manajemen Log & Pembersihan Data Berkala (`/superadmin/logs`)
@@ -131,8 +131,8 @@ Mengingat keterbatasan kuota penyimpanan dan pembacaan/penulisan Firestore, Supe
   * Jika jumlah guru aktif < `schoolData.kuota_guru`: Form pendaftaran via `secondaryAuth` terbuka.
   * Jika kuota telah penuh: Sistem menampilkan modal dialog peringatan:  
     *"Kuota akun guru untuk paket sekolah Anda telah penuh (X/X Guru). Silakan hubungi Administrator Sistem (Superadmin) untuk menambah kuota."*
-* **Tombol Reset Password Guru ke Default (Solusi Lupa Sandi):**  
-  Kepsek dapat mereset sandi guru yang lupa langsung dari daftar guru menjadi password default (`Guru1234!`) dan menandai `wajib_ganti_password: true`. Guru tidak perlu repot membuka email inbox.
+* **Modal Reset Password Guru (Tentukan Sandi Baru):**  
+  Kepsek dapat mereset sandi guru yang lupa langsung dari daftar guru dengan menentukan kata sandi sementara baru (default: `Guru1234!`) dan menandai `wajib_ganti_password: true`. Guru tidak perlu repot membuka email inbox dan langsung diwajibkan mengganti kata sandi saat pertama kali masuk.
 * Fitur Edit Profil Guru dan Nonaktifkan Akun (*Soft Delete*) saat guru mutasi atau berhenti bertugas.
 
 ### 4.3. Validasi Jurnal & Fitur "Setujui Sekaligus" (Bulk Approval)

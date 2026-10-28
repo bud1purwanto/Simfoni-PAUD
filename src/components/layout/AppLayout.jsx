@@ -26,6 +26,7 @@ import { useAuth } from '../../context/AuthContext';
 import NetworkStatusBanner from './NetworkStatusBanner';
 import DevBadge from './DevBadge';
 import ModalGantiPassword from '../ui/ModalGantiPassword';
+import ModalKonfirmasi from '../ui/ModalKonfirmasi';
 import { sisaHariLangganan } from '../../utils/schoolConfig';
 import { formatTanggalIndo } from '../../utils/formatters';
 
@@ -33,12 +34,25 @@ export default function AppLayout() {
   const { userData, schoolData, logout, needsPasswordChange } = useAuth();
   const navigate = useNavigate();
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
+  const [logoutModalOpen, setLogoutModalOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   const role = userData?.role || 'guru';
 
-  const handleLogout = async () => {
-    await logout();
-    navigate('/login');
+  const handleLogoutClick = () => {
+    setLogoutModalOpen(true);
+  };
+
+  const handleConfirmLogout = async () => {
+    setLoggingOut(true);
+    try {
+      await logout();
+      setLogoutModalOpen(false);
+      navigate('/login');
+    } catch (err) {
+      console.error('Logout error:', err);
+      setLoggingOut(false);
+    }
   };
 
   // Navigasi Khusus Superadmin
@@ -155,7 +169,7 @@ export default function AppLayout() {
             </button>
 
             <button
-              onClick={handleLogout}
+              onClick={handleLogoutClick}
               title="Keluar Akun"
               aria-label="Keluar Akun"
               className="p-2.5 rounded-2xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 active:scale-95 transition"
@@ -259,6 +273,18 @@ export default function AppLayout() {
           })}
         </div>
       </nav>
+            {/* Modal Peringatan Konfirmasi Logout Elegan */}
+      <ModalKonfirmasi
+        isOpen={logoutModalOpen}
+        title="Konfirmasi Keluar Akun"
+        message={`Apakah Anda yakin ingin keluar dari akun ${userData?.nama ? `"${userData.nama}"` : ''}? Anda harus memasukkan kembali email dan kata sandi untuk mengakses sistem SIMFONI PAUD.`}
+        confirmText="Ya, Keluar Akun"
+        cancelText="Batal"
+        type="warning"
+        loading={loggingOut}
+        onConfirm={handleConfirmLogout}
+        onClose={() => setLogoutModalOpen(false)}
+      />
 
       {/* Modal Wajib Ganti Sandi (akun baru / baru di-reset) atau ganti sandi sukarela */}
       <ModalGantiPassword

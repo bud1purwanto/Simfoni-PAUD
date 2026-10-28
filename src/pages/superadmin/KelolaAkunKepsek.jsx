@@ -36,6 +36,7 @@ import { logActivity } from '../../utils/auditLogger';
 import ModalKonfirmasi from '../../components/ui/ModalKonfirmasi';
 import { resetPasswordAkun } from '../../utils/adminApi';
 import { DEFAULT_PASSWORD } from '../../utils/schoolConfig';
+import ModalResetPassword from '../../components/ui/ModalResetPassword';
 
 export default function KelolaAkunKepsek() {
   const { userData } = useAuth();
@@ -50,6 +51,9 @@ export default function KelolaAkunKepsek() {
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedKepsek, setSelectedKepsek] = useState(null);
+  const [resetModalOpen, setResetModalOpen] = useState(false);
+  const [targetKepsekForReset, setTargetKepsekForReset] = useState(null);
+  const [resetLoading, setResetLoading] = useState(false);
 
   // Form Tambah Kepsek
   const [formSchoolId, setFormSchoolId] = useState('');
@@ -226,44 +230,45 @@ export default function KelolaAkunKepsek() {
     }
   };
 
-  // Reset Password Kepsek ke Default (Kepsek1234!) via API Worker, fallback email
+  // Buka Modal Reset Password Kepsek (Admin tentukan sandi baru)
   const handleResetPassword = (k) => {
-    setConfirmModal({
-      isOpen: true,
-      title: 'Reset Kata Sandi Kepala Sekolah',
-      message: `Reset kata sandi untuk Kepala Sekolah "${k.nama}" (${k.email}) ke password default "${DEFAULT_PASSWORD.kepsek}"?\n\nKepala Sekolah akan diwajibkan mengganti kata sandi baru saat login berikutnya.`,
-      confirmText: 'Ya, Reset Sandi',
-      type: 'warning',
-      loading: false,
-      onConfirm: async () => {
-        setConfirmModal((prev) => ({ ...prev, loading: true }));
-        try {
-          const result = await resetPasswordAkun({ targetUid: k.id, targetEmail: k.email });
+    setTargetKepsekForReset(k);
+    setResetModalOpen(true);
+  };
 
-          await logActivity({
-            schoolId: k.school_id,
-            actorId: userData.uid,
-            actorNama: userData.nama,
-            action: 'RESET_PASSWORD_KEPSEK',
-            recordType: 'users',
-            recordId: k.id,
-            detail: { mode: result.mode },
-          });
+  const handleConfirmResetPassword = async (newPassword) => {
+    if (!targetKepsekForReset) return;
+    setResetLoading(true);
+    try {
+      const result = await resetPasswordAkun({
+        targetUid: targetKepsekForReset.id,
+        targetEmail: targetKepsekForReset.email,
+        newPassword,
+      });
 
-          setConfirmModal((prev) => ({ ...prev, isOpen: false, loading: false }));
-          showNotification(
-            'success',
-            result.mode === 'default'
-              ? `Kata sandi ${k.nama} berhasil direset ke "${result.defaultPassword}". Akun ditandai wajib ganti kata sandi.`
-              : `Layanan reset instan belum aktif di server. Tautan reset sandi dikirim ke ${k.email} dan akun ditandai wajib ganti sandi.`
-          );
-        } catch (err) {
-          console.error('Error resetting password:', err);
-          setConfirmModal((prev) => ({ ...prev, isOpen: false, loading: false }));
-          showNotification('error', 'Gagal mereset kata sandi: ' + err.message);
-        }
-      },
-    });
+      await logActivity({
+        schoolId: targetKepsekForReset.school_id,
+        actorId: userData.uid,
+        actorNama: userData.nama,
+        action: 'RESET_PASSWORD_KEPSEK',
+        recordType: 'users',
+        recordId: targetKepsekForReset.id,
+        detail: { mode: result.mode, sandiSementara: newPassword },
+      });
+
+      setResetModalOpen(false);
+      showNotification(
+        'success',
+        result.mode === 'default'
+          ? `Kata sandi ${targetKepsekForReset.nama} disetel ke "${newPassword}". Akun ditandai wajib ganti kata sandi.`
+          : `Layanan reset instan belum aktif di server. Tautan reset sandi dikirim ke ${targetKepsekForReset.email} dan akun ditandai wajib ganti sandi.`
+      );
+    } catch (err) {
+      console.error('Error resetting password:', err);
+      showNotification('error', 'Gagal mereset kata sandi: ' + err.message);
+    } finally {
+      setResetLoading(false);
+    }
   };
 
   // Toggle Status Akun (Aktif vs Nonaktif)
@@ -683,6 +688,16 @@ export default function KelolaAkunKepsek() {
         </div>,
         document.body
       )}
+
+      {/* MODAL RESET KATA SANDI (ADMIN TENTUKAN SANDI) */}
+      <ModalResetPassword
+        isOpen={resetModalOpen}
+        targetUser={targetKepsekForReset}
+        defaultPassword="Kepsek1234!"
+        loading={resetLoading}
+        onClose={() => setResetModalOpen(false)}
+        onConfirm={handleConfirmResetPassword}
+      />
 
       {/* MODAL KONFIRMASI ELEGAN */}
       <ModalKonfirmasi

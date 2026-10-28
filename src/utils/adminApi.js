@@ -11,7 +11,7 @@ import { auth, markPasswordResetByAdmin } from '../config/firebase';
  *
  * @returns {Promise<{ mode: 'default' | 'email', defaultPassword?: string }>}
  */
-export const resetPasswordAkun = async ({ targetUid, targetEmail }) => {
+export const resetPasswordAkun = async ({ targetUid, targetEmail, newPassword }) => {
   if (!auth.currentUser) throw new Error('Sesi login tidak ditemukan. Silakan login ulang.');
   const idToken = await auth.currentUser.getIdToken();
 
@@ -20,7 +20,7 @@ export const resetPasswordAkun = async ({ targetUid, targetEmail }) => {
     res = await fetch('/api/admin/reset-password', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
-      body: JSON.stringify({ targetUid }),
+      body: JSON.stringify({ targetUid, newPassword }),
     });
   } catch {
     res = null; // jaringan / endpoint tidak terjangkau

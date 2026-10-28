@@ -83,7 +83,10 @@ async function handleResetPassword(request, env) {
     throw httpError(403, 'Anda tidak berwenang mereset sandi akun ini.');
   }
 
-  const newPassword = DEFAULT_PASSWORD[targetDoc.role];
+  const customPassword = typeof body?.newPassword === 'string' && body.newPassword.trim().length >= 6
+    ? body.newPassword.trim()
+    : null;
+  const newPassword = customPassword || DEFAULT_PASSWORD[targetDoc.role];
 
   await googleFetch(
     `https://identitytoolkit.googleapis.com/v1/projects/${projectId}/accounts:update`,
