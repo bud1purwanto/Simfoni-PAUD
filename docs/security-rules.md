@@ -64,6 +64,12 @@ classDiagram
 | **Suspend / Nonaktifkan Sekolah** | ❌ Dilarang | ❌ Dilarang | ✅ Ya |
 | **Buat Akun Kepala Sekolah** | ❌ Dilarang | ❌ Dilarang | ✅ Ya (Secondary Auth) |
 | **Melihat Audit Trail (`audit_logs`)** | ❌ Dilarang | ✅ Ya (sekolah sendiri) | ✅ Ya (global) |
+| **Kelola Master Data 21 Siswa** | ✅ Ya (Dinamis: input & kelola murid di kelasnya) | ✅ Ya (seluruh kelas sekolah) | ✅ Ya (global) |
+| **Input Presensi Harian Siswa** | ✅ Ya (kelas sendiri) | ✅ Ya (monitoring & input) | ✅ Ya |
+| **Unggah Perangkat Ajar (RPPH)** | ✅ Ya (kelas sendiri) | ❌ Read & Review | ✅ Ya |
+| **Validasi / Telaah RPPH** | ❌ Dilarang | ✅ Ya (sekolah sendiri) | ✅ Ya |
+| **Asesmen Capaian Perkembangan Siswa** | ✅ Ya (kelas sendiri) | ✅ Ya (monitoring rekap) | ✅ Ya |
+| **Supervisi & Evaluasi Kinerja Guru** | ❌ Hanya membaca hasil | ✅ Ya (mengisi instrumen) | ✅ Ya |
 | **Pembersihan Log Audit (Purge/Retention)**| ❌ Dilarang | ❌ Dilarang | ✅ Ya (Manual & Periodik) |
 | **Akses Lintas Tenant (`school_id` lain)**| ❌ **DIBLOKIR** | ❌ **DIBLOKIR** | ✅ **Global Access** |
 

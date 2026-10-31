@@ -52,10 +52,13 @@ graph TD
 flowchart TD
     SA["👑 superadmin (Project Owner)<br/>school_id: null | Global Master Access"]
     KP["🏫 kepsek (School Tenant Admin)<br/>school_id: 'sch_xxxx' | Dibatasi Kuota Guru"]
-    GR["👩‍🏫 guru (School Tenant User)<br/>school_id: 'sch_xxxx' | Operasional Harian KBM"]
+    OP["🧑‍💻 operator (Admin Teknis Siswa)<br/>Dirangkap Kepsek / Guru (is_operator: true)"]
+    GR["👩‍🏫 3 guru (Guru Kelas / Tenant User)<br/>school_id: 'sch_xxxx' | Operasional Harian KBM"]
 
     SA -->|Membuat Sekolah & Akun Kepsek| KP
     KP -->|Mendaftarkan Akun Guru (Maks = kuota_guru)| GR
+    KP -.->|Menunjuk / Merangkap| OP
+    OP -->|Kelola Data Induk 21 Siswa| DB[(Master Data Siswa)]
 ```
 
 1. **`superadmin` (Project Owner):**
@@ -65,10 +68,15 @@ flowchart TD
 2. **`kepsek` (Kepala Sekolah / Tenant Admin):**
    * Terikat pada satu `school_id`.
    * Mengelola akun guru di sekolahnya sesuai batas `kuota_guru`.
-   * Memvalidasi jurnal KBM, menyetujui koreksi absen, mengatur jadwal, dan mengunduh rekap PDF resmi sekolahnya.
-3. **`guru` (Pengajar / Tenant User):**
+   * Memvalidasi jurnal KBM dan perangkat ajar (RPPH), melakukan supervisi evaluasi kinerja guru, menyetujui koreksi absen, mengatur jadwal, dan mengunduh rekap PDF resmi sekolahnya.
+   * Dapat merangkap sebagai Admin Teknis untuk Data Induk Siswa.
+3. **`guru` (Pengajar / Tenant User - 3 Guru Kelas):**
    * Terikat pada satu `school_id`.
-   * Melakukan presensi, mengisi jurnal mengajar dengan Voice-to-Text, mengunggah foto kompresi, dan menyampaikan kendala.
+   * Melakukan presensi mandiri dan presensi harian 21 siswa per rombel.
+   * Mengunggah perangkat ajar mingguan (RPPH / Modul Ajar).
+   * Mengisi jurnal mengajar KBM harian dengan Voice-to-Text, foto kompresi, dan tagging Kurikulum Merdeka.
+   * Mencatat capaian asesmen perkembangan 21 siswa.
+   * Guru yang ditunjuk dapat memiliki flag `is_operator: true` untuk membantu manajemen data induk siswa.
 
 ---
 

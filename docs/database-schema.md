@@ -16,6 +16,11 @@ Sistem menggunakan 8 koleksi di mana seluruh dokumen operasional diisolasi mengg
 | `journals` | Auto-generated ID | Jurnal mengajar KBM harian, tagging Kurikulum Merdeka, dan dokumentasi foto. |
 | `schedules` | Auto-generated ID | Jadwal KBM mingguan kelas TK A, TK B, atau kelompok bermain per sekolah. |
 | `tasks_and_issues`| Auto-generated ID | Laporan kegiatan kedinasan, administrasi guru, dan pelaporan kendala sarpras. |
+| `students` | Auto-generated ID (`std_xxxx`) | **[Pilar 4]** Master Data 21 Siswa per sekolah (NISN, Nama, Kelompok Kelas, Orang Tua). |
+| `student_attendance` | `{school_id}_{YYYY-MM-DD}_{kelompok}` | **[Pilar 1]** Presensi kehadiran harian siswa per rombel/kelompok. |
+| `rpph_submissions` | Auto-generated ID | **[Pilar 2]** Pengumpulan & telaah perangkat ajar (RPPH/Modul Ajar) mingguan. |
+| `student_assessments` | Auto-generated ID | **[Pilar 4]** Catatan anekdot, unjuk kerja, dan capaian perkembangan murid. |
+| `teacher_supervisions` | Auto-generated ID | **[Pilar 5]** Evaluasi supervisi kinerja dan instrumen KBM guru oleh Kepala Sekolah. |
 | `audit_logs` | Auto-generated ID | Rekam jejak audit operasional sistem (dapat dibersihkan berkala oleh Superadmin). |
 | `system_settings` | `general_config` | **[Baru]** Konfigurasi global platform SaaS, durasi retensi log, & jadwal auto-cleanup. |
 
@@ -85,6 +90,7 @@ Menyimpan profil seluruh pengguna di dalam platform.
   "school_id": "string | null (null HANYA untuk superadmin)",
   "nama_sekolah": "string | null",
   "kelompok_kelas": "string | null (salah satu kelompok_tersedia sekolah, atau 'Semua')",
+  "is_operator": "boolean (opsional, true jika guru merangkap admin teknis/operator data induk)",
   "status_akun": "aktif | nonaktif",
   "wajib_ganti_password": "boolean (true jika baru direset oleh Kepsek/Admin, default: false)",
   "created_at": "Timestamp (ServerTimestamp)",
@@ -234,7 +240,167 @@ Pelaporan kegiatan non-KBM dan sarana prasarana sekolah.
 
 ---
 
-### 2.7. Koleksi `audit_logs` (Jejak Rekam Keamanan)
+### 2.7. Koleksi `students` (Master Data 21 Siswa)
+Menyimpan data induk murid PAUD/TK per sekolah tenant secara dinamis.
+
+* **Document ID:** Auto-generated ID Firestore (`std_xxxx`)
+* **Pengelola & Penginput:** **Dinamis dapat diinputkan dan dikelola langsung oleh Guru Kelas** (guru dapat menambah anak baru di kelasnya, mengedit kontak wali murid, atau menandai mutasi/lulus), serta dapat ditinjau dan dikelola penuh oleh Kepala Sekolah / Guru Operator.
+* **Kueri:** Wajib menyertakan `where("school_id", "==", currentUser.school_id)`. Guru kelas umumnya memfilter berdasarkan kelompok rombelnya (`kelompok == currentUser.kelompok_kelas`).
+
+```json
+{
+  "id": "string (student_id)",
+  "school_id": "string (ID sekolah)",
+  "nisn": "string (opsional, NISN anak)",
+  "nama_lengkap": "string (Nama lengkap anak)",
+  "nama_panggilan": "string (Nama panggilan sehari-hari)",
+  "kelompok": "string (salah satu kelompok_tersedia, misal TK A / TK B)",
+  "jenis_kelamin": "L | P",
+  "tanggal_lahir": "string (YYYY-MM-DD)",
+  "nama_orang_tua": "string",
+  "kontak_orang_tua": "string (No HP / WhatsApp)",
+  "alamat": "string",
+  "catatan_khusus": "string (Alergi / kebutuhan khusus)",
+  "status": "aktif | lulus | mutasi",
+  "created_at": "Timestamp",
+  "updated_at": "Timestamp"
+}
+```
+
+---
+
+### 2.8. Koleksi `student_attendance` (Presensi Harian Siswa)
+Mencatat presensi rombel per kelompok kelas pada tanggal tertentu.
+
+* **Document ID:** `{school_id}_{YYYY-MM-DD}_{kelompok}`
+* **Pengisi:** Guru kelas yang bersangkutan.
+
+```json
+{
+  "id": "string ({school_id}_{YYYY-MM-DD}_{kelompok})",
+  "school_id": "string",
+  "tanggal": "string (YYYY-MM-DD)",
+  "kelompok": "string (TK A / TK B)",
+  "guru_id": "string (UID guru yang menginput)",
+  "nama_guru": "string",
+  "total_siswa": "number (misal: 21)",
+  "rekap": {
+    "hadir": "number",
+    "sakit": "number",
+    "izin": "number",
+    "alpa": "number"
+  },
+  "data_siswa": [
+    {
+      "student_id": "string",
+      "nama": "string",
+      "status": "hadir | sakit | izin | alpa",
+      "catatan": "string (misal: demam/batuk)"
+    }
+  ],
+  "created_at": "Timestamp",
+  "updated_at": "Timestamp"
+}
+```
+
+---
+
+### 2.9. Koleksi `rpph_submissions` (Modul Ajar / Perangkat Ajar)
+Menampung pengumpulan perangkat ajar mingguan/tema dari guru kelas untuk ditelaah dan disahkan oleh Kepala Sekolah.
+
+* **Document ID:** Auto-generated ID Firestore
+* **Status Siklus:** `draf` -> `dikirim` -> (`perlu_revisi` -> `dikirim`) -> `disetujui`
+
+```json
+{
+  "school_id": "string",
+  "guru_id": "string (UID guru pengunggah)",
+  "nama_guru": "string",
+  "kelompok": "string",
+  "minggu_ke": "number",
+  "semester": "1 | 2",
+  "tahun_ajaran": "string (misal: 2026/2027)",
+  "tema": "string",
+  "subtema": "string",
+  "file_url": "string (URL PDF modul ajar di Storage atau tautan Cloud)",
+  "ringkasan_tujuan": "string",
+  "status": "draf | dikirim | perlu_revisi | disetujui",
+  "catatan_kepsek": "string",
+  "disetujui_at": "Timestamp | null",
+  "disetujui_by": "string | null (UID Kepsek)",
+  "created_at": "Timestamp",
+  "updated_at": "Timestamp"
+}
+```
+
+---
+
+### 2.10. Koleksi `student_assessments` (Capaian Perkembangan Siswa)
+Mencatat observasi capaian perkembangan individual 21 siswa berbasis Kurikulum Merdeka (Anekdot, Hasil Karya, Checklist).
+
+* **Document ID:** Auto-generated ID Firestore
+
+```json
+{
+  "school_id": "string",
+  "student_id": "string",
+  "nama_siswa": "string",
+  "kelompok": "string",
+  "guru_id": "string",
+  "tanggal": "string (YYYY-MM-DD)",
+  "minggu_ke": "number",
+  "tipe_asesmen": "ceklis | anekdot | hasil_karya",
+  "elemen_capaian": [
+    "Nilai Agama & Budi Pekerti",
+    "Jati Diri",
+    "Dasar-dasar Literasi & STEAM"
+  ],
+  "deskripsi_pengamatan": "string",
+  "foto_url": "string | null",
+  "umpan_balik_guru": "string",
+  "created_at": "Timestamp",
+  "updated_at": "Timestamp"
+}
+```
+
+---
+
+### 2.11. Koleksi `teacher_supervisions` (Evaluasi Supervisi Kinerja Guru)
+Instrumen evaluasi dan supervisi klinis / pembelajaran di kelas yang diisi langsung oleh Kepala Sekolah.
+
+* **Document ID:** Auto-generated ID Firestore
+
+```json
+{
+  "school_id": "string",
+  "kepsek_id": "string (UID Kepsek penilai)",
+  "nama_kepsek": "string",
+  "guru_id": "string (UID guru yang disupervisi)",
+  "nama_guru": "string",
+  "tanggal_supervisi": "string (YYYY-MM-DD)",
+  "kelompok_kelas": "string",
+  "fokus_observasi": "string (misal: Interaksi Positif & Diferensiasi Pembelajaran)",
+  "skor_rubrik": {
+    "perencanaan_pembelajaran": "number (1-4)",
+    "pelaksanaan_kegiatan_inti": "number (1-4)",
+    "keterlibatan_anak": "number (1-4)",
+    "manajemen_kelas_dan_suasana": "number (1-4)",
+    "asesmen_otentik": "number (1-4)"
+  },
+  "nilai_akhir": "number (100)",
+  "predikat": "Sangat Baik | Baik | Cukup | Perlu Pembinaan",
+  "catatan_apresiasi": "string",
+  "catatan_rekomendasi": "string",
+  "tindak_lanjut": "string",
+  "status": "selesai",
+  "created_at": "Timestamp",
+  "updated_at": "Timestamp"
+}
+```
+
+---
+
+### 2.12. Koleksi `audit_logs` (Jejak Rekam Keamanan)
 Mencatat aksi kritis per sekolah.
 
 * **Document ID:** Auto-generated ID Firestore
@@ -255,7 +421,7 @@ Mencatat aksi kritis per sekolah.
 
 ---
 
-### 2.8. Koleksi `system_settings` (Konfigurasi Global & Retensi Log)
+### 2.13. Koleksi `system_settings` (Konfigurasi Global & Retensi Log)
 Menyimpan pengaturan tingkat platform SaaS yang hanya dapat dibaca/ditulis oleh `superadmin`.
 
 * **Document ID:** `general_config`

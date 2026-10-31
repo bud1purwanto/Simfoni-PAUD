@@ -67,10 +67,11 @@ export default function AppLayout() {
   const kepsekNavItems = [
     { label: 'Dashboard', path: '/kepsek/dashboard', icon: Home },
     { label: 'Kelola Guru', path: '/kepsek/guru', icon: Users },
+    { label: 'Data Murid', path: '/kepsek/siswa', icon: GraduationCap },
     { label: 'Validasi KBM', path: '/kepsek/validasi', icon: CheckSquare },
     { label: 'Jadwal Sekolah', path: '/kepsek/jadwal', icon: Calendar },
-    { label: 'Rekap & PDF/Excel', path: '/kepsek/rekap', icon: FileText },
-    // Menu ke-6 hanya tampil di sidebar desktop; di HP diakses dari kartu Dashboard
+    { label: 'Rekap & PDF/Excel', path: '/kepsek/rekap', icon: FileText, desktopOnly: true },
+    // Menu hanya tampil di sidebar desktop; di HP diakses dari kartu Dashboard
     { label: 'Riwayat Aktivitas', path: '/kepsek/riwayat', icon: History, desktopOnly: true },
   ];
 
@@ -78,9 +79,10 @@ export default function AppLayout() {
   const guruNavItems = [
     { label: 'Beranda', path: '/guru/dashboard', icon: Home },
     { label: 'Presensi', path: '/guru/presensi', icon: Clock },
+    { label: 'Murid', path: '/guru/siswa', icon: Users },
     { label: 'Jurnal KBM', path: '/guru/jurnal', icon: BookOpen },
     { label: 'Jadwal', path: '/guru/jadwal', icon: Calendar },
-    { label: 'Tugas & Kendala', path: '/guru/laporan', icon: AlertTriangle },
+    { label: 'Tugas & Kendala', path: '/guru/laporan', icon: AlertTriangle, desktopOnly: true },
   ];
 
   let currentNavItems = guruNavItems;
@@ -220,7 +222,7 @@ export default function AppLayout() {
         </aside>
 
         {/* Main Content Area (Responsif, ruang bawah disesuaikan untuk BottomNav mobile) */}
-        <main className="flex-1 p-4 md:p-6 pb-28 md:pb-12 max-w-full overflow-x-hidden">
+        <main className="flex-1 p-4 md:p-6 pb-32 md:pb-12 max-w-full overflow-x-hidden">
           {showLanggananBanner && (
             <div className="mb-4 p-3 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/80 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-xs">
               <div className="flex items-center space-x-2 text-amber-950 text-xs font-semibold">
@@ -244,7 +246,7 @@ export default function AppLayout() {
       </div>
 
       {/* 5. Bottom Navigation Bar Mobile (Floating Pill Ramah Jempol di < 768px) */}
-      <nav className="md:hidden fixed bottom-3 left-4 right-4 bg-white/95 backdrop-blur-md border border-orange-200/70 shadow-2xl shadow-orange-950/10 rounded-3xl z-30 px-2 py-1.5">
+      <nav className="md:hidden fixed bottom-3 left-3 right-3 bg-white/95 backdrop-blur-md border border-orange-200/70 shadow-2xl shadow-orange-950/10 rounded-3xl z-30 px-1.5 py-1.5">
         <div className="flex items-center justify-around">
           {currentNavItems.filter((item) => !item.desktopOnly).slice(0, 5).map((item) => {
             const Icon = item.icon;
@@ -253,7 +255,7 @@ export default function AppLayout() {
                 key={item.path}
                 to={item.path}
                 className={({ isActive }) =>
-                  `flex flex-col items-center justify-center py-1 px-2 rounded-2xl text-[10px] font-bold transition min-w-[56px] ${
+                  `flex flex-col items-center justify-center py-1 px-1 rounded-2xl text-[10px] font-bold transition min-w-[50px] ${
                     isActive
                       ? 'text-orange-600'
                       : 'text-slate-400 hover:text-slate-600'
@@ -263,9 +265,9 @@ export default function AppLayout() {
                 {({ isActive }) => (
                   <>
                     <div className={`p-1.5 rounded-xl transition ${isActive ? 'bg-orange-100 text-orange-600 shadow-xs' : ''}`}>
-                      <Icon className={`w-5 h-5 ${isActive ? 'stroke-[2.5]' : 'stroke-[1.8]'}`} />
+                      <Icon className={`w-4 h-4 ${isActive ? 'stroke-[2.5]' : 'stroke-[1.8]'}`} />
                     </div>
-                    <span className="mt-0.5 truncate max-w-[64px] font-brand">{item.label}</span>
+                    <span className="mt-0.5 truncate max-w-[56px] text-[9.5px] font-brand tracking-tight">{item.label}</span>
                   </>
                 )}
               </NavLink>

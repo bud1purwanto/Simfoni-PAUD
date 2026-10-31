@@ -162,12 +162,33 @@ Mengingat keterbatasan kuota penyimpanan dan pembacaan/penulisan Firestore, Supe
 * **4. Fitur "Bagikan Rekap ke WhatsApp" (*One-Click WA Share*):**  
   Tombol cepat untuk membuat pesan terformat rapi dan langsung membuka WhatsApp Web / Aplikasi WA HP untuk mengirimkan rekap bulanan ke Yayasan atau Pengawas Sekolah.
 
+### 4.5. Manajemen Data Induk 21 Siswa (`/kepsek/siswa` atau Akses Operator Guru)
+* **Master Data Murid (21 Siswa):** Pengelolaan profil siswa per kelompok kelas (TK A, TK B, Kelompok Bermain) mencakup NISN, nama lengkap, nama panggilan, jenis kelamin, tanggal lahir, nama orang tua, nomor WhatsApp orang tua, alamat, dan catatan khusus.
+* **Hak Akses & Pengawasan:** Kepala Sekolah dapat memantau seluruh murid di semua rombel, mengesahkan mutasi/kelulusan, dan mengekspor data murid.
+
+### 4.6. Validasi Perangkat Ajar (RPPH / Modul Ajar)
+* Telaah mingguan/tematik rencana pembelajaran yang diunggah oleh guru kelas.
+* Memberikan status `disetujui` atau `perlu_revisi` disertai catatan arahan pedagogis Kepala Sekolah.
+
+### 4.7. Evaluasi & Supervisi Kinerja Guru Kelas
+* **Instrumen Supervisi Pembelajaran Kelas:** Rubrik penilaian terstruktur (skala 1-4) mencakup:
+  1. Perencanaan Pembelajaran (Kesesuaian Modul Ajar)
+  2. Pelaksanaan Kegiatan Inti & Diferensiasi
+  3. Keterlibatan & Respons Positif Anak
+  4. Manajemen Kelas & Iklim Belajar Aman/Menyenangkan
+  5. Asesmen Otentik & Dokumentasi KBM
+* Penghitungan skor otomatis, penetapan predikat (Sangat Baik / Baik / Cukup / Perlu Pembinaan), catatan apresiasi, rekomendasi, dan rencana tindak lanjut pembinaan guru.
+
 ---
 
 ## 5. Rincian Modul Guru (`/guru/*`)
 
 1. **Presensi Cepat Dual Timestamp (Anti-Trap Offline):**  
    Mencatat `jam_datang_device` (waktu lokal saat tombol ditekan) dan `jam_datang_server`. Jika sinkronisasi tertunda karena sinyal drop, guru tidak akan dirugikan sebagai terlambat.
+1a. **Presensi Harian 21 Siswa Kelas:**  
+   Guru kelas dapat melakukan pencatatan kehadiran murid (Hadir, Sakit, Izin, Alpa) secara cepat dalam satu layar ringkas dengan opsi catatan kesehatan anak (misal: batuk, demam). Rekapitulasi otomatis tersimpan ke `student_attendance`.
+1b. **Manajemen Dinamis Data Murid Kelas (`/guru/siswa`):**  
+   Guru kelas dapat langsung menginputkan data murid baru di kelompoknya secara dinamis (nama lengkap, panggilan, tanggal lahir, kontak WA orang tua, catatan alergi/khusus), mengubah data jika ada pembaruan nomor wali murid, serta menandai status murid aktif/pindah tanpa harus menunggu admin pusat.
 2. **Penanganan Lupa Absen Pulang:**  
    Record hari lalu yang hadir tanpa checkout otomatis ditandai `lupa_absen` dan disajikan tombol **"Ajukan Jam Pulang"**. Koreksi yang sudah diputuskan Kepsek terkunci.
 2a. **Pengajuan Izin / Sakit:**  
@@ -175,6 +196,13 @@ Mengingat keterbatasan kuota penyimpanan dan pembacaan/penulisan Firestore, Supe
 3. **Modal Wajib Ganti Password:**  
    Jika akun guru baru saja direset oleh Kepsek (`wajib_ganti_password: true`), sistem langsung memunculkan modal pembuatan kata sandi baru saat login pertama berhasil.
 4. **Jurnal KBM Harian:** Form terstruktur mencakup Topik, Capaian Pembelajaran Kurikulum Merdeka, Kegiatan Pembuka-Inti-Penutup, Refleksi, dan Kendala. Jurnal `disetujui` bersifat read-only, draf dapat dihapus, dan tombol "Tulis Jurnal dari Jadwal" mengisi kelompok & topik otomatis. Kegiatan inti wajib diisi sebelum dikirim.
+4a. **Pengunggahan Perangkat Ajar (RPPH / Modul Ajar):**  
+   Guru mengunggah dokumen modul ajar mingguan, menentukan tema/subtema, capaian pembelajaran, serta memantau status validasi dari Kepala Sekolah.
+4b. **Pencatatan Capaian Perkembangan 21 Siswa (Asesmen Otentik):**  
+   Guru mencatat observasi harian anak didik melalui 3 instrumen Kurikulum Merdeka:
+   - *Catatan Anekdot:* Peristiwa penting / perilaku bermakna anak saat KBM.
+   - *Hasil Karya & Foto Portofolio:* Unggah karya seni, lego/balok, sains anak dengan deskripsi capaian.
+   - *Checklist Ketercapaian:* Ceklis capaian elemen Nilai Agama, Jati Diri, dan STEAM per anak.
 5. **Bank Template Kegiatan KBM Kurikulum Merdeka:**  
    Pilihan template cepat sekali klik (*Upacara & Pembiasaan Pagi*, *Motorik Kasar & Senam*, *Sentra Sains Eksperimen*, *Sentra Seni & Kreativitas*, *Literasi Awal*) yang otomatis mengisi isian kegiatan sehingga guru cukup mengedit sedikit narasi (hemat waktu hingga 90%).
 6. **Voice-to-Text (`id-ID`):** Menggunakan Web Speech API agar guru PAUD dapat mendiktekan narasi kegiatan langsung menggunakan mikrofon smartphone.

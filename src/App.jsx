@@ -27,6 +27,9 @@ import KelolaJadwal from './pages/kepsek/KelolaJadwal';
 import RekapDanPdf from './pages/kepsek/RekapDanPdf';
 import RiwayatAktivitas from './pages/kepsek/RiwayatAktivitas';
 
+// Modul Dinamis Siswa PAUD (Pilar 4)
+import KelolaSiswaGuru from './pages/guru/KelolaSiswaGuru';
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -56,6 +59,7 @@ export default function App() {
               <Route path="/kepsek/jadwal" element={<KelolaJadwal />} />
               <Route path="/kepsek/rekap" element={<RekapDanPdf />} />
               <Route path="/kepsek/riwayat" element={<RiwayatAktivitas />} />
+              <Route path="/kepsek/siswa" element={<KelolaSiswaGuru />} />
             </Route>
           </Route>
 
@@ -64,6 +68,7 @@ export default function App() {
             <Route element={<AppLayout />}>
               <Route path="/guru/dashboard" element={<DashboardGuru />} />
               <Route path="/guru/presensi" element={<PresensiGuru />} />
+              <Route path="/guru/siswa" element={<KelolaSiswaGuru />} />
               <Route path="/guru/jurnal" element={<JurnalGuru />} />
               <Route path="/guru/jadwal" element={<JadwalGuru />} />
               <Route path="/guru/laporan" element={<LaporanLainGuru />} />

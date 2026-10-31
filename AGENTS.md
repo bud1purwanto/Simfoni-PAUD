@@ -202,8 +202,10 @@ Saat diminta membangun atau menyempurnakan fitur, ikuti urutan langkah terstrukt
   - [x] Peningkatan penanganan pesan galat login pada Login.jsx.
   - [x] Sinkronisasi seluruh dokumen `docs/*.md` dengan kode akhir.
 
-- [ ] **Fase 9 (Usulan): Penguatan & Fitur Lanjutan** (ide dari audit Oktober 2026).
-  - [x] Penegakan kuota guru di sisi server (counter + batch + Security Rules, tanpa Cloud Functions).
-  - [x] Halaman Riwayat Aktivitas (audit trail) untuk Kepsek (`/kepsek/riwayat`).
-  - [x] PWA Service Worker (offline shell) + fallback cache profil pada sinyal lemah.
-  - [x] Uji: 52 skenario rules, 16 unit test, 24 langkah E2E (build produksi + emulator).
+- [ ] **Fase 10: Perluasan 5 Pilar PAUD & Manajemen Data Induk Siswa (Aktif)**
+  - [ ] **Pilar 1 - Presensi Siswa**: Koleksi `student_attendance` per kelompok kelas harian, pencatatan status (Hadir, Sakit, Izin, Alpa) dan catatan kesehatan 21 siswa.
+  - [ ] **Pilar 2 - Perangkat Ajar (RPPH / Modul Ajar)**: Koleksi `rpph_submissions`, modul unggah perangkat ajar mingguan oleh guru, dan validasi/telaah oleh Kepala Sekolah.
+  - [ ] **Pilar 3 - Jurnal Realisasi KBM**: Penyelarasan relasi jurnal harian dengan modul ajar/RPPH yang telah disetujui.
+  - [ ] **Pilar 4 - Administrasi & Capaian 21 Siswa**: Koleksi `students` (Master Data 21 Siswa) dan koleksi `student_assessments` (Capaian Pembelajaran Kurikulum Merdeka: Nilai Agama & Budi Pekerti, Jati Diri, Literasi & STEAM).
+  - [ ] **Pilar 5 - Supervisi & Evaluasi Kinerja Guru**: Koleksi `teacher_supervisions`, instrumen rubrik supervisi KBM kelas, serta umpan balik berkala dari Kepala Sekolah kepada guru.
+  - [ ] **Manajemen Peran & Operator Data Induk**: Integrasi pengelolaan data induk 21 siswa di dashboard Kepsek serta fleksibilitas flag `is_operator: true` bagi guru perbantuan.
