@@ -309,14 +309,41 @@ service cloud.firestore {
       allow write: if isSuperAdmin();
     }
 
-    // --- 9. ATURAN UNIVERSAL MULTI-TENANT (KOLEKSI BARU DI MASA DEPAN) ---
+    // --- 9. KOLEKSI SUPERVISI KINERJA GURU (PILAR 5) ---
+    match /teacher_supervisions/{supervisionId} {
+      // Guru yang bersangkutan atau Kepsek sekolah yang sama bisa membaca hasil supervisi
+      allow read: if isSuperAdmin()
+                  || (resource.data.get('school_id', null) is string
+                      && isSameSchool(resource.data.school_id)
+                      && (isSchoolKepsek(resource.data.school_id) || resource.data.guru_id == request.auth.uid));
+
+      // Hanya Kepala Sekolah yang berhak membuat instrumen evaluasi supervisi
+      allow create: if isSuperAdmin()
+                    || (request.resource.data.get('school_id', null) is string
+                        && isSchoolKepsek(request.resource.data.school_id)
+                        && request.resource.data.kepsek_id == request.auth.uid);
+
+      // Hanya Kepala Sekolah yang berhak memperbarui dokumen supervisi
+      allow update: if isSuperAdmin()
+                    || (resource.data.get('school_id', null) is string
+                        && isSchoolKepsek(resource.data.school_id)
+                        && request.resource.data.school_id == resource.data.school_id);
+
+      // Hanya Kepala Sekolah yang berhak menghapus
+      allow delete: if isSuperAdmin()
+                    || (resource.data.get('school_id', null) is string
+                        && isSchoolKepsek(resource.data.school_id));
+    }
+
+    // --- 10. ATURAN UNIVERSAL MULTI-TENANT (KOLEKSI BARU DI MASA DEPAN) ---
     // Mengamankan koleksi baru (mis. inventaris, spp_siswa, raport) yang memiliki field
     // 'school_id' tanpa perlu menulis aturan baru. Koleksi inti DIKECUALIKAN agar aturan
     // longgar ini tidak membuka celah pada aturan ketat di atas.
     match /{collectionName}/{docId} {
       function isCoreCollection() {
         return collectionName in ['schools', 'users', 'attendance', 'journals', 'schedules',
-                                  'tasks_and_issues', 'audit_logs', 'system_settings'];
+                                  'tasks_and_issues', 'audit_logs', 'system_settings',
+                                  'teacher_supervisions'];
       }
 
       allow read: if !isCoreCollection() && (isSuperAdmin()

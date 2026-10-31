@@ -27,8 +27,19 @@ import KelolaJadwal from './pages/kepsek/KelolaJadwal';
 import RekapDanPdf from './pages/kepsek/RekapDanPdf';
 import RiwayatAktivitas from './pages/kepsek/RiwayatAktivitas';
 
-// Modul Dinamis Siswa PAUD (Pilar 4)
+// Modul Dinamis Siswa PAUD (Pilar 1 & Pilar 4)
 import KelolaSiswaGuru from './pages/guru/KelolaSiswaGuru';
+import PresensiSiswa from './pages/guru/PresensiSiswa';
+
+// Modul Perangkat Ajar RPPH (Pilar 2)
+import RpphGuru from './pages/guru/RpphGuru';
+import ValidasiRpphKepsek from './pages/kepsek/ValidasiRpphKepsek';
+
+// Modul Asesmen Capaian Murid (Pilar 4)
+import AsesmenSiswaGuru from './pages/guru/AsesmenSiswaGuru';
+
+// Modul Supervisi Kinerja Guru (Pilar 5)
+import SupervisiKinerja from './pages/kepsek/SupervisiKinerja';
 
 export default function App() {
   return (
@@ -60,6 +71,10 @@ export default function App() {
               <Route path="/kepsek/rekap" element={<RekapDanPdf />} />
               <Route path="/kepsek/riwayat" element={<RiwayatAktivitas />} />
               <Route path="/kepsek/siswa" element={<KelolaSiswaGuru />} />
+              <Route path="/kepsek/presensi-siswa" element={<PresensiSiswa />} />
+              <Route path="/kepsek/validasi-rpph" element={<ValidasiRpphKepsek />} />
+              <Route path="/kepsek/asesmen-siswa" element={<AsesmenSiswaGuru />} />
+              <Route path="/kepsek/supervisi" element={<SupervisiKinerja />} />
             </Route>
           </Route>
 
@@ -68,7 +83,11 @@ export default function App() {
             <Route element={<AppLayout />}>
               <Route path="/guru/dashboard" element={<DashboardGuru />} />
               <Route path="/guru/presensi" element={<PresensiGuru />} />
+              <Route path="/guru/presensi-siswa" element={<PresensiSiswa />} />
               <Route path="/guru/siswa" element={<KelolaSiswaGuru />} />
+              <Route path="/guru/rpph" element={<RpphGuru />} />
+              <Route path="/guru/asesmen" element={<AsesmenSiswaGuru />} />
+              <Route path="/guru/supervisi" element={<SupervisiKinerja />} />
               <Route path="/guru/jurnal" element={<JurnalGuru />} />
               <Route path="/guru/jadwal" element={<JadwalGuru />} />
               <Route path="/guru/laporan" element={<LaporanLainGuru />} />

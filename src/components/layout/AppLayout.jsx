@@ -20,7 +20,9 @@ import {
   GraduationCap,
   Sparkles,
   KeyRound,
-  History
+  History,
+  Award,
+  ClipboardCheck
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import NetworkStatusBanner from './NetworkStatusBanner';
@@ -68,8 +70,12 @@ export default function AppLayout() {
     { label: 'Dashboard', path: '/kepsek/dashboard', icon: Home },
     { label: 'Kelola Guru', path: '/kepsek/guru', icon: Users },
     { label: 'Data Murid', path: '/kepsek/siswa', icon: GraduationCap },
-    { label: 'Validasi KBM', path: '/kepsek/validasi', icon: CheckSquare },
-    { label: 'Jadwal Sekolah', path: '/kepsek/jadwal', icon: Calendar },
+    { label: 'Presensi Murid', path: '/kepsek/presensi-siswa', icon: CheckSquare },
+    { label: 'Validasi RPPH', path: '/kepsek/validasi-rpph', icon: BookOpen },
+    { label: 'Supervisi Guru', path: '/kepsek/supervisi', icon: ClipboardCheck },
+    { label: 'Capaian Murid', path: '/kepsek/asesmen-siswa', icon: Award, desktopOnly: true },
+    { label: 'Validasi KBM', path: '/kepsek/validasi', icon: CheckSquare, desktopOnly: true },
+    { label: 'Jadwal Sekolah', path: '/kepsek/jadwal', icon: Calendar, desktopOnly: true },
     { label: 'Rekap & PDF/Excel', path: '/kepsek/rekap', icon: FileText, desktopOnly: true },
     // Menu hanya tampil di sidebar desktop; di HP diakses dari kartu Dashboard
     { label: 'Riwayat Aktivitas', path: '/kepsek/riwayat', icon: History, desktopOnly: true },
@@ -78,10 +84,14 @@ export default function AppLayout() {
   // Navigasi Khusus Guru PAUD
   const guruNavItems = [
     { label: 'Beranda', path: '/guru/dashboard', icon: Home },
-    { label: 'Presensi', path: '/guru/presensi', icon: Clock },
+    { label: 'Absen Guru', path: '/guru/presensi', icon: Clock },
+    { label: 'Absen Siswa', path: '/guru/presensi-siswa', icon: CheckSquare },
     { label: 'Murid', path: '/guru/siswa', icon: Users },
-    { label: 'Jurnal KBM', path: '/guru/jurnal', icon: BookOpen },
-    { label: 'Jadwal', path: '/guru/jadwal', icon: Calendar },
+    { label: 'Asesmen', path: '/guru/asesmen', icon: Award },
+    { label: 'Hasil Supervisi', path: '/guru/supervisi', icon: ClipboardCheck, desktopOnly: true },
+    { label: 'Modul RPPH', path: '/guru/rpph', icon: BookOpen, desktopOnly: true },
+    { label: 'Jurnal KBM', path: '/guru/jurnal', icon: BookOpen, desktopOnly: true },
+    { label: 'Jadwal', path: '/guru/jadwal', icon: Calendar, desktopOnly: true },
     { label: 'Tugas & Kendala', path: '/guru/laporan', icon: AlertTriangle, desktopOnly: true },
   ];
 
