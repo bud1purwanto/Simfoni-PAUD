@@ -259,6 +259,20 @@ export default function KelolaSekolah() {
 
       if (editingSchoolId) {
         await updateDoc(doc(db, 'schools', editingSchoolId), payload);
+
+        // Sinkronkan nama ke akun Kepala Sekolah jika sudah ada akun kepsek untuk sekolah ini
+        const kepsekUser = users.find((u) => u.school_id === schoolId && u.role === 'kepsek');
+        if (kepsekUser && formNamaKepsek.trim() && kepsekUser.nama !== formNamaKepsek.trim()) {
+          try {
+            await updateDoc(doc(db, 'users', kepsekUser.id), {
+              nama: formNamaKepsek.trim(),
+              updated_at: serverTimestamp(),
+            });
+          } catch (syncErr) {
+            console.warn('Gagal sinkronisasi nama ke akun kepsek:', syncErr);
+          }
+        }
+
         logActivity({
           schoolId,
           actorId: userData.uid,
@@ -561,7 +575,7 @@ export default function KelolaSekolah() {
                     <div className="flex items-center justify-between">
                       <span className="text-slate-400">Kepala Sekolah:</span>
                       <span className="font-bold text-slate-700 line-clamp-1">
-                        {kepsekInSchool?.nama || s.nama_kepsek_resmi || 'Belum Dibuat'}
+                        {s.nama_kepsek_resmi || kepsekInSchool?.nama || 'Belum Dibuat'}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
