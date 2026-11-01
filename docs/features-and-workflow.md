@@ -125,6 +125,16 @@ Mengingat keterbatasan kuota penyimpanan dan pembacaan/penulisan Firestore, Supe
 * Antrean koreksi presensi memuat pengajuan dari **semua tanggal**, bukan hanya hari ini.
 * Notifikasi antrean jurnal mengajar baru berstatus `dikirim` yang siap diperiksa.
 * Notifikasi pengajuan koreksi absen dan kendala sarpras yang butuh tindak lanjut.
+* Tombol cepat **"Fokus Tab Presensi"** untuk melompat langsung ke halaman dedikasi Presensi Guru.
+
+### 4.1.1. Tab Khusus Presensi Guru (`/kepsek/presensi-guru`)
+* **Halaman Dedikasi Mandiri:** Memberikan ruang kerja terfokus bagi Kepala Sekolah untuk memantau presensi seluruh guru tanpa terdistraksi kartu ringkasan lain.
+* **Pilihan Tanggal Fleksibel:** Navigator tanggal operasional (Hari Ini, Kemarin, dan *Date Picker* bebas) lengkap dengan format tanggal Indonesia dan label status hari kerja/libur.
+* **Metrik & Ringkasan KPI Harian:** Total guru aktif, hadir tepat waktu, hadir terlambat, izin/sakit resmi, belum absen, serta persentase kehadiran total.
+* **Filter Cepat & Pencarian:** Tab filter status (Semua, Tepat Waktu, Terlambat, Izin/Sakit, Belum Absen, dan Ada Koreksi) serta kotak pencarian nama/rombel guru.
+* **Integrasi WhatsApp 1-Klik (`wa.me`):** Membuka pesan WhatsApp ramah untuk mengingatkan guru yang belum melakukan presensi kedatangan atau lupa absen pulang (> 18:00).
+* **Verifikasi Koreksi Langsung di Tempat:** Modal review pengajuan koreksi jam kedatangan/pulang tanpa harus berpindah ke tab Validasi Laporan. Status keterlambatan dan menit telat otomatis dihitung ulang secara akurat saat disetujui.
+* **Modal Aturan Jam Kerja Sekolah:** Akses cepat info jam masuk, toleransi keterlambatan, jam pulang, dan hari kerja efektif yang berlaku di sekolah.
 
 ### 4.2. Kelola Akun Guru, Validasi Kuota & Reset Password
 * **Pengecekan Kuota Otomatis (UI + Server):** Saat Kepala Sekolah menekan tombol **"Tambah Guru Baru"**, sistem menghitung jumlah akun guru aktif di sekolah tersebut. Batas yang sama juga ditegakkan Security Rules melalui counter `jumlah_guru_aktif`, sehingga tidak bisa dilewati lewat manipulasi klien; bila server menolak, akun Auth yang baru dibuat langsung dihapus kembali.

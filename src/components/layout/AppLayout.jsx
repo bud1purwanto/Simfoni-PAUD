@@ -68,11 +68,12 @@ export default function AppLayout() {
   // Navigasi Khusus Kepala Sekolah
   const kepsekNavItems = [
     { label: 'Dashboard', path: '/kepsek/dashboard', icon: Home },
+    { label: 'Presensi Guru', path: '/kepsek/presensi-guru', icon: Clock },
     { label: 'Kelola Guru', path: '/kepsek/guru', icon: Users },
-    { label: 'Data Murid', path: '/kepsek/siswa', icon: GraduationCap },
     { label: 'Presensi Murid', path: '/kepsek/presensi-siswa', icon: CheckSquare },
     { label: 'Validasi RPPH', path: '/kepsek/validasi-rpph', icon: BookOpen },
-    { label: 'Supervisi Guru', path: '/kepsek/supervisi', icon: ClipboardCheck },
+    { label: 'Data Murid', path: '/kepsek/siswa', icon: GraduationCap, desktopOnly: true },
+    { label: 'Supervisi Guru', path: '/kepsek/supervisi', icon: ClipboardCheck, desktopOnly: true },
     { label: 'Capaian Murid', path: '/kepsek/asesmen-siswa', icon: Award, desktopOnly: true },
     { label: 'Validasi KBM', path: '/kepsek/validasi', icon: CheckSquare, desktopOnly: true },
     { label: 'Jadwal Sekolah', path: '/kepsek/jadwal', icon: Calendar, desktopOnly: true },

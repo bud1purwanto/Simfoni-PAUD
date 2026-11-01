@@ -301,18 +301,25 @@ export default function DashboardKepsek() {
             </p>
           </div>
 
-          <div className="flex items-center space-x-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => navigate('/kepsek/presensi-guru')}
+              className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-2xl text-xs font-black transition shadow-sm shadow-orange-500/20 flex items-center space-x-1.5"
+            >
+              <span>Fokus Tab Presensi</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
             <button
               onClick={() => navigate('/kepsek/guru')}
               className="px-4 py-2 bg-amber-50 hover:bg-amber-100 text-amber-900 rounded-2xl text-xs font-bold transition border border-amber-200"
             >
-              Kelola Daftar Guru
+              Kelola Guru
             </button>
             <button
               onClick={() => navigate('/kepsek/rekap')}
-              className="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-2xl text-xs font-extrabold transition shadow-md shadow-orange-500/20"
+              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl text-xs font-bold transition"
             >
-              Ekspor Laporan PDF/Excel
+              Ekspor PDF/Excel
             </button>
           </div>
         </div>

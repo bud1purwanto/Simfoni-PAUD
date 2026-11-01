@@ -22,6 +22,7 @@ import ManajemenLog from './pages/superadmin/ManajemenLog';
 // Modul Kepala Sekolah (Fase 6)
 import DashboardKepsek from './pages/kepsek/DashboardKepsek';
 import KelolaGuru from './pages/kepsek/KelolaGuru';
+import PresensiGuruKepsek from './pages/kepsek/PresensiGuruKepsek';
 import ValidasiLaporan from './pages/kepsek/ValidasiLaporan';
 import KelolaJadwal from './pages/kepsek/KelolaJadwal';
 import RekapDanPdf from './pages/kepsek/RekapDanPdf';
@@ -66,6 +67,7 @@ export default function App() {
             <Route element={<AppLayout />}>
               <Route path="/kepsek/dashboard" element={<DashboardKepsek />} />
               <Route path="/kepsek/guru" element={<KelolaGuru />} />
+              <Route path="/kepsek/presensi-guru" element={<PresensiGuruKepsek />} />
               <Route path="/kepsek/validasi" element={<ValidasiLaporan />} />
               <Route path="/kepsek/jadwal" element={<KelolaJadwal />} />
               <Route path="/kepsek/rekap" element={<RekapDanPdf />} />
