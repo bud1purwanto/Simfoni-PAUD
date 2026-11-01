@@ -125,11 +125,29 @@ firebase deploy --only firestore:rules,firestore:indexes,storage
 ### 4.2a. Service Worker (PWA)
 `public/sw.js` didaftarkan otomatis pada build produksi. Saat mengubah strategi cache, naikkan konstanta `CACHE` (mis. `simfoni-shell-v2`) agar cache lama dibersihkan. Aset Vite ber-hash sehingga rilis baru tetap terambil (navigasi selalu *network-first*).
 
-### 4.3. CORS Bucket Storage (Foto & Stempel di PDF)
-Generator PDF memuat logo, stempel, dan foto ke `<canvas>` sehingga bucket memerlukan CORS. Tanpa ini PDF tetap terbentuk, namun gambar dilewati.
+### 4.3. Konfigurasi CORS Bucket Firebase Storage (Upload Media & Ekspor PDF)
+Bucket Firebase Storage secara default memblokir request lintas-domain (*Cross-Origin*) dari custom domain Cloudflare (`https://app.simfoni-paud.workers.dev`). Tanpa CORS, pengunggahan logo/foto kamera akan gagal dengan pesan:  
+`blocked by CORS policy: Response to preflight request doesn't pass access control check`.
+
+Gunakan berkas [`cors.json`](../cors.json) di root proyek:
+```json
+[
+  {
+    "origin": ["*"],
+    "method": ["GET", "PUT", "POST", "DELETE", "HEAD", "OPTIONS"],
+    "responseHeader": ["*"],
+    "maxAgeSeconds": 3600
+  }
+]
+```
+
+Jalankan perintah berikut di **Google Cloud Shell** (atau CLI terminal lokal):
 ```bash
-# cors.json: [{"origin": ["https://simfoni-paud.pages.dev","https://dev.simfoni-paud.pages.dev","http://localhost:3000"],"method": ["GET"],"maxAgeSeconds": 3600}]
-gsutil cors set cors.json gs://<storage-bucket-project>
+# Menggunakan gcloud storage (rekomendasi Google Cloud SDK terbaru):
+gcloud storage buckets update gs://simfoni-paud-prd.firebasestorage.app --cors-file=cors.json
+
+# ATAU menggunakan gsutil:
+gsutil cors set cors.json gs://simfoni-paud-prd.firebasestorage.app
 ```
 
 ---

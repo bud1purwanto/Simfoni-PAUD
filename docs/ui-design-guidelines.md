@@ -116,13 +116,41 @@ Pada perangkat smartphone (`< 768px`), navigasi bawah dilarang menempel kaku di 
 
 ---
 
-## 📐 7. Checklist Verifikasi Desain untuk Pengembang & AI Agent
+## ⏳ 7. Standar Umpan Balik Visual & Indikator Loading (Anti-Silent Wait)
+
+> [!IMPORTANT]
+> ### 📢 ATURAN MUTLAK: SEMUA PROSES LOAD WAJIB MEMILIKI INDIKATOR VISUAL!
+> Pengguna PAUD (terutama Guru di lapangan) sering mengakses sistem di bawah kondisi sinyal seluler tidak stabil.  
+> **DILARANG MEMBIARKAN UI TANPA FEEDBACK SAAT PROSES ASINKRON BERJALAN!**  
+> Pengguna tidak boleh bertanya-tanya apakah tombol yang mereka tekan sudah bekerja atau aplikasi macet.
+
+### ✨ Pedoman Implementasi Indikator Loading:
+1. **Loading Bar / Progress Bar untuk Unggahan Media:**
+   - Gunakan komponen [`src/components/ui/ProgressBar.jsx`](../src/components/ui/ProgressBar.jsx).
+   - Tampilkan persentase aktual (0%–100%) dengan baris teks tahapan real-time:
+     * *Tahap 1 (0%–30%):* "Mengompresi foto < 300 KB..."
+     * *Tahap 2 (30%–95%):* "Mengunggah ke cloud storage (xx%)..."
+     * *Tahap 3 (100%):* "Selesai!"
+   - Wajib diterapkan pada: Upload Foto KBM Guru, Upload Foto Bukti Tugas/Kendala, serta Upload Logo & Stempel Sekolah Mitra.
+2. **Tombol Pengiriman Formulir (Submitting Buttons):**
+   - Wajib beralih ke keadaan `disabled` untuk mencegah *double-submit* atau duplikasi data.
+   - Mengganti ikon aksi dengan ikon spinner berputar (`animate-spin` dari `lucide-react`).
+   - Mengubah teks tombol secara aktif (misal: *"Menyimpan..."*, *"Mengirim..."*, *"Membuat Akun..."*).
+3. **Pemuatan Awal Data (Initial Screen Loading):**
+   - Gunakan skeleton card atau spinner ramah bertema Warm Honey di tengah layar saat data Firestore pertama kali dimuat. Dilarang menampilkan layar putih kosong (*blank screen*).
+4. **Ekspor Berkas Berat (PDF & Excel):**
+   - Tombol unduh wajib menampilkan status pemrosesan (*"Membuat PDF..."*, *"Mengolah Excel..."*) selama dokumen disusun di memori perangkat.
+
+---
+
+## 📐 8. Checklist Verifikasi Desain untuk Pengembang & AI Agent
 
 Sebelum menyelesaikan pembuatan layar atau komponen baru, pastikan telah memenuhi checklist ini:
 
 - [ ] Menggunakan font `Nunito` (`font-brand`) untuk judul/heading dan `Plus Jakarta Sans` untuk body text.
 - [ ] Sudut komponen menggunakan `rounded-2xl` atau `rounded-3xl` (tidak ada kotak siku 90 derajat).
 - [ ] **Tidak menggunakan `window.alert` atau `window.confirm` bawaan browser; seluruh dialog menggunakan `ModalKonfirmasi.jsx`.**
+- [ ] **Semua proses asinkron (upload gambar, submit form, ekspor dokumen, fetch data) memiliki indikator visual (ProgressBar / spinner / loading button / skeleton).**
 - [ ] Tombol aksi sentuh jempol berukuran minimal 44px tinggi dengan jarak antar tombol yang lega.
 - [ ] Border menggunakan warna pastel lembut (`border-slate-200/80`, `border-orange-200/60`, `border-amber-200/70`).
 - [ ] Bayangan menggunakan warm/soft shadow (`shadow-sm`, `shadow-orange-500/20`, bukan bayangan hitam pekat).

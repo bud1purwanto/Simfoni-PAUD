@@ -126,5 +126,10 @@ gitGraph
    Setiap perubahan `firestore.rules`/`storage.rules` wajib diuji di Firebase Emulator (lihat `docs/security-rules.md` §6). Ingat: Firestore meng-OR-kan semua `match` yang cocok.
 10. **Indikator DEV Mode:**  
    Komponen `DevBadge.jsx` wajib terpasang di layout aplikasi untuk menampilkan label peringatan visual saat berjalan di luar mode production.
-6. **Larangan Mutlak Dialog Browser Bawaan (No Native Popups):**  
+11. **Larangan Mutlak Dialog Browser Bawaan (No Native Popups):**  
    **DILARANG KERAS** menggunakan `window.alert()`, `window.confirm()`, atau `window.prompt()`. Seluruh dialog interaktif (konfirmasi hapus, penonaktifan akun, reset sandi, notifikasi galat) **WAJIB** menggunakan komponen modal kustom elegan ([`src/components/ui/ModalKonfirmasi.jsx`](../src/components/ui/ModalKonfirmasi.jsx)) dengan backdrop blur, transisi halus, badge ikon tematik, dan tata letak ramah pengguna PAUD (tidak memunculkan teks kaku seperti *"localhost:3000 says"*).
+12. **Wajib Indikator Loading pada Seluruh Operasi Asinkron (Anti-Silent Wait):**  
+   Setiap operasi yang membutuhkan waktu tunggu (unggah media, eksekusi mutasi Firestore, unduh berkas PDF/Excel, hingga penarikan data) **WAJIB** membungkus siklusnya dengan state loading:
+   - **Unggah Gambar:** Gunakan helper `uploadCompressedImage` atau `uploadFileWithProgress` dengan callback `onProgress`, lalu render komponen visual [`ProgressBar.jsx`](../src/components/ui/ProgressBar.jsx).
+   - **Blok Try-Catch-Finally:** State loading (`setLoading(false)`, `setSubmitting(false)`, `setUploadProgress(...)`) **HARUS** di-reset di dalam blok `finally` agar UI tidak macet/terkunci jika terjadi galat jaringan.
+   - **Disabled Button:** Seluruh tombol aksi pemicu mutasi asinkron wajib memiliki properti `disabled={submitting}` dan ikon spinner `animate-spin` saat proses berlangsung.

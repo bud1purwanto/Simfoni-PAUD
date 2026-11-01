@@ -37,6 +37,7 @@ import { db, storage } from '../../config/firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useSpeechToText } from '../../hooks/useSpeechToText';
 import { uploadCompressedImage } from '../../utils/imageCompressor';
+import ProgressBar from '../../components/ui/ProgressBar';
 import { getKbmTemplates, getTemplateById } from '../../utils/kbmTemplates';
 import { formatTanggalIndo, createWhatsAppShareUrl, formatKbmToWhatsAppMessage, getLocalDateString } from '../../utils/formatters';
 import { logActivity } from '../../utils/auditLogger';
@@ -78,6 +79,7 @@ export default function JurnalGuru() {
   const [kendala, setKendala] = useState('');
   const [fotos, setFotos] = useState([]); // [{ url, storage_path, caption, izin_publikasi }]
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState({ active: false, percent: 0, label: '', detail: '' });
   const [sessionUploads, setSessionUploads] = useState([]); // storage_path foto yang diunggah sesi ini
   const isReadOnly = editingStatus === 'disetujui';
 
@@ -245,12 +247,16 @@ export default function JurnalGuru() {
     }
 
     setUploadingPhoto(true);
+    setUploadProgress({ active: true, percent: 5, label: 'Mempersiapkan foto...', detail: 'Memulai kompresi...' });
     try {
       const { url, storagePath, sizeKb } = await uploadCompressedImage(
         file,
         userData.school_id,
         userData.uid,
-        'journals'
+        'journals',
+        (pct, status) => {
+          setUploadProgress({ active: true, percent: pct, label: 'Mengunggah Foto KBM...', detail: status });
+        }
       );
 
       const newPhoto = {
@@ -275,6 +281,7 @@ export default function JurnalGuru() {
       setNotification({ type: 'error', text: 'Gagal mengunggah foto. Pastikan format file sesuai.' });
     } finally {
       setUploadingPhoto(false);
+      setUploadProgress({ active: false, percent: 0, label: '', detail: '' });
     }
   };
 
@@ -833,6 +840,17 @@ export default function JurnalGuru() {
                 />
               </label>}
             </div>
+
+            {uploadProgress.active && (
+              <div className="p-3 bg-amber-50/90 rounded-2xl border border-amber-200/80 shadow-xs animate-in fade-in duration-200">
+                <ProgressBar
+                  progress={uploadProgress.percent}
+                  label={uploadProgress.label}
+                  detail={uploadProgress.detail}
+                  size="md"
+                />
+              </div>
+            )}
 
             {fotos.length > 0 ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 pt-2">

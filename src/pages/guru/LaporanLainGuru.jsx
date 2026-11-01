@@ -38,6 +38,7 @@ import { db } from '../../config/firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useSpeechToText } from '../../hooks/useSpeechToText';
 import { uploadCompressedImage } from '../../utils/imageCompressor';
+import ProgressBar from '../../components/ui/ProgressBar';
 import { logActivity } from '../../utils/auditLogger';
 import ModalKonfirmasi from '../../components/ui/ModalKonfirmasi';
 import { commitWrite, QUEUED_SUFFIX } from '../../utils/offlineWrite';
@@ -87,6 +88,7 @@ export default function LaporanLainGuru() {
   const [photoFile, setPhotoFile] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState({ active: false, percent: 0, label: '', detail: '' });
   const [submitError, setSubmitError] = useState('');
   const [activeSpeechField, setActiveSpeechField] = useState(null); // 'deskripsi' | 'hasil'
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
@@ -206,11 +208,15 @@ export default function LaporanLainGuru() {
         return;
       }
       if (photoFile) {
+        setUploadProgress({ active: true, percent: 10, label: 'Mengompresi foto...', detail: 'Memulai kompresi < 300 KB...' });
         const uploadResult = await uploadCompressedImage(
           photoFile,
           userData.school_id,
           userData.uid,
-          'tasks'
+          'tasks',
+          (pct, status) => {
+            setUploadProgress({ active: true, percent: pct, label: 'Mengunggah Foto Bukti...', detail: status });
+          }
         );
         fotoUrl = uploadResult.url;
       }
@@ -250,6 +256,7 @@ export default function LaporanLainGuru() {
       setSubmitError(err.message || 'Terjadi kesalahan saat menyimpan laporan.');
     } finally {
       setSubmitting(false);
+      setUploadProgress({ active: false, percent: 0, label: '', detail: '' });
     }
   };
 
@@ -713,6 +720,18 @@ export default function LaporanLainGuru() {
                   </label>
                 )}
               </div>
+
+              {/* Indikator Progress Bar Upload Gambar */}
+              {uploadProgress.active && (
+                <div className="p-3.5 bg-teal-50/90 rounded-2xl border border-teal-200/80 shadow-xs animate-in fade-in duration-200">
+                  <ProgressBar
+                    progress={uploadProgress.percent}
+                    label={uploadProgress.label}
+                    detail={uploadProgress.detail}
+                    size="md"
+                  />
+                </div>
+              )}
 
               {/* Submit Buttons */}
               <div className="pt-3 border-t border-slate-100 flex items-center justify-end space-x-3">

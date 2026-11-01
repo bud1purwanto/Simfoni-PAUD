@@ -137,6 +137,12 @@ Sistem SIMFONI PAUD dilengkapi dengan spesialisasi Subagent dinamis dan Workspac
     Sediakan tombol bagikan ringkasan KBM ke WhatsApp (`wa.me`), banner visual status online/offline (`NetworkStatusBanner.jsx`), bank template KBM siap pakai (`kbmTemplates.js`), serta stempel/cap digital sekolah transparan pada rekap PDF.
 13. **Larangan Mutlak Pop-up Dialog Browser Native (`window.alert` / `window.confirm`):**
     Dilarang keras memakai dialog bawaan browser yang memunculkan teks kaku seperti *"localhost:3000 says"* atau *"app.simfoni-paud.workers.dev says"*. Seluruh dialog konfirmasi, peringatan aksi berbahaya, dan notifikasi wajib menggunakan komponen modal kustom elegan (`ModalKonfirmasi.jsx`) dengan backdrop blur, sudut membulat empuk (`rounded-3xl`), animasi halus, dan badge tematik agar tampilan selalu berkelas dan ramah bagi pengguna PAUD.
+14. **Kewajiban Indikator Loading & Progress Bar pada Seluruh Proses Asinkron (Anti-Silent Wait):**
+    Seluruh operasi asinkron (unggah logo/stempel sekolah, foto dokumentasi guru, pengiriman formulir, pengambilan data/kueri, serta ekspor PDF/Excel) **WAJIB** menampilkan indikator visual loading yang jelas dan responsif:
+    - **Unggah Gambar & Dokumen:** Wajib menggunakan komponen [`src/components/ui/ProgressBar.jsx`](src/components/ui/ProgressBar.jsx) dengan persentase progresif (0%–100%) dan label tahapan real-time (kompresi foto `< 300 KB` ➡️ unggah cloud storage ➡️ finalisasi).
+    - **Pemuatan / Kueri Data:** Wajib menampilkan skeleton loader atau spinner animasi tematik, dilarang membiarkan layar kosong membeku.
+    - **Pengiriman Formulir & Tombol Aksi:** Wajib beralih ke mode `disabled` dengan ikon spinner berputar (`animate-spin`) dan label aksi aktif (misal: *"Menyimpan..."*, *"Mengirim..."*).
+    - **Ekspor Berkas Berat:** Wajib memberikan feedback status pembuatan berkas agar pengguna tidak mengklik tombol berulang kali.
 ---
 
 ## 📋 Roadmap & Tahapan Eksekusi untuk AI Agent

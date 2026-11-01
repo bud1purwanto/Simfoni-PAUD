@@ -31,12 +31,13 @@ import {
   deleteDoc,
   serverTimestamp
 } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { db, storage } from '../../config/firebase';
+import { db } from '../../config/firebase';
 import { useAuth } from '../../context/AuthContext';
 import { formatTanggalIndo } from '../../utils/formatters';
 import { logActivity } from '../../utils/auditLogger';
 import ModalKonfirmasi from '../../components/ui/ModalKonfirmasi';
+import ProgressBar from '../../components/ui/ProgressBar';
+import { fileToBase64Optimized } from '../../utils/imageCompressor';
 import { syncGuruCounters } from '../../utils/quotaSync';
 import { addDays, format } from 'date-fns';
 import {
@@ -67,6 +68,7 @@ export default function KelolaSekolah() {
   const [deleteConfirmSchool, setDeleteConfirmSchool] = useState(null);
   const [suspendConfirmSchool, setSuspendConfirmSchool] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState({ active: false, percent: 0, label: '', detail: '' });
 
   // Form Fields
   const [formId, setFormId] = useState('');
@@ -171,19 +173,37 @@ export default function KelolaSekolah() {
     setIsModalOpen(true);
   };
 
-  const handleLogoChange = (e) => {
+  const handleLogoChange = async (e) => {
     const file = e.target.files[0];
     if (file) {
-      setLogoFile(file);
-      setLogoPreview(URL.createObjectURL(file));
+      try {
+        setUploadProgress({ active: true, percent: 35, label: 'Mengoptimasi logo sekolah...', detail: 'Mengubah ke Base64 ringkas (< 50 KB)...' });
+        const base64 = await fileToBase64Optimized(file, { maxWidth: 360, maxHeight: 360, quality: 0.85, preserveTransparency: true });
+        setLogoPreview(base64);
+        setLogoFile(file);
+        setUploadProgress({ active: true, percent: 100, label: 'Logo siap disimpan ke Firestore!', detail: 'Bebas CORS & tanpa Google Cloud' });
+        setTimeout(() => setUploadProgress({ active: false, percent: 0, label: '', detail: '' }), 800);
+      } catch (err) {
+        showNotification('error', 'Gagal memproses logo: ' + err.message);
+        setUploadProgress({ active: false, percent: 0, label: '', detail: '' });
+      }
     }
   };
 
-  const handleStempelChange = (e) => {
+  const handleStempelChange = async (e) => {
     const file = e.target.files[0];
     if (file) {
-      setStempelFile(file);
-      setStempelPreview(URL.createObjectURL(file));
+      try {
+        setUploadProgress({ active: true, percent: 35, label: 'Mengoptimasi stempel cap...', detail: 'Mempertahankan transparansi PNG...' });
+        const base64 = await fileToBase64Optimized(file, { maxWidth: 360, maxHeight: 360, preserveTransparency: true });
+        setStempelPreview(base64);
+        setStempelFile(file);
+        setUploadProgress({ active: true, percent: 100, label: 'Stempel siap disimpan ke Firestore!', detail: 'Bebas CORS & tanpa Google Cloud' });
+        setTimeout(() => setUploadProgress({ active: false, percent: 0, label: '', detail: '' }), 800);
+      } catch (err) {
+        showNotification('error', 'Gagal memproses stempel: ' + err.message);
+        setUploadProgress({ active: false, percent: 0, label: '', detail: '' });
+      }
     }
   };
 
@@ -204,9 +224,6 @@ export default function KelolaSekolah() {
     setSubmitting(true);
 
     try {
-      let finalLogoUrl = logoPreview;
-      let finalStempelUrl = stempelPreview;
-
       const schoolId = editingSchoolId || formId.trim().toLowerCase().replace(/[^a-z0-9_]/g, '_');
       if (!schoolId) {
         showNotification('error', 'ID sekolah tidak valid');
@@ -222,19 +239,10 @@ export default function KelolaSekolah() {
         }
       }
 
-      // Upload Logo jika ada file baru
-      if (logoFile) {
-        const logoRef = ref(storage, `schools/${schoolId}/branding/logo_${Date.now()}`);
-        const snap = await uploadBytes(logoRef, logoFile, { contentType: logoFile.type });
-        finalLogoUrl = await getDownloadURL(snap.ref);
-      }
-
-      // Upload Stempel jika ada file baru
-      if (stempelFile) {
-        const stempelRef = ref(storage, `schools/${schoolId}/branding/stempel_${Date.now()}`);
-        const snap = await uploadBytes(stempelRef, stempelFile, { contentType: stempelFile.type });
-        finalStempelUrl = await getDownloadURL(snap.ref);
-      }
+      // OPSI A: Simpan langsung sebagai data URL Base64 yang sudah dioptimasi (< 50 KB)
+      // 100% murni di Firestore: bebas dari masalah CORS dan tanpa perlu Google Cloud Console!
+      const finalLogoUrl = logoPreview || null;
+      const finalStempelUrl = stempelPreview || null;
 
       const payload = {
         id: schoolId,
@@ -309,6 +317,7 @@ export default function KelolaSekolah() {
       showNotification('error', 'Gagal menyimpan sekolah: ' + err.message);
     } finally {
       setSubmitting(false);
+      setUploadProgress({ active: false, percent: 0, label: '', detail: '' });
     }
   };
 
@@ -917,13 +926,23 @@ export default function KelolaSekolah() {
                   <label className="block text-xs font-bold text-slate-700 mb-1">Logo Sekolah</label>
                   <div className="flex items-center space-x-3 mt-1">
                     {logoPreview ? (
-                      <img
-                        src={logoPreview}
-                        alt="Logo Preview"
-                        className="w-12 h-12 rounded-xl object-contain border border-slate-200 p-0.5 bg-white"
-                      />
+                      <div className="relative group shrink-0">
+                        <img
+                          src={logoPreview}
+                          alt="Logo Preview"
+                          className="w-12 h-12 rounded-xl object-contain border border-slate-200 p-0.5 bg-white shadow-xs"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => { setLogoPreview(''); setLogoFile(null); }}
+                          title="Hapus Logo"
+                          className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-rose-500 hover:bg-rose-600 text-white rounded-full flex items-center justify-center shadow-xs transition"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
                     ) : (
-                      <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400">
+                      <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 shrink-0">
                         <Upload className="w-5 h-5" />
                       </div>
                     )}
@@ -943,13 +962,23 @@ export default function KelolaSekolah() {
                   </label>
                   <div className="flex items-center space-x-3 mt-1">
                     {stempelPreview ? (
-                      <img
-                        src={stempelPreview}
-                        alt="Stempel Preview"
-                        className="w-12 h-12 rounded-xl object-contain border border-slate-200 p-0.5 bg-white shadow-xs"
-                      />
+                      <div className="relative group shrink-0">
+                        <img
+                          src={stempelPreview}
+                          alt="Stempel Preview"
+                          className="w-12 h-12 rounded-xl object-contain border border-slate-200 p-0.5 bg-white shadow-xs"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => { setStempelPreview(''); setStempelFile(null); }}
+                          title="Hapus Stempel"
+                          className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-rose-500 hover:bg-rose-600 text-white rounded-full flex items-center justify-center shadow-xs transition"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
                     ) : (
-                      <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400">
+                      <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 shrink-0">
                         <Upload className="w-5 h-5" />
                       </div>
                     )}
@@ -965,6 +994,18 @@ export default function KelolaSekolah() {
                   </span>
                 </div>
               </div>
+
+              {/* Indikator Loading Bar Upload Gambar & Simpan */}
+              {uploadProgress.active && (
+                <div className="p-3.5 bg-orange-50/90 rounded-2xl border border-orange-200/80 shadow-xs animate-in fade-in duration-200">
+                  <ProgressBar
+                    progress={uploadProgress.percent}
+                    label={uploadProgress.label}
+                    detail={uploadProgress.detail}
+                    size="md"
+                  />
+                </div>
+              )}
 
               {/* Tombol Simpan */}
               <div className="flex items-center justify-end space-x-2 pt-3 border-t border-slate-100">
