@@ -19,10 +19,6 @@ import {
   query,
   where,
   getDocs,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  doc,
   serverTimestamp
 } from 'firebase/firestore';
 import { db } from '../../config/firebase';
@@ -30,7 +26,9 @@ import { useAuth } from '../../context/AuthContext';
 import ModalFormSiswa from '../../components/ui/ModalFormSiswa';
 import ModalKonfirmasi from '../../components/ui/ModalKonfirmasi';
 import { logActivity } from '../../utils/auditLogger';
-import { commitWrite, QUEUED_SUFFIX } from '../../utils/offlineWrite';
+import { QUEUED_SUFFIX } from '../../utils/offlineWrite';
+import { saveStudent, deleteStudent } from '../../utils/studentWrites';
+import { formatKuota } from '../../utils/planConfig';
 import { getKelompokOptions, normalizeKelompok } from '../../utils/schoolConfig';
 import { formatTanggalIndo } from '../../utils/formatters';
 
@@ -51,6 +49,12 @@ export default function KelolaSiswaGuru() {
 
   const daftarKelompok = getKelompokOptions(schoolData).filter(k => k !== 'Semua');
   const kelasSaya = normalizeKelompok(userData?.kelompok_kelas);
+
+  // Kuota murid dari paket sekolah (null = tanpa batas); murid lulus/mutasi tidak dihitung
+  const kuotaMurid = schoolData?.kuota_murid ?? null;
+  const jumlahMuridAktif = siswaList.filter((s) => (s.status || 'aktif') === 'aktif').length;
+  const isKuotaMuridPenuh = kuotaMurid !== null && jumlahMuridAktif >= kuotaMurid;
+  const kuotaPenuhText = `Kuota murid aktif paket sekolah sudah penuh (${jumlahMuridAktif}/${kuotaMurid}). Ubah status murid yang lulus/pindah, atau hubungi Administrator SIMFONI untuk meningkatkan paket.`;
 
   // Set default filter kelompok ke kelas guru jika bukan 'Semua'
   useEffect(() => {
@@ -90,17 +94,27 @@ export default function KelolaSiswaGuru() {
 
   // Handler Simpan / Update
   const handleSaveSiswa = async (formData) => {
+    const wasAktif = selectedSiswa ? (selectedSiswa.status || 'aktif') === 'aktif' : false;
+    const willAktif = (formData.status || 'aktif') === 'aktif';
+    if (!wasAktif && willAktif && isKuotaMuridPenuh) {
+      setNotification({ type: 'error', text: kuotaPenuhText });
+      return;
+    }
     setActionLoading(true);
     try {
       if (selectedSiswa) {
-        // Update
-        const docRef = doc(db, 'students', selectedSiswa.id);
+        // Update (counter kuota ikut disesuaikan bila status aktif berubah)
         const updatePayload = {
           ...formData,
           updated_at: serverTimestamp(),
           updated_by: userData.uid
         };
-        const { queued } = await commitWrite(updateDoc(docRef, updatePayload));
+        const { queued } = await saveStudent({
+          schoolId: userData.school_id,
+          studentId: selectedSiswa.id,
+          prevStatus: selectedSiswa.status,
+          data: updatePayload,
+        });
 
         logActivity({
           schoolId: userData.school_id,
@@ -125,7 +139,10 @@ export default function KelolaSiswaGuru() {
           created_at: serverTimestamp(),
           updated_at: serverTimestamp()
         };
-        const { queued } = await commitWrite(addDoc(collection(db, 'students'), createPayload));
+        const { id: newId, queued } = await saveStudent({
+          schoolId: userData.school_id,
+          data: createPayload,
+        });
 
         logActivity({
           schoolId: userData.school_id,
@@ -133,7 +150,7 @@ export default function KelolaSiswaGuru() {
           actorNama: userData.nama,
           action: 'ADD_STUDENT',
           recordType: 'students',
-          recordId: 'new',
+          recordId: newId,
           detail: { nama: formData.nama_lengkap, kelompok: formData.kelompok }
         });
 
@@ -150,7 +167,9 @@ export default function KelolaSiswaGuru() {
       console.error('Gagal menyimpan data siswa:', err);
       setNotification({
         type: 'error',
-        text: 'Terjadi kesalahan saat menyimpan data murid. Silakan coba lagi.'
+        text: err.code === 'permission-denied'
+          ? 'Ditolak server: kuota murid paket sudah penuh atau data kuota sekolah belum disinkronkan Administrator.'
+          : 'Terjadi kesalahan saat menyimpan data murid. Silakan coba lagi.'
       });
     } finally {
       setActionLoading(false);
@@ -162,7 +181,11 @@ export default function KelolaSiswaGuru() {
     if (!siswaToDelete) return;
     setActionLoading(true);
     try {
-      await commitWrite(deleteDoc(doc(db, 'students', siswaToDelete.id)));
+      await deleteStudent({
+        schoolId: userData.school_id,
+        studentId: siswaToDelete.id,
+        status: siswaToDelete.status,
+      });
 
       logActivity({
         schoolId: userData.school_id,
@@ -218,12 +241,16 @@ export default function KelolaSiswaGuru() {
               Daftar Murid Kelas 🌸
             </h1>
             <p className="text-xs md:text-sm text-orange-100 max-w-xl mt-1 leading-relaxed">
-              Kelola data 21 anak didik secara mandiri. Guru kelas dapat langsung menambah anak baru, memperbarui kontak orang tua, atau mencatat kebutuhan khusus anak.
+              Kuota murid aktif: <strong>{jumlahMuridAktif} / {formatKuota(kuotaMurid)}</strong>. Guru kelas dapat langsung menambah anak baru, memperbarui kontak orang tua, atau mencatat kebutuhan khusus anak.
             </p>
           </div>
 
           <button
             onClick={() => {
+              if (isKuotaMuridPenuh) {
+                setNotification({ type: 'error', text: kuotaPenuhText });
+                return;
+              }
               setSelectedSiswa(null);
               setModalFormOpen(true);
             }}

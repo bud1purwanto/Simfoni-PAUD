@@ -120,7 +120,9 @@ firebase deploy --only firestore:rules,firestore:indexes,storage
 ```
 * Saat deploy `storage.rules` pertama kali, setujui permintaan izin *cross-service rules* (Storage membaca `users` di Firestore).
 * Indeks komposit `attendance`/`journals` (`school_id` + `tanggal`) wajib ada untuk halaman Rekap per bulan, dan `audit_logs` (`school_id` + `timestamp` desc) untuk Riwayat Aktivitas Kepsek.
-* **Setelah deploy rules versi kuota-server**, Superadmin wajib login sekali dan membuka Dashboard agar counter `jumlah_guru_aktif` setiap sekolah tersinkron; sebelum itu Kepsek tidak dapat menambah guru.
+* **Setelah deploy rules versi kuota-server & paket dinamis**:
+  1. Superadmin login dan membuka menu **Paket Langganan** (`/superadmin/paket`) lalu klik **"Muat Paket Bawaan"** bila koleksi `plans` belum diinisialisasi.
+  2. Buka **Dashboard Superadmin** sekali agar counter `jumlah_guru_aktif` dan `jumlah_murid_aktif` setiap sekolah terinisialisasi; sebelum itu penambahan guru/murid baru oleh Kepsek/Guru akan ditolak oleh rules.
 
 ### 4.2a. Service Worker (PWA)
 `public/sw.js` didaftarkan otomatis pada build produksi. Saat mengubah strategi cache, naikkan konstanta `CACHE` (mis. `simfoni-shell-v2`) agar cache lama dibersihkan. Aset Vite ber-hash sehingga rilis baru tetap terambil (navigasi selalu *network-first*).

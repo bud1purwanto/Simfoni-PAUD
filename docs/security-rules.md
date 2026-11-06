@@ -65,6 +65,8 @@ classDiagram
 | **Buat Akun Kepala Sekolah** | ❌ Dilarang | ❌ Dilarang | ✅ Ya (Secondary Auth) |
 | **Melihat Audit Trail (`audit_logs`)** | ❌ Dilarang | ✅ Ya (sekolah sendiri) | ✅ Ya (global) |
 | **Kelola Master Data 21 Siswa** | ✅ Ya (Dinamis: input & kelola murid di kelasnya) | ✅ Ya (seluruh kelas sekolah) | ✅ Ya (global) |
+| **Kelola Paket Langganan (`plans`)** | ❌ Read-only | ❌ Read-only | ✅ Ya (CRUD Penuh) |
+| **Ubah Kuota Murid Sekolah** | ❌ Dilarang | ❌ Dilarang | ✅ Ya |
 | **Input Presensi Harian Siswa** | ✅ Ya (kelas sendiri) | ✅ Ya (monitoring & input) | ✅ Ya |
 | **Unggah Perangkat Ajar (RPPH)** | ✅ Ya (kelas sendiri) | ❌ Read & Review | ✅ Ya |
 | **Validasi / Telaah RPPH** | ❌ Dilarang | ✅ Ya (sekolah sendiri) | ✅ Ya |
@@ -100,6 +102,8 @@ Prinsip utama implementasi:
 5. **Rentang tanggal presensi**: absen hadir hanya untuk tanggal hari ini (toleransi sinkron offline 3 hari); izin/sakit −7 s.d. +30 hari.
 6. **Kuota guru ditegakkan server**: pembuatan, aktivasi, dan nonaktivasi guru oleh Kepsek WAJIB satu batch dengan perubahan `schools.jumlah_guru_aktif` (+1/−1) dan `counter_ref_uid`. Rules memverifikasi selisih status guru via `get()`/`getAfter()` dan menolak bila counter melebihi `kuota_guru`. Sekolah tanpa counter (data lama) menolak pendaftaran sampai disinkronkan Superadmin.
 7. **`get` dokumen yang belum ada**: `resource == null`, sehingga cek "sudah absen hari ini?" diizinkan khusus untuk ID berpola `{school_id}_{YYYY-MM-DD}_{uid}` milik sendiri.
+8. **Kuota murid ditegakkan server**: penambahan atau pengaktifan murid aktif oleh Guru/Kepsek WAJIB satu batch dengan pembaruan `schools.jumlah_murid_aktif` (+1/−1) dan `murid_counter_ref`. Rules memverifikasi status murid via `get()`/`getAfter()` dan menolak bila counter melebihi `kuota_murid` (kecuali `null`).
+9. **Koleksi `plans`**: seluruh pengguna login dapat membaca untuk feature gating; penulisan eksklusif Superadmin.
 
 Isi lengkap berkas [`firestore.rules`](../firestore.rules):
 

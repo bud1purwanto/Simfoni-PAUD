@@ -93,6 +93,7 @@ export default function LaporanLainGuru() {
   const [activeSpeechField, setActiveSpeechField] = useState(null); // 'deskripsi' | 'hasil'
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [notification, setNotification] = useState(null);
 
   // Speech to Text hook
   const { isListening, transcript, error: speechError, startListening, stopListening, resetTranscript } = useSpeechToText();
@@ -250,7 +251,10 @@ export default function LaporanLainGuru() {
 
       resetForm();
       setModalOpen(false);
-      if (queued) window.alert(`Laporan dicatat${QUEUED_SUFFIX}.`);
+      setNotification({
+        type: 'success',
+        text: queued ? `Laporan dicatat${QUEUED_SUFFIX}.` : 'Laporan baru berhasil disimpan!',
+      });
     } catch (err) {
       console.error('Gagal menyimpan laporan:', err);
       setSubmitError(err.message || 'Terjadi kesalahan saat menyimpan laporan.');
@@ -318,6 +322,33 @@ export default function LaporanLainGuru() {
           </button>
         </div>
       </div>
+
+      {/* Notifikasi Status Aksi */}
+      {notification && (
+        <div
+          className={`p-4 rounded-2xl border flex items-center justify-between text-xs font-bold animate-in fade-in duration-200 ${
+            notification.type === 'error'
+              ? 'bg-rose-50 border-rose-200 text-rose-800'
+              : 'bg-emerald-50 border-emerald-200 text-emerald-800'
+          }`}
+        >
+          <div className="flex items-center space-x-2">
+            {notification.type === 'error' ? (
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+            ) : (
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            )}
+            <span>{notification.text}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setNotification(null)}
+            className="p-1 rounded-lg hover:bg-black/5 transition"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
 
       {/* Tabs Filter Kategori */}
       <div className="bg-white rounded-3xl p-4 md:p-5 border border-slate-200/80 shadow-sm">

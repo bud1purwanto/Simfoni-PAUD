@@ -22,6 +22,7 @@ import { useAuth } from '../../context/AuthContext';
 import { formatTanggalIndo } from '../../utils/formatters';
 import { runAutoRetentionIfDue } from '../../utils/logRetention';
 import { syncGuruCounters } from '../../utils/quotaSync';
+import { getPlan } from '../../utils/planConfig';
 import { sisaHariLangganan, isLanggananKedaluwarsa } from '../../utils/schoolConfig';
 
 export default function DashboardSuperadmin() {
@@ -323,7 +324,7 @@ export default function DashboardSuperadmin() {
                       </td>
                       <td className="py-3.5 px-4 text-center">
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-amber-50 text-amber-700 border border-amber-200/60">
-                          {s.paket_langganan || 'trial'}
+                          {getPlan(s.paket_langganan).nama}
                         </span>
                       </td>
                       <td className="py-3.5 px-4 text-center font-bold text-slate-700">

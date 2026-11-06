@@ -49,8 +49,8 @@ const TASK_STATUS_STYLE = {
 };
 
 export default function ValidasiLaporan() {
-  const { userData, schoolData } = useAuth();
-  const isProPlan = schoolData?.paket_langganan === 'pro';
+  const { userData, schoolData, hasFeature } = useAuth();
+  const isProPlan = hasFeature('bulk_approval');
 
   const [activeTab, setActiveTab] = useState('jurnal'); // 'jurnal' | 'koreksi' | 'tugas'
   const [journals, setJournals] = useState([]);
@@ -378,7 +378,8 @@ export default function ValidasiLaporan() {
       setNotification({ type: 'success', text: `Tanggapan untuk "${selectedTask.judul}" tersimpan.` });
       setSelectedTask(null);
     } catch (err) {
-      alert('Gagal menyimpan tanggapan: ' + err.message);
+      console.error('Error responding task/issue:', err);
+      setNotification({ type: 'error', text: 'Gagal menyimpan tanggapan: ' + err.message });
     } finally {
       setSavingTask(false);
     }
@@ -517,7 +518,7 @@ export default function ValidasiLaporan() {
                 ) : (
                   <div className="flex items-center space-x-1.5 px-3 py-2 bg-amber-50/70 border border-amber-200/80 rounded-xl text-amber-900 text-xs font-bold shrink-0">
                     <Lock className="w-3.5 h-3.5 text-amber-600 stroke-[2.5]" />
-                    <span>Setujui Sekaligus (Khusus Paket PRO)</span>
+                    <span>Setujui Sekaligus (belum termasuk paket sekolah)</span>
                   </div>
                 )
               )}

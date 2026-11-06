@@ -190,6 +190,10 @@ Bila Worker belum dikonfigurasi (mis. `npm run dev`), klien (`src/utils/adminApi
 ### 3.2a. Penegakan Kuota Guru di Server (Counter + Batch)
 `createGuruAccountByKepsek` dan `toggleStatusGuruByKepsek` menulis dokumen guru **dan** `schools.jumlah_guru_aktif` (`increment(±1)`, `counter_ref_uid`) dalam satu `writeBatch`. Security Rules memverifikasi selisih status guru dengan `get()`/`getAfter()` dan menolak bila melebihi `kuota_guru` — tanpa Cloud Functions. `src/utils/quotaSync.js` menyelaraskan counter otomatis saat Superadmin membuka Dashboard/Kelola Sekolah.
 
+### 3.2b. Penegakan Kuota Murid di Server & Paket Dinamis (`studentWrites.js`, `planConfig.js`)
+* **Kuota Murid Dinamis:** Penambahan murid aktif atau pengaktifan kembali murid mutasi/lulus dikelola via helper `saveStudent()` dan `deleteStudent()` (`src/utils/studentWrites.js`). Operasi ini memutasi dokumen murid dan counter `schools.jumlah_murid_aktif` (`increment(±1)`, `murid_counter_ref`) dalam satu `writeBatch`. Security Rules menegakkan batas `kuota_murid` (kecuali `null` = tanpa batas). Murid berstatus `lulus` atau `mutasi` tidak memakan kuota.
+* **Plan Feature Gating:** Dikelola terpusat di `src/utils/planConfig.js` dan pembungkus komponen `src/components/layout/FeatureGate.jsx`. Koleksi `plans` disinkronkan secara realtime oleh `AuthContext.jsx` ke dalam status `plan` dan fungsi `hasFeature(key)`. Halaman Superadmin `/superadmin/paket` (`KelolaPaket.jsx`) menyediakan kontrol penuh pengeditan tier paket langganan.
+
 ### 3.3. Konfigurasi Operasional Sekolah (`schoolConfig.js`)
 Jam masuk/pulang, toleransi keterlambatan, hari kerja, dan daftar kelompok kelas dibaca dari dokumen `schools` melalui helper `src/utils/schoolConfig.js` (dengan nilai bawaan). Seluruh perhitungan status `terlambat`, menit keterlambatan, dan hari kerja efektif rekap memakai helper ini. Label kelompok lama (`Kelompok Bermain (KB)`, `Semua Kelompok`) dinormalisasi agar relasi jadwal ↔ jurnal ↔ guru konsisten.
 

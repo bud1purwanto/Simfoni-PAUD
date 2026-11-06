@@ -31,6 +31,7 @@ import {
 import { db } from '../../config/firebase';
 import { useAuth } from '../../context/AuthContext';
 import { countLogsOlderThan, purgeLogsOlderThan, recordCleanup, runAutoRetentionIfDue } from '../../utils/logRetention';
+import ModalKonfirmasi from '../../components/ui/ModalKonfirmasi';
 
 const LOG_DISPLAY_LIMIT = 500;
 const PURGE_OPTIONS = [
@@ -62,6 +63,7 @@ export default function ManajemenLog() {
 
   // Modal Purge
   const [purgeModalOpen, setPurgeModalOpen] = useState(false);
+  const [confirmPurgeOpen, setConfirmPurgeOpen] = useState(false);
   const [purgeDaysOption, setPurgeDaysOption] = useState(60);
   const [customDays, setCustomDays] = useState(180);
   const [purgeCounts, setPurgeCounts] = useState({});
@@ -163,20 +165,19 @@ export default function ManajemenLog() {
     }
   };
 
-  // Eksekusi Pembersihan Log Manual (Manual Purge)
-  const handleExecutePurge = async () => {
-    const days = resolvePurgeDays(purgeDaysOption);
+  // Validasi sebelum konfirmasi Purge
+  const handleOpenPurgeConfirm = () => {
     const toDeleteCount = purgeCounts[purgeDaysOption];
     if (toDeleteCount === 0) {
       showNotification('error', 'Tidak ada dokumen log yang memenuhi kriteria untuk dihapus.');
       return;
     }
+    setConfirmPurgeOpen(true);
+  };
 
-    const label = days === 0 ? 'SELURUH' : `lebih lama dari ${days} hari`;
-    if (!window.confirm(`Yakin ingin menghapus permanen ${toDeleteCount ?? ''} dokumen log ${label}? Tindakan ini tidak dapat dibatalkan.`)) {
-      return;
-    }
-
+  // Eksekusi Pembersihan Log Manual (Manual Purge)
+  const executeConfirmedPurge = async () => {
+    const days = resolvePurgeDays(purgeDaysOption);
     setIsPurging(true);
 
     try {
@@ -184,6 +185,7 @@ export default function ManajemenLog() {
       await recordCleanup({ deletedCount, days, actor: userData, mode: 'manual' });
 
       showNotification('success', `Berhasil membersihkan ${deletedCount} dokumen log usang!`);
+      setConfirmPurgeOpen(false);
       setPurgeModalOpen(false);
       setPurgeCounts({});
     } catch (err) {
@@ -510,7 +512,7 @@ export default function ManajemenLog() {
               </button>
               <button
                 type="button"
-                onClick={handleExecutePurge}
+                onClick={handleOpenPurgeConfirm}
                 disabled={isPurging}
                 className="px-5 py-2 text-xs font-extrabold text-white bg-rose-500 hover:bg-rose-600 rounded-xl shadow-md shadow-rose-500/20 active:scale-95 transition disabled:opacity-50"
               >
@@ -521,6 +523,19 @@ export default function ManajemenLog() {
         </div>,
         document.body
       )}
+
+      {/* Modal Konfirmasi Purge Log */}
+      <ModalKonfirmasi
+        isOpen={confirmPurgeOpen}
+        title="Konfirmasi Pembersihan Log"
+        message={`Apakah Anda yakin ingin menghapus permanen ${purgeCounts[purgeDaysOption] ?? ''} dokumen log ${resolvePurgeDays(purgeDaysOption) === 0 ? 'SELURUHNYA' : `lebih lama dari ${resolvePurgeDays(purgeDaysOption)} hari`}? Tindakan ini tidak dapat dibatalkan.`}
+        confirmText="Ya, Hapus Log Usang"
+        cancelText="Batal"
+        type="danger"
+        loading={isPurging}
+        onConfirm={executeConfirmedPurge}
+        onClose={() => setConfirmPurgeOpen(false)}
+      />
     </div>
   );
 }

@@ -78,21 +78,26 @@ Masing-masing peran memiliki dashboard eksklusif yang dirancang spesifik sesuai 
 * **Pintasan Cepat:** Tombol **"+ Tambah Sekolah & Kepsek Baru"** untuk onboarding sekolah mitra secara instan.
 
 ### 3.2. Kelola Sekolah / Tenant (`/superadmin/sekolah`)
-* **Tabel & Kartu Sekolah Mitra:** Menampilkan Nama Sekolah, Kota, Paket Langganan (`trial`, `basic`, `pro`), Pemakaian Kuota Guru (contoh: `4 / 5 Guru`), Masa Berlaku, dan Status Akun.
+* **Tabel & Kartu Sekolah Mitra:** Menampilkan Nama Sekolah, Kota, Paket Langganan (`trial`, `rintisan`, `sahabat`, `mandiri`), Pemakaian Kuota Guru & Murid (contoh: `4 / 6 Guru • 22 / 60 Murid`), Masa Berlaku, dan Status Akun.
 * **Modal Tambah / Edit Sekolah:**
-  * Input field: Nama Sekolah, NPSN, Alamat Lengkap, Kota, Telepon, Nama Kepala Sekolah Resmi (untuk penandatangan dokumen PDF), NIP/NUPTK, Paket Langganan, Kuota Maksimum Guru, Tanggal Akhir Masa Berlaku, Unggah Logo Sekolah, dan **Unggah Stempel/Cap Digital Sekolah (PNG Transparan)**.
-  * **Fitur Durasi Trial Dinamis (Dynamic Days by Admin):** Saat paket `trial` dipilih, Superadmin memiliki preset durasi cepat (+7, +14, +30, +60 hari) yang secara dinamis menghitung tanggal kedaluwarsa `berlaku_hingga` dan kuota guru otomatis.
-* **Sistem Gating Fitur Berdasarkan Paket (*Plan Feature Gating*):**
-  * **Paket Trial:** Presensi dan Jurnal KBM dasar dengan durasi dinamis oleh Admin. Menampilkan banner floating trial reminder di dashboard sekolah.
-  * **Paket Basic (Standard):** Kuota hingga 10 Guru, Presensi Dual Timestamp, Jurnal Kurikulum Merdeka + Dikte Suara (Voice-to-Text `id-ID`), kompresi foto kamera HP (< 300 KB), Ekspor PDF Ringkas Kop Resmi & Stempel Transparan, serta Share to WhatsApp.
-  * **Paket Pro (Full Akreditasi):** Seluruh fitur Basic ditambah fitur eksklusif:
-    1. **Ekspor Portofolio Foto BAN-PDM:** Bukti fisik akreditasi PAUD lengkap dengan foto dan capaian pembelajaran.
-    2. **Ekspor Spreadsheet Excel (.xlsx):** Rekapitulasi presensi bulanan untuk honorarium / uang transport guru.
-    3. **Fitur "Setujui Sekaligus" (*Bulk Approval*):** Review dan persetujuan massal jurnal KBM sekali klik.
+  * Input field: Nama Sekolah, NPSN, Alamat Lengkap, Kota, Telepon, Nama Kepala Sekolah Resmi (untuk penandatangan dokumen PDF), NIP/NUPTK, Paket Langganan, Kuota Maksimum Guru, Kuota Maksimum Murid (kosong = tanpa batas), Tanggal Akhir Masa Berlaku, Unggah Logo Sekolah, dan **Unggah Stempel/Cap Digital Sekolah (PNG Transparan)**.
+  * Memilih paket langganan otomatis mengisi saran default kuota guru, kuota murid, serta durasi trial jika memilih paket uji coba.
+* **Sistem Gating Fitur Berdasarkan Paket Dinamis (*Plan Feature Gating*):**
+  * Konfigurasi fitur disimpan di koleksi `plans` dan dapat disesuaikan Superadmin di `/superadmin/paket`.
+  * **Uji Coba (Trial - 14 Hari):** Setara paket Rintisan (kuota 3 Guru / 25 Murid), presensi, jurnal KBM, data & presensi murid, PDF ber-kop standar (tanpa stempel).
+  * **Rintisan:** Kuota 3 Guru / 25 Murid, Presensi Dual Timestamp, Jurnal Kurikulum Merdeka + Dikte Suara (Voice-to-Text `id-ID`), kompresi foto kamera HP (< 300 KB), Ekspor PDF Ringkas Kop Resmi Standar (tanpa stempel), serta Share to WhatsApp.
+  * **Sahabat PAUD:** Kuota 6 Guru / 60 Murid, seluruh fitur Rintisan ditambah RPPH/Modul Ajar, Asesmen Capaian Murid, Supervisi Guru, Stempel Digital PDF, Ekspor Rekap Excel honorarium, Portofolio Foto BAN-PDM, dan Review Sekaligus (*Bulk Approval*).
+  * **Mandiri Plus:** Kuota 12 Guru / Tanpa Batas Murid, seluruh fitur terlengkap untuk PAUD mandiri skala besar.
 * **Fitur Suspend / Nonaktifkan Sekolah:**
   * Superadmin dapat menonaktifkan status langganan sekolah (`status_langganan: "nonaktif"`), atau sistem otomatis menonaktifkan sekolah jika tanggal `berlaku_hingga` telah terlewati. Seluruh staf (Kepsek dan Guru) sekolah tersebut otomatis tidak dapat mengakses sistem dan diarahkan ke layar penangguhan layanan.
 
-### 3.3. Kelola Akun Kepala Sekolah (`/superadmin/kepsek`)
+### 3.3. Kelola Paket Langganan Dinamis (`/superadmin/paket`)
+* Pengelolaan penuh paket SaaS (nama, deskripsi, harga bulanan/tahunan, kuota guru, kuota murid, status uji coba & durasi, urutan tampil, status aktif).
+* Toggle checklist fitur opsional: `rpph`, `asesmen`, `supervisi`, `stempel_pdf`, `excel`, `portofolio`, `bulk_approval`. Fitur core (presensi, jurnal, data murid, WhatsApp) selalu aktif.
+* Tombol **"Muat Paket Bawaan"** bila basis data masih kosong.
+* Konfirmasi otomatis untuk menerapkan pembaruan kuota paket ke sekolah-sekolah aktif yang sedang berlangganan paket tersebut.
+
+### 3.4. Kelola Akun Kepala Sekolah (`/superadmin/kepsek`)
 * Pendaftaran akun Kepala Sekolah baru menggunakan **Secondary Firebase App Instance** (`secondaryAuth`) sehingga sesi login Superadmin tidak terganggu.
 * Form pendaftaran: Pilih Sekolah Mitra (`school_id`), Nama Lengkap Kepala Sekolah, Email Login, dan Password Default.
 * **Fitur Reset Password Kepala Sekolah:** Modal reset interaktif di mana Superadmin dapat menentukan kata sandi sementara baru (default prefilled: `Kepsek1234!`), diproses aman via Cloudflare Worker `/api/admin/reset-password`. Status `wajib_ganti_password: true` tetap aktif agar Kepala Sekolah wajib membuat sandi pribadi saat login.

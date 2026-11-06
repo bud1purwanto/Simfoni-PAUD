@@ -38,6 +38,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useSpeechToText } from '../../hooks/useSpeechToText';
 import { uploadCompressedImage } from '../../utils/imageCompressor';
 import ProgressBar from '../../components/ui/ProgressBar';
+import ModalKonfirmasi from '../../components/ui/ModalKonfirmasi';
 import { getKbmTemplates, getTemplateById } from '../../utils/kbmTemplates';
 import { formatTanggalIndo, createWhatsAppShareUrl, formatKbmToWhatsAppMessage, getLocalDateString } from '../../utils/formatters';
 import { logActivity } from '../../utils/auditLogger';
@@ -63,6 +64,7 @@ export default function JurnalGuru() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [notification, setNotification] = useState(null);
+  const [deleteDraftModalOpen, setDeleteDraftModalOpen] = useState(false);
 
   // Form Fields
   const [editingId, setEditingId] = useState(null);
@@ -296,19 +298,24 @@ export default function JurnalGuru() {
   };
 
   // Hapus Draf Jurnal
-  const handleDeleteDraft = async () => {
+  const handleDeleteDraft = () => {
     if (!editingId || editingStatus !== 'draf') return;
-    if (!window.confirm('Hapus draf jurnal ini? Tindakan tidak dapat dibatalkan.')) return;
+    setDeleteDraftModalOpen(true);
+  };
+
+  const executeDeleteDraft = async () => {
+    if (!editingId || editingStatus !== 'draf') return;
     setSaving(true);
     try {
       await commitWrite(deleteDoc(doc(db, 'journals', editingId)));
       fotos.forEach((f) => f.storage_path && deleteObject(storageRef(storage, f.storage_path)).catch(() => {}));
-      setNotification({ type: 'success', text: 'Draf jurnal dihapus.' });
+      setNotification({ type: 'success', text: 'Draf jurnal berhasil dihapus.' });
       setJournals(prev => prev.filter((j) => j.id !== editingId));
+      setDeleteDraftModalOpen(false);
       setViewMode('list');
     } catch (err) {
       console.error('Error deleting draft:', err);
-      setNotification({ type: 'error', text: 'Gagal menghapus draf.' });
+      setNotification({ type: 'error', text: 'Gagal menghapus draf: ' + err.message });
     } finally {
       setSaving(false);
     }
@@ -915,6 +922,19 @@ export default function JurnalGuru() {
           </div>}
         </fieldset>
       )}
+
+      {/* Modal Konfirmasi Hapus Draf */}
+      <ModalKonfirmasi
+        isOpen={deleteDraftModalOpen}
+        title="Hapus Draf Jurnal"
+        message="Apakah Anda yakin ingin menghapus draf jurnal ini? Seluruh catatan yang belum dikirim akan hilang dan tindakan ini tidak dapat dibatalkan."
+        confirmText="Ya, Hapus Draf"
+        cancelText="Batal"
+        type="danger"
+        loading={saving}
+        onConfirm={executeDeleteDraft}
+        onClose={() => setDeleteDraftModalOpen(false)}
+      />
     </div>
   );
 }

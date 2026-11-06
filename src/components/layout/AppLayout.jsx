@@ -19,6 +19,7 @@ import {
   ShieldCheck,
   GraduationCap,
   Sparkles,
+  Lock,
   KeyRound,
   History,
   Award,
@@ -33,7 +34,7 @@ import { sisaHariLangganan } from '../../utils/schoolConfig';
 import { formatTanggalIndo } from '../../utils/formatters';
 
 export default function AppLayout() {
-  const { userData, schoolData, logout, needsPasswordChange } = useAuth();
+  const { userData, schoolData, logout, needsPasswordChange, plan, hasFeature } = useAuth();
   const navigate = useNavigate();
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
   const [logoutModalOpen, setLogoutModalOpen] = useState(false);
@@ -61,6 +62,7 @@ export default function AppLayout() {
   const superadminNavItems = [
     { label: 'Dashboard', path: '/superadmin/dashboard', icon: Home },
     { label: 'Sekolah Mitra', path: '/superadmin/sekolah', icon: School },
+    { label: 'Paket Langganan', path: '/superadmin/paket', icon: Sparkles },
     { label: 'Akun Kepsek', path: '/superadmin/kepsek', icon: Users },
     { label: 'Audit Log & Retensi', path: '/superadmin/logs', icon: ShieldAlert },
   ];
@@ -72,10 +74,10 @@ export default function AppLayout() {
     { label: 'Presensi Guru', path: '/kepsek/presensi-guru', icon: Clock, desktopOnly: true },
     { label: 'Kelola Guru', path: '/kepsek/guru', icon: Users },
     { label: 'Presensi Murid', path: '/kepsek/presensi-siswa', icon: CheckSquare },
-    { label: 'Validasi RPPH', path: '/kepsek/validasi-rpph', icon: BookOpen },
+    { label: 'Validasi RPPH', path: '/kepsek/validasi-rpph', icon: BookOpen, feature: 'rpph' },
     { label: 'Data Murid', path: '/kepsek/siswa', icon: GraduationCap, desktopOnly: true },
-    { label: 'Supervisi Guru', path: '/kepsek/supervisi', icon: ClipboardCheck, desktopOnly: true },
-    { label: 'Capaian Murid', path: '/kepsek/asesmen-siswa', icon: Award, desktopOnly: true },
+    { label: 'Supervisi Guru', path: '/kepsek/supervisi', icon: ClipboardCheck, desktopOnly: true, feature: 'supervisi' },
+    { label: 'Capaian Murid', path: '/kepsek/asesmen-siswa', icon: Award, desktopOnly: true, feature: 'asesmen' },
     { label: 'Validasi KBM', path: '/kepsek/validasi', icon: CheckSquare, desktopOnly: true },
     { label: 'Jadwal Sekolah', path: '/kepsek/jadwal', icon: Calendar, desktopOnly: true },
     { label: 'Rekap & PDF/Excel', path: '/kepsek/rekap', icon: FileText, desktopOnly: true },
@@ -89,9 +91,9 @@ export default function AppLayout() {
     { label: 'Absen Guru', path: '/guru/presensi', icon: Clock },
     { label: 'Absen Siswa', path: '/guru/presensi-siswa', icon: CheckSquare },
     { label: 'Murid', path: '/guru/siswa', icon: Users },
-    { label: 'Asesmen', path: '/guru/asesmen', icon: Award },
-    { label: 'Hasil Supervisi', path: '/guru/supervisi', icon: ClipboardCheck, desktopOnly: true },
-    { label: 'Modul RPPH', path: '/guru/rpph', icon: BookOpen, desktopOnly: true },
+    { label: 'Asesmen', path: '/guru/asesmen', icon: Award, feature: 'asesmen' },
+    { label: 'Hasil Supervisi', path: '/guru/supervisi', icon: ClipboardCheck, desktopOnly: true, feature: 'supervisi' },
+    { label: 'Modul RPPH', path: '/guru/rpph', icon: BookOpen, desktopOnly: true, feature: 'rpph' },
     { label: 'Jurnal KBM', path: '/guru/jurnal', icon: BookOpen, desktopOnly: true },
     { label: 'Jadwal', path: '/guru/jadwal', icon: Calendar, desktopOnly: true },
     { label: 'Tugas & Kendala', path: '/guru/laporan', icon: AlertTriangle, desktopOnly: true },
@@ -101,6 +103,15 @@ export default function AppLayout() {
   if (role === 'superadmin') currentNavItems = superadminNavItems;
   if (role === 'kepsek') currentNavItems = kepsekNavItems;
 
+  const isLocked = (item) => item.feature && !hasFeature(item.feature);
+
+  // Bottom-nav HP (maks. 5): menu utama yang tidak terkunci paket; slot kosong diisi menu
+  // desktop-only yang tersedia (mis. Jurnal KBM pada paket tanpa Asesmen).
+  const mobileNavItems = [
+    ...currentNavItems.filter((item) => !item.desktopOnly && !isLocked(item)),
+    ...currentNavItems.filter((item) => item.desktopOnly && !isLocked(item)),
+  ].slice(0, 5);
+
   // Nama Sekolah & Branding Dinamis
   const dynamicSchoolName = role === 'superadmin' 
     ? 'SIMFONI PAUD SaaS Master'
@@ -108,7 +119,7 @@ export default function AppLayout() {
 
   // Pengingat masa langganan (trial / masa tenggang / segera berakhir)
   const sisaHari = role === 'superadmin' ? null : sisaHariLangganan(schoolData);
-  const isTrial = schoolData?.paket_langganan === 'trial';
+  const isTrial = !!plan?.is_trial;
   const isMasaTenggang = schoolData?.status_langganan === 'masa_tenggang';
   const showLanggananBanner =
     role !== 'superadmin' && (isTrial || isMasaTenggang || (sisaHari !== null && sisaHari <= 14));
@@ -219,7 +230,8 @@ export default function AppLayout() {
                   }
                 >
                   <Icon className="w-4 h-4 stroke-[2.2]" />
-                  <span>{item.label}</span>
+                  <span className="flex-1">{item.label}</span>
+                  {isLocked(item) && <Lock className="w-3.5 h-3.5 opacity-60" aria-label="Terkunci paket" />}
                 </NavLink>
               );
             })}
@@ -228,6 +240,7 @@ export default function AppLayout() {
               <div className="text-[10px] text-slate-400 leading-relaxed">
                 <span className="font-bold text-orange-900/60">SIMFONI PAUD v1.0</span><br />
                 SaaS Multi-Tenant Edition
+                {plan && role !== 'superadmin' && (<><br />Paket: <span className="font-bold text-orange-900/70">{plan.nama}</span></>)}
               </div>
             </div>
           </div>
@@ -260,7 +273,7 @@ export default function AppLayout() {
       {/* 5. Bottom Navigation Bar Mobile (Floating Pill Ramah Jempol di < 768px) */}
       <nav className="md:hidden fixed bottom-3 left-3 right-3 bg-white/95 backdrop-blur-md border border-orange-200/70 shadow-2xl shadow-orange-950/10 rounded-3xl z-30 px-1.5 py-1.5">
         <div className="flex items-center justify-around">
-          {currentNavItems.filter((item) => !item.desktopOnly).slice(0, 5).map((item) => {
+          {mobileNavItems.map((item) => {
             const Icon = item.icon;
             return (
               <NavLink

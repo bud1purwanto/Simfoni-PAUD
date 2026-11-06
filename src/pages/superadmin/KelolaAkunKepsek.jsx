@@ -141,12 +141,26 @@ export default function KelolaAkunKepsek() {
     }
 
     const existingKepsek = kepsekList.find((k) => k.school_id === formSchoolId && k.status_akun === 'aktif');
-    if (existingKepsek && !window.confirm(
-      `Sekolah ini sudah memiliki Kepala Sekolah aktif (${existingKepsek.nama}). Tetap tambahkan akun Kepsek kedua?`
-    )) {
+    if (existingKepsek) {
+      setConfirmModal({
+        isOpen: true,
+        title: 'Konfirmasi Penambahan Kepala Sekolah',
+        message: `Sekolah ini sudah memiliki Kepala Sekolah aktif (${existingKepsek.nama}). Apakah Anda yakin ingin menambahkan akun Kepala Sekolah kedua?`,
+        confirmText: 'Ya, Tetap Tambahkan',
+        type: 'warning',
+        loading: false,
+        onConfirm: () => {
+          setConfirmModal((prev) => ({ ...prev, isOpen: false }));
+          executeCreateKepsek();
+        },
+      });
       return;
     }
 
+    await executeCreateKepsek();
+  };
+
+  const executeCreateKepsek = async () => {
     setIsSubmitting(true);
 
     try {

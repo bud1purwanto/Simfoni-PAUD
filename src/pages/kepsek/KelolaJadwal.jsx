@@ -31,6 +31,7 @@ import { useAuth } from '../../context/AuthContext';
 import { logActivity } from '../../utils/auditLogger';
 import { getKelompokOptions, normalizeKelompok, KELOMPOK_SEMUA, toMinutes } from '../../utils/schoolConfig';
 import PengaturanJamSekolah from '../../components/kepsek/PengaturanJamSekolah';
+import ModalKonfirmasi from '../../components/ui/ModalKonfirmasi';
 
 const DAYS = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
 const PIC_SEMUA = 'all';
@@ -61,6 +62,8 @@ export default function KelolaJadwal() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+  const [isDeletingSchedule, setIsDeletingSchedule] = useState(false);
+  const [bentrokConfirmData, setBentrokConfirmData] = useState(null);
 
   // Form State
   const [formHari, setFormHari] = useState('Senin');
@@ -172,12 +175,15 @@ export default function KelolaJadwal() {
       (sch.kelompok === formKelompok || sch.kelompok === KELOMPOK_SEMUA || formKelompok === KELOMPOK_SEMUA) &&
       toMinutes(sch.jam_mulai) < selesai && mulai < toMinutes(sch.jam_selesai)
     );
-    if (bentrok && !window.confirm(
-      `Jadwal ini beririsan dengan "${bentrok.kegiatan}" (${bentrok.jam_mulai}-${bentrok.jam_selesai}, ${bentrok.kelompok}). Tetap simpan?`
-    )) {
+    if (bentrok) {
+      setBentrokConfirmData(bentrok);
       return;
     }
 
+    await executeSaveSchedule();
+  };
+
+  const executeSaveSchedule = async () => {
     setIsSubmitting(true);
 
     try {
@@ -233,22 +239,26 @@ export default function KelolaJadwal() {
     }
   };
 
-  const handleDeleteSchedule = async (id) => {
+  const handleDeleteSchedule = async () => {
+    if (!deleteConfirmId) return;
+    setIsDeletingSchedule(true);
     try {
-      await deleteDoc(doc(db, 'schedules', id));
+      await deleteDoc(doc(db, 'schedules', deleteConfirmId));
       logActivity({
         schoolId: userData.school_id,
         actorId: userData.uid,
         actorNama: userData.nama,
         action: 'DELETE_JADWAL',
         recordType: 'schedules',
-        recordId: id,
+        recordId: deleteConfirmId,
       });
       showNotification('success', 'Jadwal berhasil dihapus!');
       setDeleteConfirmId(null);
     } catch (err) {
       console.error('Error deleting schedule:', err);
       showNotification('error', 'Gagal menghapus jadwal: ' + err.message);
+    } finally {
+      setIsDeletingSchedule(false);
     }
   };
 
@@ -647,38 +657,34 @@ export default function KelolaJadwal() {
         document.body
       )}
 
-      {/* MODAL KONFIRMASI HAPUS JADWAL */}
-      {deleteConfirmId && createPortal(
-        <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-100 text-center">
-            <div className="w-12 h-12 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center mx-auto mb-3">
-              <Trash2 className="w-6 h-6" />
-            </div>
-            <h3 className="text-base font-extrabold text-slate-800 font-brand">
-              Hapus Sesi Jadwal?
-            </h3>
-            <p className="text-xs text-slate-500 mt-1">
-              Jadwal yang dihapus tidak dapat dipulihkan kembali. Guru pengampu tidak akan melihat jadwal ini lagi di dashboard.
-            </p>
+      {/* MODAL KONFIRMASI BENTROK JADWAL */}
+      <ModalKonfirmasi
+        isOpen={!!bentrokConfirmData}
+        title="Jadwal Beririsan (Bentrok)"
+        message={`Jadwal ini beririsan dengan kegiatan "${bentrokConfirmData?.kegiatan}" (${bentrokConfirmData?.jam_mulai} - ${bentrokConfirmData?.jam_selesai}, ${bentrokConfirmData?.kelompok}). Apakah Anda yakin tetap ingin menyimpannya?`}
+        confirmText="Ya, Tetap Simpan"
+        cancelText="Batal & Sesuaikan"
+        type="warning"
+        loading={isSubmitting}
+        onConfirm={async () => {
+          setBentrokConfirmData(null);
+          await executeSaveSchedule();
+        }}
+        onClose={() => setBentrokConfirmData(null)}
+      />
 
-            <div className="flex items-center justify-center space-x-2 mt-5">
-              <button
-                onClick={() => setDeleteConfirmId(null)}
-                className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition"
-              >
-                Batal
-              </button>
-              <button
-                onClick={() => handleDeleteSchedule(deleteConfirmId)}
-                className="px-4 py-2 text-xs font-extrabold text-white bg-rose-500 hover:bg-rose-600 rounded-xl shadow-md shadow-rose-500/20 active:scale-95 transition"
-              >
-                Ya, Hapus
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
+      {/* MODAL KONFIRMASI HAPUS JADWAL */}
+      <ModalKonfirmasi
+        isOpen={!!deleteConfirmId}
+        title="Hapus Sesi Jadwal"
+        message="Apakah Anda yakin ingin menghapus sesi jadwal ini? Jadwal yang dihapus tidak dapat dipulihkan kembali dan tidak akan muncul lagi di dashboard guru."
+        confirmText="Ya, Hapus Jadwal"
+        cancelText="Batal"
+        type="danger"
+        loading={isDeletingSchedule}
+        onConfirm={handleDeleteSchedule}
+        onClose={() => setDeleteConfirmId(null)}
+      />
     </div>
   );
 }

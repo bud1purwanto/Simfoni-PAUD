@@ -16,7 +16,8 @@ Sistem menggunakan 8 koleksi di mana seluruh dokumen operasional diisolasi mengg
 | `journals` | Auto-generated ID | Jurnal mengajar KBM harian, tagging Kurikulum Merdeka, dan dokumentasi foto. |
 | `schedules` | Auto-generated ID | Jadwal KBM mingguan kelas TK A, TK B, atau kelompok bermain per sekolah. |
 | `tasks_and_issues`| Auto-generated ID | Laporan kegiatan kedinasan, administrasi guru, dan pelaporan kendala sarpras. |
-| `students` | Auto-generated ID (`std_xxxx`) | **[Pilar 4]** Master Data 21 Siswa per sekolah (NISN, Nama, Kelompok Kelas, Orang Tua). |
+| `students` | Auto-generated ID (`std_xxxx`) | **[Pilar 4]** Master Data Siswa per sekolah (NISN, Nama, Kelompok, status aktif/lulus/mutasi). |
+| `plans` | `{id}` (trial, rintisan, sahabat, mandiri) | **[Baru]** Konfigurasi paket langganan dinamis SaaS, harga, kuota, dan daftar fitur aktif. |
 | `student_attendance` | `{school_id}_{YYYY-MM-DD}_{kelompok}` | **[Pilar 1]** Presensi kehadiran harian siswa per rombel/kelompok. |
 | `rpph_submissions` | Auto-generated ID | **[Pilar 2]** Pengumpulan & telaah perangkat ajar (RPPH/Modul Ajar) mingguan. |
 | `student_assessments` | Auto-generated ID | **[Pilar 4]** Catatan anekdot, unjuk kerja, dan capaian perkembangan murid. |
@@ -50,11 +51,14 @@ Menyimpan informasi tenant, kuota paket, dan data kop surat resmi.
   "stempel_url": "string | null (URL cap/stempel resmi sekolah PNG transparan untuk PDF)",
   "nama_kepsek_resmi": "string (Nama lengkap Kepsek untuk tanda tangan PDF)",
   "nip_kepsek": "string | null (NIP/NUPTK jika ada)",
-  "paket_langganan": "trial | basic | pro",
+  "paket_langganan": "trial | rintisan | sahabat | mandiri (legacy: basic -> sahabat, pro -> mandiri)",
   "status_langganan": "aktif | masa_tenggang | nonaktif",
-  "kuota_guru": "number (Batas maksimum akun guru, misal: 5 atau 20)",
+  "kuota_guru": "number (Batas maksimum akun guru, misal: 3, 6, 12)",
   "jumlah_guru_aktif": "number (Counter guru aktif; diubah ±1 dalam batch yang sama dengan perubahan akun guru, ditegakkan rules)",
   "counter_ref_uid": "string (UID guru yang memicu perubahan counter terakhir; dipakai rules untuk verifikasi)",
+  "kuota_murid": "number | null (Batas maksimum murid aktif, misal 25, 60, atau null untuk tanpa batas)",
+  "jumlah_murid_aktif": "number (Counter murid aktif; diubah ±1 dalam batch yang sama dengan penambahan/perubahan murid, ditegakkan rules)",
+  "murid_counter_ref": "string (ID murid yang memicu perubahan counter terakhir; diverifikasi rules)",
   "total_foto_terunggah": "number (Counter agregat jumlah foto untuk estimasi kuota)",
   "estimasi_storage_mb": "number (Estimasi akumulasi storage dalam MB)",
   "berlaku_hingga": "string (Format: YYYY-MM-DD)",
@@ -440,6 +444,42 @@ Menyimpan pengaturan tingkat platform SaaS yang hanya dapat dibaca/ditulis oleh 
 
 * **Penanda inisialisasi:** Keberadaan dokumen `general_config` menandai sistem sudah di-setup. Dokumen ini dapat di-`get` tanpa login (hanya untuk mendeteksi wizard seeder di halaman login) dan menutup jalur self-create superadmin.
 * **Periodic Retention Job:** Dijalankan di klien saat Superadmin membuka Dashboard/Manajemen Log, maksimal sekali per sesi dan hanya bila `last_cleanup_timestamp` > 24 jam (lihat `src/utils/logRetention.js`).
+
+---
+
+### 2.14. Koleksi `plans` (Paket Langganan Dinamis SaaS)
+Menyimpan konfigurasi tier langganan B2B SaaS yang dapat dikelola secara dinamis oleh `superadmin` (`/superadmin/paket`).
+
+* **Document ID:** `{id}` (contoh: `trial`, `rintisan`, `sahabat`, `mandiri`)
+* **Pengelola:** Dibuat, diubah, atau dihapus oleh `superadmin`. Dapat dibaca oleh semua pengguna terautentikasi (sebagai acuan feature gating dan label paket).
+* **Fitur Flags:** Kunci boolean untuk fitur opsional (`rpph`, `asesmen`, `supervisi`, `stempel_pdf`, `excel`, `portofolio`, `bulk_approval`). Fitur inti (*core*) seperti presensi, anti-trap, dan WA selalu aktif.
+
+```json
+{
+  "id": "string (trial | rintisan | sahabat | mandiri)",
+  "nama": "string (Contoh: Sahabat PAUD)",
+  "deskripsi": "string (Penjelasan ringkas paket)",
+  "harga_bulanan": "number (Contoh: 175000)",
+  "harga_tahunan": "number (Contoh: 1750000)",
+  "kuota_guru": "number (Batas guru, misal: 6)",
+  "kuota_murid": "number | null (Batas murid aktif, misal 60, atau null untuk tanpa batas)",
+  "is_trial": "boolean",
+  "trial_durasi_hari": "number (Default: 14)",
+  "urutan": "number (Urutan display, misal: 1, 2, 3, 4)",
+  "aktif": "boolean (true jika paket aktif ditawarkan)",
+  "fitur": {
+    "rpph": "boolean",
+    "asesmen": "boolean",
+    "supervisi": "boolean",
+    "stempel_pdf": "boolean",
+    "excel": "boolean",
+    "portofolio": "boolean",
+    "bulk_approval": "boolean"
+  },
+  "created_at": "Timestamp",
+  "updated_at": "Timestamp"
+}
+```
 
 ---
 

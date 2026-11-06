@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
@@ -18,6 +18,7 @@ import {
   serverTimestamp
 } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
+import { getPlan, planHasFeature, resolvePlanId } from '../utils/planConfig';
 import {
   DEFAULT_JAM_MASUK,
   DEFAULT_JAM_PULANG,
@@ -218,10 +219,12 @@ export const AuthProvider = ({ children }) => {
         stempel_url: null,
         nama_kepsek_resmi: '',
         nip_kepsek: '',
-        paket_langganan: 'basic',
+        paket_langganan: 'sahabat',
         status_langganan: 'aktif',
-        kuota_guru: 5,
+        kuota_guru: 6,
         jumlah_guru_aktif: 0,
+        kuota_murid: 60,
+        jumlah_murid_aktif: 0,
         total_foto_terunggah: 0,
         estimasi_storage_mb: 0,
         berlaku_hingga: `${new Date().getFullYear() + 1}-12-31`,
@@ -320,10 +323,36 @@ export const AuthProvider = ({ children }) => {
     return () => unsubscribe();
   }, [uid]);
 
+  // Paket langganan sekolah (dinamis dari koleksi `plans`, fallback ke paket bawaan).
+  // Didengarkan realtime agar perubahan paket/fitur oleh Superadmin langsung berlaku.
+  const [planDoc, setPlanDoc] = useState(null);
+  const planId = schoolData ? resolvePlanId(schoolData.paket_langganan) : null;
+  useEffect(() => {
+    setPlanDoc(null);
+    if (!planId) return undefined;
+    const unsubscribe = onSnapshot(
+      doc(db, 'plans', planId),
+      (snap) => setPlanDoc(snap.exists() ? snap.data() : null),
+      (err) => console.warn('Gagal memuat paket langganan:', err)
+    );
+    return () => unsubscribe();
+  }, [planId]);
+  const plan = useMemo(
+    () => (planId ? getPlan(planId, planDoc ? { [planId]: planDoc } : {}) : null),
+    [planId, planDoc]
+  );
+  // Superadmin tidak dibatasi paket
+  const hasFeature = useCallback(
+    (key) => userData?.role === 'superadmin' || planHasFeature(plan, key),
+    [userData?.role, plan]
+  );
+
   const value = {
     currentUser,
     userData,
     schoolData,
+    plan,
+    hasFeature,
     loading,
     isSuspended,
     needsPasswordChange,

@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/layout/ProtectedRoute';
 import AppLayout from './components/layout/AppLayout';
+import FeatureGate from './components/layout/FeatureGate';
 import Login from './pages/auth/Login';
 import SuspendedSchool from './pages/auth/SuspendedSchool';
 
@@ -18,6 +19,7 @@ import DashboardSuperadmin from './pages/superadmin/DashboardSuperadmin';
 import KelolaSekolah from './pages/superadmin/KelolaSekolah';
 import KelolaAkunKepsek from './pages/superadmin/KelolaAkunKepsek';
 import ManajemenLog from './pages/superadmin/ManajemenLog';
+import KelolaPaket from './pages/superadmin/KelolaPaket';
 
 // Modul Kepala Sekolah (Fase 6)
 import DashboardKepsek from './pages/kepsek/DashboardKepsek';
@@ -59,6 +61,7 @@ export default function App() {
               <Route path="/superadmin/sekolah" element={<KelolaSekolah />} />
               <Route path="/superadmin/kepsek" element={<KelolaAkunKepsek />} />
               <Route path="/superadmin/logs" element={<ManajemenLog />} />
+              <Route path="/superadmin/paket" element={<KelolaPaket />} />
             </Route>
           </Route>
 
@@ -75,9 +78,9 @@ export default function App() {
               <Route path="/kepsek/riwayat" element={<RiwayatAktivitas />} />
               <Route path="/kepsek/siswa" element={<KelolaSiswaGuru />} />
               <Route path="/kepsek/presensi-siswa" element={<PresensiSiswa />} />
-              <Route path="/kepsek/validasi-rpph" element={<ValidasiRpphKepsek />} />
-              <Route path="/kepsek/asesmen-siswa" element={<AsesmenSiswaGuru />} />
-              <Route path="/kepsek/supervisi" element={<SupervisiKinerja />} />
+              <Route path="/kepsek/validasi-rpph" element={<FeatureGate feature="rpph"><ValidasiRpphKepsek /></FeatureGate>} />
+              <Route path="/kepsek/asesmen-siswa" element={<FeatureGate feature="asesmen"><AsesmenSiswaGuru /></FeatureGate>} />
+              <Route path="/kepsek/supervisi" element={<FeatureGate feature="supervisi"><SupervisiKinerja /></FeatureGate>} />
             </Route>
           </Route>
 
@@ -88,9 +91,9 @@ export default function App() {
               <Route path="/guru/presensi" element={<PresensiGuru />} />
               <Route path="/guru/presensi-siswa" element={<PresensiSiswa />} />
               <Route path="/guru/siswa" element={<KelolaSiswaGuru />} />
-              <Route path="/guru/rpph" element={<RpphGuru />} />
-              <Route path="/guru/asesmen" element={<AsesmenSiswaGuru />} />
-              <Route path="/guru/supervisi" element={<SupervisiKinerja />} />
+              <Route path="/guru/rpph" element={<FeatureGate feature="rpph"><RpphGuru /></FeatureGate>} />
+              <Route path="/guru/asesmen" element={<FeatureGate feature="asesmen"><AsesmenSiswaGuru /></FeatureGate>} />
+              <Route path="/guru/supervisi" element={<FeatureGate feature="supervisi"><SupervisiKinerja /></FeatureGate>} />
               <Route path="/guru/jurnal" element={<JurnalGuru />} />
               <Route path="/guru/jadwal" element={<JadwalGuru />} />
               <Route path="/guru/laporan" element={<LaporanLainGuru />} />

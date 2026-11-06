@@ -39,6 +39,7 @@ import ModalKonfirmasi from '../../components/ui/ModalKonfirmasi';
 import ProgressBar from '../../components/ui/ProgressBar';
 import { fileToBase64Optimized } from '../../utils/imageCompressor';
 import { syncGuruCounters } from '../../utils/quotaSync';
+import { DEFAULT_PLANS, getPlan, resolvePlanId, formatKuota } from '../../utils/planConfig';
 import { addDays, format } from 'date-fns';
 import {
   DEFAULT_KELOMPOK,
@@ -79,8 +80,10 @@ export default function KelolaSekolah() {
   const [formTelepon, setFormTelepon] = useState('');
   const [formNamaKepsek, setFormNamaKepsek] = useState('');
   const [formNipKepsek, setFormNipKepsek] = useState('');
-  const [formPaket, setFormPaket] = useState('basic');
-  const [formKuotaGuru, setFormKuotaGuru] = useState(5);
+  const [formPaket, setFormPaket] = useState('rintisan');
+  const [formKuotaGuru, setFormKuotaGuru] = useState(3);
+  const [formKuotaMurid, setFormKuotaMurid] = useState(25); // '' = tanpa batas
+  const [plansDb, setPlansDb] = useState({});
   const [formBerlakuHingga, setFormBerlakuHingga] = useState(defaultBerlakuHingga());
   const [formStatus, setFormStatus] = useState('aktif');
   const [formKelompok, setFormKelompok] = useState(DEFAULT_KELOMPOK.join(', '));
@@ -108,11 +111,35 @@ export default function KelolaSekolah() {
       setLoading(false);
     });
 
+    // Paket langganan dinamis (fallback paket bawaan bila koleksi `plans` masih kosong)
+    const unsubPlans = onSnapshot(collection(db, 'plans'), (snap) => {
+      setPlansDb(Object.fromEntries(snap.docs.map((d) => [d.id, d.data()])));
+    }, () => {});
+
     return () => {
       unsubSchools();
       unsubUsers();
+      unsubPlans();
     };
   }, []);
+
+  const planOptions = (Object.keys(plansDb).length ? Object.keys(plansDb) : Object.keys(DEFAULT_PLANS))
+    .map((id) => getPlan(id, plansDb))
+    .sort((a, b) => (a.urutan ?? 99) - (b.urutan ?? 99));
+  const selectedPlan = getPlan(formPaket, plansDb);
+
+  // Memilih paket mengisi kuota guru & murid sesuai paket (masih bisa diubah manual)
+  const handleSelectPlan = (planId) => {
+    const plan = getPlan(planId, plansDb);
+    setFormPaket(plan.id);
+    setFormKuotaGuru(plan.kuota_guru);
+    setFormKuotaMurid(plan.kuota_murid ?? '');
+    if (plan.is_trial) {
+      const target = new Date();
+      target.setDate(target.getDate() + (plan.durasi_trial_hari || 14));
+      setFormBerlakuHingga(format(target, 'yyyy-MM-dd'));
+    }
+  };
 
   // Selaraskan counter kuota guru (dipakai Security Rules untuk menegakkan kuota)
   useEffect(() => {
@@ -135,8 +162,9 @@ export default function KelolaSekolah() {
     setFormTelepon('');
     setFormNamaKepsek('');
     setFormNipKepsek('');
-    setFormPaket('basic');
-    setFormKuotaGuru(5);
+    setFormPaket('rintisan');
+    setFormKuotaGuru(getPlan('rintisan', plansDb).kuota_guru);
+    setFormKuotaMurid(getPlan('rintisan', plansDb).kuota_murid ?? '');
     setFormBerlakuHingga(defaultBerlakuHingga());
     setFormStatus('aktif');
     setFormKelompok(DEFAULT_KELOMPOK.join(', '));
@@ -159,8 +187,11 @@ export default function KelolaSekolah() {
     setFormTelepon(s.telepon || '');
     setFormNamaKepsek(s.nama_kepsek_resmi || '');
     setFormNipKepsek(s.nip_kepsek || '');
-    setFormPaket(s.paket_langganan || 'basic');
-    setFormKuotaGuru(s.kuota_guru || 5);
+    setFormPaket(resolvePlanId(s.paket_langganan));
+    setFormKuotaGuru(s.kuota_guru || getPlan(s.paket_langganan, plansDb).kuota_guru);
+    setFormKuotaMurid(
+      s.kuota_murid !== undefined ? (s.kuota_murid ?? '') : (getPlan(s.paket_langganan, plansDb).kuota_murid ?? '')
+    );
     setFormBerlakuHingga(s.berlaku_hingga || defaultBerlakuHingga());
     setFormStatus(s.status_langganan || 'aktif');
     setFormKelompok((s.kelompok_tersedia?.length ? s.kelompok_tersedia : DEFAULT_KELOMPOK).join(', '));
@@ -254,7 +285,8 @@ export default function KelolaSekolah() {
         nama_kepsek_resmi: formNamaKepsek.trim(),
         nip_kepsek: formNipKepsek.trim(),
         paket_langganan: formPaket,
-        kuota_guru: Math.max(1, Number(formKuotaGuru) || 5),
+        kuota_guru: Math.max(1, Number(formKuotaGuru) || 1),
+        kuota_murid: formKuotaMurid === '' || formKuotaMurid === null ? null : Math.max(1, Number(formKuotaMurid) || 1),
         berlaku_hingga: formBerlakuHingga,
         status_langganan: formStatus,
         kelompok_tersedia: kelompokList,
@@ -294,6 +326,7 @@ export default function KelolaSekolah() {
       } else {
         payload.created_at = serverTimestamp();
         payload.jumlah_guru_aktif = 0;
+        payload.jumlah_murid_aktif = 0;
         payload.total_foto_terunggah = 0;
         payload.estimasi_storage_mb = 0;
         payload.toleransi_terlambat_menit = DEFAULT_TOLERANSI_MENIT;
@@ -520,7 +553,7 @@ export default function KelolaSekolah() {
             );
             const isExpired = isLanggananKedaluwarsa(s);
             const isSuspended = s.status_langganan === 'nonaktif' || isExpired;
-            const kuota = s.kuota_guru || 5;
+            const kuota = s.kuota_guru || getPlan(s.paket_langganan, plansDb).kuota_guru;
             const terpakai = teachersInSchool.length;
             const kuotaPersen = Math.min(100, Math.round((terpakai / kuota) * 100));
 
@@ -550,7 +583,7 @@ export default function KelolaSekolah() {
                       )}
                       <div>
                         <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase bg-amber-50 text-amber-800 border border-amber-200/60">
-                          {s.paket_langganan || 'trial'}
+                          {getPlan(s.paket_langganan, plansDb).nama}
                         </span>
                         <h3 className="font-extrabold text-slate-800 text-sm leading-tight font-brand mt-1 line-clamp-1">
                           {s.nama_sekolah}
@@ -611,6 +644,9 @@ export default function KelolaSekolah() {
                       <span>Kapasitas Akun Guru:</span>
                       <span>
                         {terpakai} / {kuota} Guru ({kuotaPersen}%)
+                        <span className="block text-[10px] text-slate-400 font-semibold text-right">
+                          {s.jumlah_murid_aktif ?? 0} / {formatKuota(s.kuota_murid !== undefined ? s.kuota_murid : getPlan(s.paket_langganan, plansDb).kuota_murid)} Murid
+                        </span>
                       </span>
                     </div>
                     <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
@@ -807,17 +843,19 @@ export default function KelolaSekolah() {
               </div>
 
               {/* Paket, Kuota & Masa Berlaku */}
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">Paket</label>
                   <select
                     value={formPaket}
-                    onChange={(e) => setFormPaket(e.target.value)}
+                    onChange={(e) => handleSelectPlan(e.target.value)}
                     className="w-full px-3 py-2 text-xs font-bold rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
                   >
-                    <option value="trial">Trial (Uji Coba)</option>
-                    <option value="basic">Basic (Standard)</option>
-                    <option value="pro">Pro (Full Akreditasi)</option>
+                    {planOptions
+                      .filter((p) => p.aktif !== false || p.id === formPaket)
+                      .map((p) => (
+                        <option key={p.id} value={p.id}>{p.nama}</option>
+                      ))}
                   </select>
                 </div>
 
@@ -835,6 +873,18 @@ export default function KelolaSekolah() {
                 </div>
 
                 <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Batas Kuota Murid</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={formKuotaMurid ?? ''}
+                    onChange={(e) => setFormKuotaMurid(e.target.value)}
+                    placeholder="Kosong = tanpa batas"
+                    className="w-full px-3 py-2 text-xs font-bold rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
+                  />
+                </div>
+
+                <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">Masa Berlaku</label>
                   <input
                     type="date"
@@ -845,8 +895,8 @@ export default function KelolaSekolah() {
                   />
                 </div>
 
-                {formPaket === 'trial' && (
-                  <div className="col-span-3 p-3 bg-amber-50/60 rounded-2xl border border-amber-200/70 space-y-2">
+                {selectedPlan.is_trial && (
+                  <div className="col-span-2 md:col-span-4 p-3 bg-amber-50/60 rounded-2xl border border-amber-200/70 space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-[11px] font-bold text-amber-900">
                         ⚡ Set Durasi Trial Dinamis (Hitung Otomatis Masa Berlaku):
@@ -862,11 +912,10 @@ export default function KelolaSekolah() {
                             const targetDate = new Date();
                             targetDate.setDate(targetDate.getDate() + days);
                             setFormBerlakuHingga(format(targetDate, 'yyyy-MM-dd'));
-                            setFormKuotaGuru(3);
                           }}
                           className="px-2.5 py-1 text-xs font-bold rounded-lg bg-white border border-amber-300 text-amber-800 hover:bg-amber-100 transition shadow-xs"
                         >
-                          +{days} Hari (Kuota: 3)
+                          +{days} Hari
                         </button>
                       ))}
                     </div>

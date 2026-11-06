@@ -21,6 +21,7 @@ import {
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { useAuth } from '../../context/AuthContext';
+import { FeatureLockedCard } from '../../components/layout/FeatureGate';
 import { exportRingkasPdf, exportLengkapPortofolioPdf } from '../../utils/pdfExporter';
 import { exportAttendanceToExcel } from '../../utils/excelExporter';
 import { createWhatsAppShareUrl, getLocalDateString } from '../../utils/formatters';
@@ -32,7 +33,11 @@ const MONTH_NAMES = [
 ];
 
 export default function RekapDanPdf() {
-  const { userData, schoolData } = useAuth();
+  const { userData, schoolData, hasFeature } = useAuth();
+  // Stempel digital hanya dicetak bila paket menyediakannya (Rintisan: kop tanpa stempel)
+  const pdfSchoolData = hasFeature('stempel_pdf')
+    ? (schoolData || {})
+    : { ...(schoolData || {}), stempel_url: null, stempel_base64: null };
 
   const now = new Date();
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth()); // 0 - 11
@@ -198,7 +203,7 @@ export default function RekapDanPdf() {
     try {
       setExportingType('ringkas');
       await exportRingkasPdf({
-        schoolData: schoolData || {},
+        schoolData: pdfSchoolData,
         periode: namaPeriode,
         hariKerjaEfektif,
         rekapPresensi: filteredData.rekapPresensi,
@@ -229,7 +234,7 @@ export default function RekapDanPdf() {
         return;
       }
       await exportLengkapPortofolioPdf({
-        schoolData: schoolData || {},
+        schoolData: pdfSchoolData,
         periode: namaPeriode,
         journals: approvedJournals,
       });
@@ -482,7 +487,7 @@ export default function RekapDanPdf() {
             </p>
           </div>
 
-          {schoolData?.paket_langganan === 'pro' ? (
+          {hasFeature('portofolio') ? (
             <button
               onClick={handleExportPortofolioPdf}
               disabled={exportingType === 'portofolio' || filteredData.monthJournals.length === 0}
@@ -492,14 +497,8 @@ export default function RekapDanPdf() {
               <span>{exportingType === 'portofolio' ? 'Menyusun Portofolio...' : 'Unduh Portofolio BAN-PDM'}</span>
             </button>
           ) : (
-            <div className="mt-6 p-3 rounded-2xl bg-amber-50/70 border border-amber-200/80 text-center flex flex-col items-center justify-center space-y-1">
-              <div className="flex items-center space-x-1.5 text-amber-900 font-extrabold text-xs font-brand">
-                <Lock className="w-4 h-4 text-amber-600 stroke-[2.5]" />
-                <span>Terkunci (Khusus Paket PRO)</span>
-              </div>
-              <p className="text-[10px] text-amber-700 font-medium">
-                Hubungi Superadmin SIMFONI untuk aktivasi Paket PRO
-              </p>
+            <div className="mt-6">
+              <FeatureLockedCard feature="portofolio" compact />
             </div>
           )}
         </div>
@@ -521,7 +520,7 @@ export default function RekapDanPdf() {
             </p>
           </div>
 
-          {schoolData?.paket_langganan === 'pro' ? (
+          {hasFeature('excel') ? (
             <button
               onClick={handleExportExcel}
               disabled={exportingType === 'excel'}
@@ -531,14 +530,8 @@ export default function RekapDanPdf() {
               <span>{exportingType === 'excel' ? 'Mengolah Excel...' : 'Unduh Excel Honor (.xlsx)'}</span>
             </button>
           ) : (
-            <div className="mt-6 p-3 rounded-2xl bg-amber-50/70 border border-amber-200/80 text-center flex flex-col items-center justify-center space-y-1">
-              <div className="flex items-center space-x-1.5 text-amber-900 font-extrabold text-xs font-brand">
-                <Lock className="w-4 h-4 text-amber-600 stroke-[2.5]" />
-                <span>Terkunci (Khusus Paket PRO)</span>
-              </div>
-              <p className="text-[10px] text-amber-700 font-medium">
-                Hubungi Superadmin SIMFONI untuk aktivasi Paket PRO
-              </p>
+            <div className="mt-6">
+              <FeatureLockedCard feature="excel" compact />
             </div>
           )}
         </div>

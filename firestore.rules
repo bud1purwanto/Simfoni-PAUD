@@ -110,6 +110,26 @@ service cloud.firestore {
            != get(schoolDocPath(schoolId)).data.get('jumlah_guru_aktif', -1);
     }
 
+    function studentDocPath(studentId) {
+      return /databases/$(database)/documents/students/$(studentId);
+    }
+
+    // Selisih status "aktif" murid sebelum vs sesudah batch (+1 / 0 / -1). Status kosong = aktif.
+    function muridDelta(studentId) {
+      let before = exists(studentDocPath(studentId))
+        && get(studentDocPath(studentId)).data.get('status', 'aktif') == 'aktif';
+      let after = existsAfter(studentDocPath(studentId))
+        && getAfter(studentDocPath(studentId)).data.get('status', 'aktif') == 'aktif';
+      return (after ? 1 : 0) - (before ? 1 : 0);
+    }
+
+    // Penulisan murid yang mengubah status aktif WAJIB satu batch dengan counter kuota murid
+    function muridCounterUpdatedFor(schoolId, studentId) {
+      return getAfter(schoolDocPath(schoolId)).data.get('murid_counter_ref', '') == studentId
+        && getAfter(schoolDocPath(schoolId)).data.get('jumlah_murid_aktif', -1)
+           != get(schoolDocPath(schoolId)).data.get('jumlah_murid_aktif', -1);
+    }
+
     function isInitialized() {
       return exists(/databases/$(database)/documents/system_settings/general_config);
     }
@@ -137,6 +157,17 @@ service cloud.firestore {
             && request.resource.data.jumlah_guru_aktif
                == resource.data.jumlah_guru_aktif + activeDelta(request.resource.data.counter_ref_uid)
             && request.resource.data.jumlah_guru_aktif <= resource.data.kuota_guru)
+        // Guru & Kepsek: counter kuota murid aktif, ±1 mengikuti perubahan status murid di batch yang sama.
+        // kuota_murid null = tanpa batas (Paket Mandiri Plus).
+        || (isSameSchool(schoolId)
+            && onlyChanged(['jumlah_murid_aktif', 'murid_counter_ref', 'updated_at'])
+            && request.resource.data.murid_counter_ref is string
+            && getAfter(studentDocPath(request.resource.data.murid_counter_ref)).data.school_id == schoolId
+            && muridDelta(request.resource.data.murid_counter_ref) != 0
+            && request.resource.data.jumlah_murid_aktif
+               == resource.data.jumlah_murid_aktif + muridDelta(request.resource.data.murid_counter_ref)
+            && (resource.data.get('kuota_murid', null) == null
+                || request.resource.data.jumlah_murid_aktif <= resource.data.kuota_murid))
         // Semua anggota: counter foto terunggah (+1 per unggahan) untuk meteran storage
         || (isSameSchool(schoolId)
             && onlyChanged(['total_foto_terunggah', 'estimasi_storage_mb'])
@@ -335,6 +366,32 @@ service cloud.firestore {
                         && isSchoolKepsek(resource.data.school_id));
     }
 
+    // --- 9a. KOLEKSI PLANS (PAKET LANGGANAN DINAMIS) ---
+    // Dibaca semua pengguna login (penguncian fitur di UI), dikelola hanya oleh Superadmin.
+    match /plans/{planId} {
+      allow read: if isSignedIn();
+      allow write: if isSuperAdmin();
+    }
+
+    // --- 9b. KOLEKSI STUDENTS (DATA INDUK MURID) + KUOTA MURID ---
+    match /students/{studentId} {
+      allow read: if isSuperAdmin() || isSameSchool(resource.data.school_id);
+      allow create: if isSuperAdmin()
+        || (isSameSchool(request.resource.data.school_id)
+            && (request.resource.data.get('status', 'aktif') != 'aktif'
+                || muridCounterUpdatedFor(request.resource.data.school_id, studentId)));
+      allow update: if isSuperAdmin()
+        || (isSameSchool(resource.data.school_id)
+            && request.resource.data.school_id == resource.data.school_id
+            && (request.resource.data.get('status', 'aktif') == resource.data.get('status', 'aktif')
+                || muridDelta(studentId) == 0
+                || muridCounterUpdatedFor(resource.data.school_id, studentId)));
+      allow delete: if isSuperAdmin()
+        || (isSchoolKepsek(resource.data.school_id)
+            && (resource.data.get('status', 'aktif') != 'aktif'
+                || muridCounterUpdatedFor(resource.data.school_id, studentId)));
+    }
+
     // --- 10. ATURAN UNIVERSAL MULTI-TENANT (KOLEKSI BARU DI MASA DEPAN) ---
     // Mengamankan koleksi baru (mis. inventaris, spp_siswa, raport) yang memiliki field
     // 'school_id' tanpa perlu menulis aturan baru. Koleksi inti DIKECUALIKAN agar aturan
@@ -343,7 +400,7 @@ service cloud.firestore {
       function isCoreCollection() {
         return collectionName in ['schools', 'users', 'attendance', 'journals', 'schedules',
                                   'tasks_and_issues', 'audit_logs', 'system_settings',
-                                  'teacher_supervisions'];
+                                  'teacher_supervisions', 'plans', 'students'];
       }
 
       allow read: if !isCoreCollection() && (isSuperAdmin()
