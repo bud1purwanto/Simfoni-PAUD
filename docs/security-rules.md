@@ -75,7 +75,22 @@ classDiagram
 
 ---
 
-## 3. Implementasi `firestore.rules` (Multi-Tenant Isolation)
+## 4. Protokol Wajib Audit & Pembaruan Rules (Firestore Rules Lifecycle)
+
+> [!CAUTION]
+> ### 🛑 PROTOKOL MUTLAK: SETIAP FITUR BARU WAJIB AUDIT & UPDATE FIRESTORE RULES
+> **Dilarang keras meluncurkan fitur baru tanpa mengecek kecukupan aturan keamanan di `firestore.rules`.**
+> 
+> **Langkah Verifikasi Wajib Pengembang & AI Agent:**
+> 1. **Pemeriksaan Koleksi & Field Baru:** Apakah fitur baru ini mengakses koleksi baru atau menulis field status sensitif?
+> 2. **Evaluasi RBAC:** Siapa saja role yang berhak melakukan `create`, `read`, `update`, dan `delete`? Jangan pernah membiarkan fitur baru mengandalkan aturan fallback yang longgar!
+> 3. **Pembaruan Berkas `firestore.rules`:** Tuliskan blok aturan eksplisit di `firestore.rules` untuk koleksi/field tersebut, pastikan menyertakan validasi `school_id == me().school_id`.
+> 4. **Sinkronisasi Dokumen PRD Keamanan:** Perbarui tabel matriks hak akses pada dokumen [`docs/security-rules.md`](security-rules.md) agar selaras dengan kode `firestore.rules`.
+> 5. **Pengujian Unit Rules:** Jalankan test runner keamanan (`@firebase/rules-unit-testing`) untuk memverifikasi penolakan akses ilegal sebelum melapor ke pengguna.
+
+---
+
+## 5. Implementasi `firestore.rules` (Multi-Tenant Isolation)
 
 Prinsip utama implementasi:
 1. **Firestore meng-OR-kan semua `match` yang cocok.** Aturan wildcard untuk koleksi masa depan WAJIB mengecualikan koleksi inti; versi lama tanpa pengecualian membuat guru bisa mengubah dokumen `users` rekan sesekolah (termasuk `role`) dan menyetujui jurnalnya sendiri.

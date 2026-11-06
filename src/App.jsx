@@ -66,6 +66,7 @@ export default function App() {
           <Route element={<ProtectedRoute allowedRoles={['kepsek']} />}>
             <Route element={<AppLayout />}>
               <Route path="/kepsek/dashboard" element={<DashboardKepsek />} />
+              <Route path="/kepsek/presensi-saya" element={<PresensiGuru />} />
               <Route path="/kepsek/guru" element={<KelolaGuru />} />
               <Route path="/kepsek/presensi-guru" element={<PresensiGuruKepsek />} />
               <Route path="/kepsek/validasi" element={<ValidasiLaporan />} />

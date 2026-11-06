@@ -18,26 +18,48 @@ File ini merupakan **Master Blueprint & Global Entrypoint** yang wajib dibaca da
 
 ---
 
-## ⚠️ ATURAN EMAS: SINKRONISASI ATURAN KECIL DI `.md` JIKA ADA PERUBAHAN BESAR
+## ⚠️ ATURAN EMAS: SINKRONISASI ATURAN KECIL DI `.md` JIKA ADA PERUBAHAN ATAU PENAMBAHAN FITUR
 
 > [!CAUTION]
-> ### 🛑 PROTOKOL ANTI-LUPA: KEWAJIBAN SINKRONISASI DOKUMENTASI
-> Setiap kali Anda melakukan **Perubahan Besar (*Major Change*)** pada arsitektur, basis data, keamanan, alur kerja, dependensi, atau konfigurasi sistem, **ANDA WAJIB MEMPERBARUI FILE ATURAN KECIL TERKAIT DI DALAM DIREKTORI `docs/`**.
+> ### 🛑 PROTOKOL ANTI-LUPA: KEWAJIBAN SINKRONISASI DOKUMENTASI SEBELUM DAN SESUDAH FITUR
+> **SETIAP ADA PENAMBAHAN FITUR, PERUBAHAN ALUR, MAUPUN PENGEMBANGAN BARU: WAJIB UPDATE DOKUMEN MARKDOWN (`.md`) TERLEBIH DAHULU SEBELUM DAN SETELAH IMPLEMENTASI KODE.**
 >
-> **Aturan Operasional:**
-> 1. Dilarang menyelesaikan pekerjaan atau melapor selesai kepada pengguna sebelum seluruh file dokumentasi yang terdampak telah diperbarui agar informasinya tidak pernah usang / terlupa.
-> 2. Periksa tabel sinkronisasi di bawah ini sebelum mengakhiri setiap tugas:
+> **Aturan Operasional Wajib:**
+> 1. Dilarang langsung menulis kode fitur baru sebelum spesifikasi dan cetak birunya dituliskan resmi pada file `.md` terkait di direktori `docs/` dan `AGENTS.md`.
+> 2. Dilarang menyelesaikan pekerjaan atau melapor selesai kepada pengguna sebelum seluruh file dokumentasi yang terdampak telah diperbarui secara menyeluruh.
+> 3. Setiap checkpoint sinkronisasi dokumentasi wajib dicatat di registry `/data/Projects/project.md`.
+> 4. Periksa tabel sinkronisasi di bawah ini untuk setiap pengembangan:
 >
-> | Jenis Perubahan Besar | File `.md` Kecil yang Wajib Diubah |
-> | :--- | :--- |
-> | Penambahan/perubahan field, relasi, koleksi `schools`, atau skema Firestore | [`docs/database-schema.md`](docs/database-schema.md) |
-> | Perubahan hak akses, hierarki 3 peran (`superadmin`, `kepsek`, `guru`), matriks RBAC, atau Security Rules | [`docs/security-rules.md`](docs/security-rules.md) |
-> | Perubahan arsitektur multi-tenant, struktur folder, dual-app Firebase, atau strategi Dev/Prod | [`docs/architecture.md`](docs/architecture.md) |
-> | Perubahan modul, inovasi UX, kuota guru, siklus status laporan, atau alur kerja | [`docs/features-and-workflow.md`](docs/features-and-workflow.md) |
-> | Perubahan standar kode, penamaan komponen, kueri berfilter `school_id`, atau aturan Git | [`docs/development-rules.md`](docs/development-rules.md) |
-> | Perubahan standar desain antarmuka, warna, tipografi, atau acuan mockup UI PAUD | [`docs/ui-design-guidelines.md`](docs/ui-design-guidelines.md) |
-> | Perubahan proses build, routing `_redirects`, environment variable Dev/Prod, atau Cloudflare Pages | [`docs/deployment.md`](docs/deployment.md) |
-> | Perubahan roadmap eksekusi global atau scope proyek | [`AGENTS.md`](AGENTS.md) (Dokumen Ini) |
+| Jenis Fitur / Perubahan | File `.md` Kecil yang Wajib Diubah |
+| :--- | :--- |
+| Penambahan fitur baru, PRD spesifikasi, halaman baru, alur kerja peran, atau modul pengguna | [`docs/features-and-workflow.md`](docs/features-and-workflow.md) |
+| Penambahan/perubahan field, relasi, format ID dokumen, atau skema koleksi Firestore | [`docs/database-schema.md`](docs/database-schema.md) |
+| Perubahan hak akses, hierarki peran (`superadmin`, `kepsek`, `guru`), izin koleksi, atau pengecekan & update Firestore Rules | [`docs/security-rules.md`](docs/security-rules.md) |
+| Perubahan arsitektur multi-tenant, struktur folder, dual-app Firebase, atau flow sistem | [`docs/architecture.md`](docs/architecture.md) |
+| Perubahan standar kode, konvensi aturan kerja, kueri filter `school_id`, atau aturan Git | [`docs/development-rules.md`](docs/development-rules.md) |
+| Perubahan standar desain antarmuka, warna, tipografi, atau acuan mockup UI PAUD | [`docs/ui-design-guidelines.md`](docs/ui-design-guidelines.md) |
+| Perubahan proses build, routing `_redirects`, environment variable Dev/Prod, atau Cloudflare Pages | [`docs/deployment.md`](docs/deployment.md) |
+| Perubahan roadmap eksekusi global, milestone, atau scope proyek | [`AGENTS.md`](AGENTS.md) (Dokumen Ini) |
+
+---
+
+## 🧪 ATURAN WAJIB TESTING: LIVE TESTING & CHECKING DATABASE UNTUK SETIAP FITUR BARU
+
+> [!CAUTION]
+> ### 🛑 PROTOKOL MUTLAK VERIFIKASI: LIVE TESTING & DB INTEGRITY CHECK
+> **SETIAP KALI SELESAI MENGIMPLEMENTASIKAN FITUR BARU, AI AGENT WAJIB MELAKUKAN LIVE TESTING FUNGSIONAL SECARA NYATA DAN CHECKING INTEGRITAS BASIS DATA (FIRESTORE DATABASE CHECK). DILARANG MENYATAKAN SELESAI HANYA BERDASARKAN KODE ATAU KOMPILASI TEORITIS!**
+>
+> **Aturan Operasional Wajib:**
+> 1. **Live Testing Fungsional Nyata:**  
+>    - Jalankan pengujian semantik sistem (uji render UI, tombol aksi, mutasi state, atau eksekusi test runner).
+>    - Pastikan lulus uji kompilasi Vite production build (`npm run build`) dengan *zero error*.
+> 2. **Checking Database & Verifikasi Firestore Rules (Wajib & Anti-Lupa):**  
+>    - **Audit Firestore Rules:** Setiap kali ada penambahan fitur baru, penambahan field sensitif, atau koleksi baru, **WAJIB MENGECEK ATURAN DI `firestore.rules` DAN DOKUMEN SPESIFIKASI (PRD/`security-rules.md`)**. Pastikan tidak lupa memperbarui dan memperketat `firestore.rules` jika fitur tersebut memerlukan izin tulis/baca khusus atau pembatasan RBAC baru.
+>    - Verifikasi struktur payload, tipe data, dan field mutasi ke koleksi Firestore terkait.
+>    - Pastikan kepatuhan isolasi multi-tenant (`school_id`), pencegahan spoofing, serta batasan izin baca/tulis di `firestore.rules`.
+>    - Jalankan verifikasi test suite rules/database lokal jika tersedia sebelum melapor ke pengguna.
+> 3. **Pencatatan Checkpoint Wajib:**  
+>    - Catat setiap bukti hasil live testing dan status integritas database ke dalam registry proyek `/data/Projects/project.md`.
 
 ---
 
@@ -208,10 +230,18 @@ Saat diminta membangun atau menyempurnakan fitur, ikuti urutan langkah terstrukt
   - [x] Peningkatan penanganan pesan galat login pada Login.jsx.
   - [x] Sinkronisasi seluruh dokumen `docs/*.md` dengan kode akhir.
 
-- [ ] **Fase 10: Perluasan 5 Pilar PAUD & Manajemen Data Induk Siswa (Aktif)**
-  - [ ] **Pilar 1 - Presensi Siswa**: Koleksi `student_attendance` per kelompok kelas harian, pencatatan status (Hadir, Sakit, Izin, Alpa) dan catatan kesehatan 21 siswa.
-  - [ ] **Pilar 2 - Perangkat Ajar (RPPH / Modul Ajar)**: Koleksi `rpph_submissions`, modul unggah perangkat ajar mingguan oleh guru, dan validasi/telaah oleh Kepala Sekolah.
-  - [ ] **Pilar 3 - Jurnal Realisasi KBM**: Penyelarasan relasi jurnal harian dengan modul ajar/RPPH yang telah disetujui.
-  - [ ] **Pilar 4 - Administrasi & Capaian 21 Siswa**: Koleksi `students` (Master Data 21 Siswa) dan koleksi `student_assessments` (Capaian Pembelajaran Kurikulum Merdeka: Nilai Agama & Budi Pekerti, Jati Diri, Literasi & STEAM).
-  - [ ] **Pilar 5 - Supervisi & Evaluasi Kinerja Guru**: Koleksi `teacher_supervisions`, instrumen rubrik supervisi KBM kelas, serta umpan balik berkala dari Kepala Sekolah kepada guru.
-  - [ ] **Manajemen Peran & Operator Data Induk**: Integrasi pengelolaan data induk 21 siswa di dashboard Kepsek serta fleksibilitas flag `is_operator: true` bagi guru perbantuan.
+- [x] **Fase 10: Perluasan 5 Pilar PAUD & Manajemen Data Induk Siswa (Selesai)**
+  - [x] **Pilar 1 - Presensi Siswa**: Koleksi `student_attendance` per kelompok kelas harian, pencatatan status (Hadir, Sakit, Izin, Alpa) dan catatan kesehatan 21 siswa (`PresensiSiswa.jsx`).
+  - [x] **Pilar 2 - Perangkat Ajar (RPPH / Modul Ajar)**: Koleksi `rpph_submissions`, modul unggah perangkat ajar mingguan oleh guru, dan validasi/telaah oleh Kepala Sekolah (`RpphGuru.jsx` & `ValidasiRpphKepsek.jsx`).
+  - [x] **Pilar 3 - Jurnal Realisasi KBM**: Penyelarasan relasi jurnal harian dengan modul ajar/RPPH yang telah disetujui.
+  - [x] **Pilar 4 - Administrasi & Capaian 21 Siswa**: Koleksi `students` (Master Data 21 Siswa Dinamis diinput Guru) dan koleksi `student_assessments` (Capaian Pembelajaran Kurikulum Merdeka: Nilai Agama & Budi Pekerti, Jati Diri, Literasi & STEAM) (`KelolaSiswaGuru.jsx` & `AsesmenSiswaGuru.jsx`).
+  - [x] **Pilar 5 - Supervisi & Evaluasi Kinerja Guru**: Koleksi `teacher_supervisions`, instrumen rubrik supervisi KBM kelas, serta umpan balik berkala dari Kepala Sekolah kepada guru (`SupervisiKinerja.jsx`).
+  - [x] **Manajemen Peran & Operator Data Induk**: Integrasi pengelolaan data induk 21 siswa di dashboard Kepsek serta fleksibilitas flag `is_operator: true` bagi guru perbantuan.
+
+- [x] **Fase 11: Presensi Mandiri Kepala Sekolah & Inklusi Rekap Eksekutif (Selesai)**
+  - [x] Widget presensi mandiri (Absen Datang & Absen Pulang) pada `DashboardKepsek.jsx`.
+  - [x] Halaman riwayat presensi mandiri Kepala Sekolah (`PresensiGuru.jsx` yang mendukung role `kepsek`).
+  - [x] Inklusi akun Kepala Sekolah dalam rekapitulasi kehadiran `RekapDanPdf.jsx` (jabatan "Kepala Sekolah").
+  - [x] Ekspor PDF Kop Resmi dan Excel (`.xlsx`) menampilkan kehadiran Kepala Sekolah di baris pertama.
+  - [x] Tampilan status kehadiran Kepala Sekolah di `PresensiGuruKepsek.jsx`.
+  - [x] Pengujian checking database, integritas skema `attendance`, dan kompilasi build produksi Vite.

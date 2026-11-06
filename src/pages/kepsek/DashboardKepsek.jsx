@@ -14,12 +14,17 @@ import {
   ShieldCheck,
   Building2,
   TrendingUp,
-  UserCheck
+  UserCheck,
+  LogIn,
+  LogOut
 } from 'lucide-react';
-import { collection, query, where, onSnapshot, getDocs } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, getDocs, doc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { useAuth } from '../../context/AuthContext';
-import { formatTanggalIndo, formatJamMenit, getLocalDateString } from '../../utils/formatters';
+import { formatTanggalIndo, formatJamMenit, getLocalDateString, getLocalTimeString } from '../../utils/formatters';
+import { hitungStatusKedatangan, hitungMenitTerlambat, getJamMasuk, getJamPulang } from '../../utils/schoolConfig';
+import { logActivity } from '../../utils/auditLogger';
+import { commitWrite, QUEUED_SUFFIX } from '../../utils/offlineWrite';
 
 export default function DashboardKepsek() {
   const { userData, schoolData } = useAuth();
@@ -31,6 +36,8 @@ export default function DashboardKepsek() {
   const [pendingCorrections, setPendingCorrections] = useState([]);
   const [pendingIssues, setPendingIssues] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [presensiMsg, setPresensiMsg] = useState(null);
 
   const todayStr = getLocalDateString();
   const now = new Date();
@@ -137,6 +144,98 @@ export default function DashboardKepsek() {
   const izinSakitCount = teacherAttendance.filter((a) => a.status === 'izin' || a.status === 'sakit').length;
   const belumAbsenCount = Math.max(0, activeTeachers.length - teacherAttendance.length);
 
+  // Presensi Kepala Sekolah Sendiri Hari Ini
+  const kepsekAttendance = todayAttendance.find((a) => a.user_id === userData?.uid);
+
+  // Aksi Presensi Datang Kepala Sekolah
+  const handleAbsenDatangKepsek = async () => {
+    setActionLoading(true);
+    setPresensiMsg(null);
+    try {
+      const jamDevice = getLocalTimeString(new Date());
+      const docId = `${userData.school_id}_${todayStr}_${userData.uid}`;
+      const statusDatang = hitungStatusKedatangan(jamDevice, schoolData);
+      const menitTerlambat = hitungMenitTerlambat(jamDevice, schoolData);
+      const isLate = statusDatang === 'terlambat';
+
+      const payload = {
+        id: docId,
+        school_id: userData.school_id,
+        user_id: userData.uid,
+        nama_guru: userData.nama,
+        tanggal: todayStr,
+        jam_datang_server: serverTimestamp(),
+        jam_datang_device: jamDevice,
+        jam_pulang_server: null,
+        jam_pulang_device: null,
+        status: statusDatang,
+        menit_terlambat: menitTerlambat,
+        status_pulang: 'belum_absen',
+        catatan: isLate ? `Terlambat ${menitTerlambat} menit` : 'Tepat waktu',
+        lokasi: null,
+        created_at: serverTimestamp(),
+        updated_at: serverTimestamp(),
+      };
+
+      const { queued } = await commitWrite(setDoc(doc(db, 'attendance', docId), payload));
+      logActivity({
+        schoolId: userData.school_id,
+        actorId: userData.uid,
+        actorNama: userData.nama,
+        action: 'ABSEN_DATANG',
+        recordType: 'attendance',
+        recordId: docId,
+      });
+
+      setPresensiMsg({
+        type: 'success',
+        text: `Presensi kedatangan Kepala Sekolah tercatat pukul ${jamDevice.slice(0, 5)}.${queued ? QUEUED_SUFFIX : ''}`,
+      });
+    } catch (err) {
+      console.error(err);
+      setPresensiMsg({ type: 'error', text: 'Gagal mencatat presensi datang. Silakan coba lagi.' });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Aksi Presensi Pulang Kepala Sekolah
+  const handleAbsenPulangKepsek = async () => {
+    setActionLoading(true);
+    setPresensiMsg(null);
+    try {
+      const jamDevice = getLocalTimeString(new Date());
+      const docId = `${userData.school_id}_${todayStr}_${userData.uid}`;
+
+      const updateData = {
+        jam_pulang_server: serverTimestamp(),
+        jam_pulang_device: jamDevice,
+        status_pulang: 'selesai',
+        updated_at: serverTimestamp(),
+      };
+
+      const { queued } = await commitWrite(updateDoc(doc(db, 'attendance', docId), updateData));
+      logActivity({
+        schoolId: userData.school_id,
+        actorId: userData.uid,
+        actorNama: userData.nama,
+        action: 'ABSEN_PULANG',
+        recordType: 'attendance',
+        recordId: docId,
+      });
+
+      setPresensiMsg({
+        type: 'success',
+        text: `Presensi kepulangan Kepala Sekolah tercatat pukul ${jamDevice.slice(0, 5)}.${queued ? QUEUED_SUFFIX : ''}`,
+      });
+    } catch (err) {
+      console.error(err);
+      setPresensiMsg({ type: 'error', text: 'Gagal mencatat presensi pulang. Silakan coba lagi.' });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   // Deteksi Lupa Absen Pulang (Sudah masuk tapi belum checkout setelah jam 18:00)
   const lupaPulangList = teacherAttendance.filter(
     (a) => ['hadir', 'terlambat'].includes(a.status) && a.jam_datang_device && !a.jam_pulang_device && isAfter18
@@ -164,6 +263,78 @@ export default function DashboardKepsek() {
           <p className="text-xs md:text-sm text-amber-50 mt-1.5 leading-relaxed font-medium">
             Monitoring aktivitas harian guru, review jurnal KBM Kurikulum Merdeka, dan pengelolaan administrasi di <strong>{schoolData?.nama_sekolah || 'sekolah Anda'}</strong>.
           </p>
+        </div>
+      </div>
+
+      {/* Banner Pesan Presensi Kepala Sekolah */}
+      {presensiMsg && (
+        <div className={`p-4 rounded-2xl border text-xs font-semibold flex items-center justify-between shadow-xs ${
+          presensiMsg.type === 'error'
+            ? 'bg-rose-50 border-rose-200 text-rose-700'
+            : 'bg-emerald-50 border-emerald-200 text-emerald-800'
+        }`}>
+          <span>{presensiMsg.text}</span>
+          <button onClick={() => setPresensiMsg(null)} className="text-slate-400 hover:text-slate-600 font-bold ml-3">✕</button>
+        </div>
+      )}
+
+      {/* WIDGET PRESENSI MANDIRI KEPALA SEKOLAH (Khusus Mbak Ratih & Pimpinan) */}
+      <div className="bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-600/10 border-2 border-amber-300/80 rounded-3xl p-5 md:p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-start sm:items-center space-x-3.5">
+          <div className="w-12 h-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-md shadow-amber-500/20">
+            <Clock className="w-6 h-6 stroke-[2.5]" />
+          </div>
+          <div>
+            <div className="flex items-center space-x-2">
+              <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-amber-500 text-white tracking-wider">
+                Daftar Hadir Mandiri
+              </span>
+              <span className="text-xs font-bold text-slate-500">
+                Jam Masuk: {getJamMasuk(schoolData)} • Jam Pulang: {getJamPulang(schoolData)}
+              </span>
+            </div>
+            <h3 className="text-sm md:text-base font-black text-slate-800 font-brand mt-1">
+              Presensi Kepala Sekolah Hari Ini
+            </h3>
+            <p className="text-xs text-slate-600 mt-0.5">
+              {!kepsekAttendance ? (
+                <span className="text-amber-800 font-semibold">Anda belum mencatat absensi datang hari ini.</span>
+              ) : (
+                <span className="text-emerald-800 font-semibold">
+                  Masuk: {formatJamMenit(kepsekAttendance.jam_datang_device)} ({kepsekAttendance.catatan || 'Tepat waktu'})
+                  {kepsekAttendance.jam_pulang_device && ` • Pulang: ${formatJamMenit(kepsekAttendance.jam_pulang_device)}`}
+                </span>
+              )}
+            </p>
+          </div>
+        </div>
+
+        {/* Tombol Aksi Absen Datang & Pulang */}
+        <div className="flex items-center space-x-2 self-end md:self-auto shrink-0">
+          {!kepsekAttendance ? (
+            <button
+              onClick={handleAbsenDatangKepsek}
+              disabled={actionLoading}
+              className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-bold shadow-md shadow-emerald-600/20 transition flex items-center space-x-2 disabled:opacity-50"
+            >
+              <LogIn className="w-4 h-4" />
+              <span>{actionLoading ? 'Mencatat...' : 'Absen Datang'}</span>
+            </button>
+          ) : !kepsekAttendance.jam_pulang_device ? (
+            <button
+              onClick={handleAbsenPulangKepsek}
+              disabled={actionLoading}
+              className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white text-xs font-bold shadow-md shadow-orange-500/20 transition flex items-center space-x-2 disabled:opacity-50"
+            >
+              <LogOut className="w-4 h-4" />
+              <span>{actionLoading ? 'Mencatat...' : 'Absen Pulang'}</span>
+            </button>
+          ) : (
+            <div className="px-4 py-2 rounded-2xl bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs font-bold flex items-center space-x-1.5">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+              <span>Presensi Lengkap (Selesai)</span>
+            </div>
+          )}
         </div>
       </div>
 

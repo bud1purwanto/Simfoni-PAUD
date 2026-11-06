@@ -64,14 +64,20 @@ export default function RekapDanPdf() {
 
     setLoading(true);
 
-    // Ambil Guru
+    // Ambil Seluruh Tenaga Pendidik (Guru & Kepala Sekolah)
     const qTeachers = query(
       collection(db, 'users'),
       where('school_id', '==', userData.school_id),
-      where('role', '==', 'guru')
+      where('role', 'in', ['kepsek', 'guru'])
     );
     const unsubTeachers = onSnapshot(qTeachers, (snap) => {
       const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      // Urutkan Kepala Sekolah paling atas, lalu guru berdasarkan abjad nama
+      list.sort((a, b) => {
+        if (a.role === 'kepsek' && b.role !== 'kepsek') return -1;
+        if (b.role === 'kepsek' && a.role !== 'kepsek') return 1;
+        return (a.nama || '').localeCompare(b.nama || '');
+      });
       setTeachers(list);
     });
 
@@ -153,8 +159,8 @@ export default function RekapDanPdf() {
 
         return {
           id: t.id,
-          nama: t.nama,
-          kelompok: t.kelompok_kelas || '-',
+          nama: t.role === 'kepsek' ? `${t.nama} (Kepala Sekolah)` : t.nama,
+          kelompok: t.role === 'kepsek' ? 'Kepala Sekolah' : (t.kelompok_kelas || '-'),
           hadir,
           terlambat,
           menitTerlambat,

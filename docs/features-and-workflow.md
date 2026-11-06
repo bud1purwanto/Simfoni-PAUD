@@ -120,6 +120,7 @@ Mengingat keterbatasan kuota penyimpanan dan pembacaan/penulisan Firestore, Supe
 
 ### 4.1. Dashboard Monitoring Live
 * Pemantauan real-time guru yang telah absen datang/pulang hari ini di sekolahnya.
+* **Widget Presensi Mandiri Kepala Sekolah:** Kepala Sekolah dapat melakukan presensi mandiri (Absen Datang & Absen Pulang harian) langsung dari dashboard atau menu khusus, lengkap dengan status kehadiran (tepat waktu / terlambat) dan durasi jam kerja, sehingga Kepala Sekolah memiliki rekam kehadiran pribadi yang sah dan terekam di sistem.
 * **Deteksi Lupa Absen Pulang:** Kartu status otomatis menandai guru yang sudah absen datang namun belum checkout setelah pukul 18:00.
 * Kartu guru menampilkan status Izin/Sakit, serta info netral bila jam diterima server berselisih > 15 menit dari jam HP (sinkron tertunda atau jam HP berubah) sebagai bahan pertimbangan Kepsek.
 * Antrean koreksi presensi memuat pengajuan dari **semua tanggal**, bukan hanya hari ini.
@@ -127,10 +128,11 @@ Mengingat keterbatasan kuota penyimpanan dan pembacaan/penulisan Firestore, Supe
 * Notifikasi pengajuan koreksi absen dan kendala sarpras yang butuh tindak lanjut.
 * Tombol cepat **"Fokus Tab Presensi"** untuk melompat langsung ke halaman dedikasi Presensi Guru.
 
-### 4.1.1. Tab Khusus Presensi Guru (`/kepsek/presensi-guru`)
-* **Halaman Dedikasi Mandiri:** Memberikan ruang kerja terfokus bagi Kepala Sekolah untuk memantau presensi seluruh guru tanpa terdistraksi kartu ringkasan lain.
+### 4.1.1. Tab Khusus Presensi Guru & Kepala Sekolah (`/kepsek/presensi-guru`)
+* **Halaman Dedikasi Mandiri:** Memberikan ruang kerja terfokus bagi Kepala Sekolah untuk memantau presensi seluruh guru dan kehadiran dirinya sendiri tanpa terdistraksi kartu ringkasan lain.
+* **Inklusi Presensi Kepala Sekolah:** Menampilkan status kehadiran Kepala Sekolah bersama jajaran guru kelas secara transparan dan akuntabel.
 * **Pilihan Tanggal Fleksibel:** Navigator tanggal operasional (Hari Ini, Kemarin, dan *Date Picker* bebas) lengkap dengan format tanggal Indonesia dan label status hari kerja/libur.
-* **Metrik & Ringkasan KPI Harian:** Total guru aktif, hadir tepat waktu, hadir terlambat, izin/sakit resmi, belum absen, serta persentase kehadiran total.
+* **Metrik & Ringkasan KPI Harian:** Total tenaga pendidik aktif, hadir tepat waktu, hadir terlambat, izin/sakit resmi, belum absen, serta persentase kehadiran total.
 * **Filter Cepat & Pencarian:** Tab filter status (Semua, Tepat Waktu, Terlambat, Izin/Sakit, Belum Absen, dan Ada Koreksi) serta kotak pencarian nama/rombel guru.
 * **Integrasi WhatsApp 1-Klik (`wa.me`):** Membuka pesan WhatsApp ramah untuk mengingatkan guru yang belum melakukan presensi kedatangan atau lupa absen pulang (> 18:00).
 * **Verifikasi Koreksi Langsung di Tempat:** Modal review pengajuan koreksi jam kedatangan/pulang tanpa harus berpindah ke tab Validasi Laporan. Status keterlambatan dan menit telat otomatis dihitung ulang secara akurat saat disetujui.
@@ -163,11 +165,11 @@ Mengingat keterbatasan kuota penyimpanan dan pembacaan/penulisan Firestore, Supe
 
 ### 4.4. Rekapitulasi Laporan Multi-Format (PDF Ringkas, Portofolio & Excel)
 * **1. Cetak Rekap PDF Ringkas (Format Administrasi/Dinas):**  
-  Menghasilkan PDF tabel presensi dan ringkasan topik KBM dengan Kop Surat resmi, tanda tangan, dan **stempel/cap digital sekolah otomatis**. Ringan (< 500 KB), render instan, dan 100% aman dibuka di HP tanpa risiko browser *crash*.
+  Menghasilkan PDF tabel presensi dan ringkasan topik KBM dengan Kop Surat resmi, tanda tangan, dan **stempel/cap digital sekolah otomatis**. Menyertakan presensi **Kepala Sekolah** pada baris pertama tabel kehadiran serta seluruh guru aktif. Ringan (< 500 KB), render instan, dan 100% aman dibuka di HP tanpa risiko browser *crash*.
 * **2. Cetak Rekap PDF Lengkap (Portofolio Foto):**  
   Menghasilkan dokumen lengkap beserta lampiran foto dokumentasi pembelajaran resolusi tinggi untuk arsip akreditasi BAN-PDM (direkomendasikan diunduh via laptop).
 * **3. Ekspor Data Excel (`.xlsx`):**  
-  Ekspor rekapitulasi presensi (hadir, terlambat + total menit keterlambatan, izin, sakit, tanpa keterangan, lupa absen pulang, persentase terhadap hari kerja efektif) ke format Spreadsheet Excel untuk keperluan **perhitungan gaji / uang transport / honorarium guru** oleh Kepala Sekolah dan Bendahara.
+  Ekspor rekapitulasi presensi (menyertakan baris kehadiran Kepala Sekolah dan seluruh guru: hadir, terlambat + total menit keterlambatan, izin, sakit, tanpa keterangan, lupa absen pulang, persentase terhadap hari kerja efektif) ke format Spreadsheet Excel untuk keperluan **perhitungan gaji / uang transport / honorarium** oleh Kepala Sekolah dan Bendahara.
 * **Aturan data rekap:** Data dimuat per bulan (kueri rentang tanggal), jurnal `draf` dikecualikan, presensi bertanggal mendatang (izin terencana) belum dihitung, dan persentase memakai hari kerja efektif sekolah (bulan berjalan dihitung sampai hari ini). Portofolio PDF hanya memuat jurnal `disetujui` lengkap dengan kop surat, foto dokumentasi (maks. 2 per kegiatan), dan pengesahan.
 * **4. Fitur "Bagikan Rekap ke WhatsApp" (*One-Click WA Share*):**  
   Tombol cepat untuk membuat pesan terformat rapi dan langsung membuka WhatsApp Web / Aplikasi WA HP untuk mengirimkan rekap bulanan ke Yayasan atau Pengawas Sekolah.

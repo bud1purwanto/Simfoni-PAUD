@@ -7,27 +7,49 @@ Dokumen ini berisi pedoman penulisan kode, konvensi teknis multi-tenant, alur ke
 ## 1. Aturan Emas: Sinkronisasi Dokumentasi (Documentation Sync Policy)
 
 > [!CAUTION]
-> ### 🛑 PROTOKOL ANTI-LUPA: KEWAJIBAN SINKRONISASI DOKUMENTASI
-> Setiap kali terjadi **Perubahan Besar (*Major Change*)** pada arsitektur SaaS, skema basis data, hak akses keamanan, dependensi, alur kerja, atau konfigurasi CI/CD, Anda **WAJIB** memperbarui file-file dokumentasi kecil terkait di folder `docs/*.md` dan `AGENTS.md`.  
-> Tidak ada pekerjaan yang dianggap selesai (*done*) sebelum dokumentasi yang terdampak telah disinkronkan!
+> ### 🛑 PROTOKOL ANTI-LUPA: KEWAJIBAN SINKRONISASI DOKUMENTASI SEBELUM & SESUDAH KODING
+> **SETIAP ADA PENAMBAHAN FITUR BARU, REFACTORING, ATAU PERUBAHAN ALUR: WAJIB MEMPERBARUI DOKUMEN MARKDOWN (`.md`) TERLEBIH DAHULU SEBELUM EKSEKUSI KODE, DAN MEMPERBARUINYA KEMBALI SETELAH TESTING.**  
+> Tidak ada pekerjaan yang dianggap selesai (*done*) sebelum dokumentasi yang terdampak telah disinkronkan dan dicatat ke `/data/Projects/project.md`!
 
-### Matriks Pembaruan Berkas Saat Terjadi Perubahan:
-1. **Perubahan Skema Database:** Menambah koleksi baru, menambah field baru, atau mengubah format Document ID.  
-   👉 *Wajib perbarui:* [`database-schema.md`](database-schema.md)
-2. **Perubahan Keamanan & Hak Akses:** Mengubah permission, matriks RBAC 3 tingkat, atau logika `firestore.rules` / `storage.rules`.  
-   👉 *Wajib perbarui:* [`security-rules.md`](security-rules.md)
-3. **Perubahan Arsitektur & Lingkungan:** Mengubah struktur folder, pola `secondaryAuth`, konfigurasi Dev vs Prod, atau library utama.  
-   👉 *Wajib perbarui:* [`architecture.md`](architecture.md)
-4. **Perubahan Modul & Alur Kerja:** Menambah halaman, fitur Superadmin, siklus status laporan, kompresi, atau alur presensi.  
+### Matriks Pembaruan Berkas Saat Terjadi Fitur Baru / Perubahan:
+1. **Penambahan Fitur Baru & Alur Kerja:** Menambah halaman, fitur mandiri (misal: Presensi Mandiri Kepala Sekolah), tombol aksi, siklus status laporan, kompresi, atau alur presensi.  
    👉 *Wajib perbarui:* [`features-and-workflow.md`](features-and-workflow.md)
+2. **Perubahan Skema Database:** Menambah koleksi baru, menambah field baru, atau mengubah format Document ID.  
+   👉 *Wajib perbarui:* [`database-schema.md`](database-schema.md)
+3. **Perubahan Keamanan & Hak Akses:** Mengubah permission, matriks RBAC 3 tingkat, atau logika `firestore.rules` / `storage.rules`.  
+   👉 *Wajib perbarui:* [`security-rules.md`](security-rules.md)
+4. **Perubahan Arsitektur & Lingkungan:** Mengubah struktur folder, pola `secondaryAuth`, konfigurasi Dev vs Prod, atau library utama.  
+   👉 *Wajib perbarui:* [`architecture.md`](architecture.md)
 5. **Perubahan Deployment & CI/CD:** Mengubah variabel lingkungan (`.env`), Cloudflare Pages branch preview/production, atau Authorized Domains.  
    👉 *Wajib perbarui:* [`deployment.md`](deployment.md)
-6. **Perubahan Roadmap Global:** Perubahan milestone dan daftar tugas pengerjaan.  
+6. **Perubahan Roadmap Global:** Perubahan milestone, fase proyek, dan daftar tugas pengerjaan.  
    👉 *Wajib perbarui:* [`AGENTS.md`](../AGENTS.md)
+7. **Pencatatan Registry Proyek:** Rekam jejak checkpoint eksekusi dan hasil testing wajib dicatat pada registry proyek.  
+   👉 *Wajib perbarui:* `/data/Projects/project.md`
 
 ---
 
-## 2. Standar Kueri Multi-Tenant (Tenant Data Isolation)
+## 2. Aturan Wajib Testing: Live Testing & Checking Database
+
+> [!CAUTION]
+> ### 🧪 PROTOKOL MUTLAK: SETIAP PENAMBAHAN FITUR WAJIB LIVE TESTING & CHECKING DATABASE
+> **Dilarang keras melapor selesai atau mengajukan commit sebelum melakukan live testing nyata pada fitur baru dan memeriksa integritas basis data (database check).**
+>
+> 1. **Live Testing Fungsional:**
+>    - Verifikasi render komponen di lingkungan antarmuka (UI).
+>    - Uji fungsionalitas tombol aksi, alur form input, serta penanganan error.
+>    - Pastikan kompilasi produksi `npm run build` tuntas sukses 100%.
+2. **Checking Database & Audit Firestore Rules (PRD Security Policy):**
+   - **Audit Firestore Rules:** Setiap penambahan fitur baru, field baru, atau koleksi baru, **WAJIB mengecek kecukupan aturan di `firestore.rules` dan dokumen PRD Keamanan (`security-rules.md`)**. Pastikan tidak lupa memperbarui dan memperketat `firestore.rules` ketika diperlukan (misalnya membatasi wewenang create/update hanya untuk role tertentu, mencegah eskalasi hak akses, dan melindungi integritas multi-tenant).
+   - Periksa integritas skema dokumen yang ditulis ke koleksi Firestore (keberadaan `school_id`, timestamp, tipe data).
+   - Uji kepatuhan Firestore Security Rules (hak akses peran `superadmin`, `kepsek`, `guru`, dan isolasi tenant antar-sekolah).
+   - Cegah celah kebocoran data (*zero security leaks*) dan manipulasi *spoofing* identitas sekolah.
+> 3. **Pencatatan Registry:**
+>    - Seluruh hasil live testing dan pengecekan database wajib dicatat di `/data/Projects/project.md`.
+
+---
+
+## 3. Standar Kueri Multi-Tenant (Tenant Data Isolation)
 
 1. **Wajib Filter `school_id`:**  
    Setiap kueri Firestore yang dijalankan oleh pengguna tenant (`kepsek` atau `guru`) **HARUS** menyertakan filter `school_id`:

@@ -237,10 +237,12 @@ export default function PresensiGuru() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-xl md:text-2xl font-extrabold text-slate-900 font-brand">
-            Riwayat & Koreksi Presensi 🌸
+            {userData?.role === 'kepsek' ? 'Daftar Hadir & Riwayat Presensi Kepala Sekolah 🌸' : 'Riwayat & Koreksi Presensi Guru 🌸'}
           </h1>
           <p className="text-xs text-slate-500 mt-0.5 font-medium">
-            Presensi dual timestamp anti-trap: jam kehadiran Anda aman saat sinyal drop.
+            {userData?.role === 'kepsek' 
+              ? 'Rekam kehadiran mandiri Kepala Sekolah yang terhubung langsung dengan laporan cetak resmi.'
+              : 'Presensi dual timestamp anti-trap: jam kehadiran Anda aman saat sinyal drop.'}
           </p>
         </div>
 

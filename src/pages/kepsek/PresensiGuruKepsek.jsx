@@ -86,17 +86,22 @@ export default function PresensiGuruKepsek() {
 
     setLoading(true);
 
-    // 1. Data Seluruh Guru di Sekolah Ini
+    // 1. Data Seluruh Tenaga Pendidik di Sekolah Ini (Guru & Kepala Sekolah)
     const qTeachers = query(
       collection(db, 'users'),
       where('school_id', '==', userData.school_id),
-      where('role', '==', 'guru')
+      where('role', 'in', ['kepsek', 'guru'])
     );
 
     const unsubTeachers = onSnapshot(
       qTeachers,
       (snap) => {
         const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        list.sort((a, b) => {
+          if (a.role === 'kepsek' && b.role !== 'kepsek') return -1;
+          if (b.role === 'kepsek' && a.role !== 'kepsek') return 1;
+          return (a.nama || '').localeCompare(b.nama || '');
+        });
         setTeachers(list);
       },
       (err) => console.warn('Gagal memuat guru:', err)
@@ -761,7 +766,7 @@ export default function PresensiGuruKepsek() {
                         </h3>
                         <div className="flex items-center space-x-2 mt-0.5">
                           <span className="px-2 py-0.5 bg-white text-slate-600 rounded-lg text-[10px] font-bold border border-slate-200 shadow-xs">
-                            {teacher.kelompok_kelas || 'Semua Kelompok'}
+                            {teacher.role === 'kepsek' ? 'Kepala Sekolah' : (teacher.kelompok_kelas || 'Semua Kelompok')}
                           </span>
                           <span className="text-[10px] text-slate-400 truncate max-w-[130px]">
                             {teacher.email}
@@ -881,37 +886,46 @@ export default function PresensiGuruKepsek() {
 
                   {/* Tombol Aksi Cepat Bawah */}
                   <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-100">
-                    {/* Aksi WhatsApp */}
-                    {isBelumAbsen ? (
-                      <a
-                        href={getWhatsAppReminderUrl(teacher.nama, 'belum_absen')}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex-1 py-2 px-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-xl text-xs font-extrabold transition flex items-center justify-center space-x-1.5 border border-emerald-200"
-                      >
-                        <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
-                        <span>Ingatkan Absen (WA)</span>
-                      </a>
-                    ) : isLupaPulang ? (
-                      <a
-                        href={getWhatsAppReminderUrl(teacher.nama, 'lupa_pulang')}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex-1 py-2 px-3 bg-rose-50 hover:bg-rose-100 text-rose-800 rounded-xl text-xs font-extrabold transition flex items-center justify-center space-x-1.5 border border-rose-200"
-                      >
-                        <MessageCircle className="w-3.5 h-3.5 text-rose-600" />
-                        <span>Ingatkan Pulang (WA)</span>
-                      </a>
-                    ) : (
-                      <a
-                        href={getWhatsAppReminderUrl(teacher.nama, 'umum')}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="py-1.5 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition flex items-center space-x-1"
-                      >
-                        <MessageCircle className="w-3.5 h-3.5 text-slate-500" />
-                        <span>Kirim Pesan</span>
-                      </a>
+                    {/* Aksi WhatsApp (Hanya untuk Guru, bukan akun Kepsek sendiri) */}
+                    {teacher.role !== 'kepsek' && (
+                      <>
+                        {isBelumAbsen ? (
+                          <a
+                            href={getWhatsAppReminderUrl(teacher.nama, 'belum_absen')}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex-1 py-2 px-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-xl text-xs font-extrabold transition flex items-center justify-center space-x-1.5 border border-emerald-200"
+                          >
+                            <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>Ingatkan Absen (WA)</span>
+                          </a>
+                        ) : isLupaPulang ? (
+                          <a
+                            href={getWhatsAppReminderUrl(teacher.nama, 'lupa_pulang')}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex-1 py-2 px-3 bg-rose-50 hover:bg-rose-100 text-rose-800 rounded-xl text-xs font-extrabold transition flex items-center justify-center space-x-1.5 border border-rose-200"
+                          >
+                            <MessageCircle className="w-3.5 h-3.5 text-rose-600" />
+                            <span>Ingatkan Pulang (WA)</span>
+                          </a>
+                        ) : (
+                          <a
+                            href={getWhatsAppReminderUrl(teacher.nama, 'umum')}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="py-1.5 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition flex items-center space-x-1"
+                          >
+                            <MessageCircle className="w-3.5 h-3.5 text-slate-500" />
+                            <span>Kirim Pesan</span>
+                          </a>
+                        )}
+                      </>
+                    )}
+                    {teacher.role === 'kepsek' && (
+                      <div className="flex-1 py-1 px-2 text-[11px] font-bold text-amber-700 bg-amber-50 rounded-xl border border-amber-200/60 text-center">
+                        Akun Kepala Sekolah (Pimpinan)
+                      </div>
                     )}
 
                     {/* Jika guru memiliki presensi namun ingin dikoreksi langsung oleh Kepsek */}

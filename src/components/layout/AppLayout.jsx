@@ -68,7 +68,8 @@ export default function AppLayout() {
   // Navigasi Khusus Kepala Sekolah
   const kepsekNavItems = [
     { label: 'Dashboard', path: '/kepsek/dashboard', icon: Home },
-    { label: 'Presensi Guru', path: '/kepsek/presensi-guru', icon: Clock },
+    { label: 'Absen Saya', path: '/kepsek/presensi-saya', icon: Clock },
+    { label: 'Presensi Guru', path: '/kepsek/presensi-guru', icon: Clock, desktopOnly: true },
     { label: 'Kelola Guru', path: '/kepsek/guru', icon: Users },
     { label: 'Presensi Murid', path: '/kepsek/presensi-siswa', icon: CheckSquare },
     { label: 'Validasi RPPH', path: '/kepsek/validasi-rpph', icon: BookOpen },
