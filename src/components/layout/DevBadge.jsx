@@ -7,10 +7,10 @@ export default function DevBadge() {
   if (!isDev) return null;
 
   return (
-    <div className="fixed bottom-24 md:bottom-4 right-4 z-40 pointer-events-none select-none">
-      <div className="bg-amber-400/90 text-amber-950 backdrop-blur-sm border border-amber-500/30 text-[10px] font-bold px-2.5 py-1 rounded-full shadow-md flex items-center space-x-1.5 uppercase tracking-wider">
-        <Terminal className="w-3 h-3 text-amber-900" />
-        <span>DEV ENVIRONMENT</span>
+    <div className="fixed top-16 right-3 z-20 pointer-events-none select-none opacity-85 hover:opacity-100 transition">
+      <div className="bg-amber-400/90 text-amber-950 backdrop-blur-sm border border-amber-500/40 text-[9px] font-black px-2 py-0.5 rounded-full shadow-sm flex items-center space-x-1 uppercase tracking-wider">
+        <Terminal className="w-2.5 h-2.5 text-amber-900" />
+        <span>DEV ENV</span>
       </div>
     </div>
   );

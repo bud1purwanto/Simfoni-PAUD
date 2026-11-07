@@ -141,23 +141,23 @@ export default function AppLayout() {
       <DevBadge />
 
       {/* 3. Header Atas Responsif */}
-      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-orange-200/60 px-4 py-3 md:px-6 shadow-xs">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
+      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-orange-200/60 px-3 py-2.5 sm:px-4 sm:py-3 md:px-6 shadow-xs">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-2">
           
           {/* Identitas Sekolah Dinamis */}
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
             {schoolData?.logo_url ? (
               <img
                 src={schoolData.logo_url}
                 alt="Logo Sekolah"
-                className="w-10 h-10 rounded-2xl object-contain border border-orange-200 p-0.5 bg-white shadow-sm"
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl object-contain border border-orange-200 p-0.5 bg-white shadow-sm shrink-0"
               />
             ) : role === 'superadmin' ? (
-              <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-400 via-orange-500 to-amber-500 text-white flex items-center justify-center font-bold text-lg shadow-md shadow-orange-500/20 font-brand">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-gradient-to-tr from-amber-400 via-orange-500 to-amber-500 text-white flex items-center justify-center font-bold text-base sm:text-lg shadow-md shadow-orange-500/20 font-brand shrink-0">
                 👑
               </div>
             ) : (
-              <div className="w-10 h-10 rounded-2xl border border-orange-200 p-0.5 bg-white shadow-sm overflow-hidden flex items-center justify-center">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl border border-orange-200 p-0.5 bg-white shadow-sm overflow-hidden flex items-center justify-center shrink-0">
                 <img
                   src="/icons/logo-kids-final.png"
                   alt="SIMFONI PAUD"
@@ -166,20 +166,20 @@ export default function AppLayout() {
               </div>
             )}
             
-            <div className="truncate max-w-[200px] sm:max-w-xs md:max-w-md">
-              <h1 className="text-sm md:text-base font-extrabold text-slate-900 truncate tracking-tight font-brand">
+            <div className="min-w-0 flex-1 pr-1">
+              <h1 className="text-xs sm:text-sm md:text-base font-extrabold text-slate-900 truncate tracking-tight font-brand leading-tight">
                 {dynamicSchoolName}
               </h1>
-              <p className="text-[11px] text-slate-500 font-semibold truncate flex items-center space-x-1.5">
-                <span>{role === 'superadmin' ? 'Project Owner Portal' : `Kelompok: ${userData?.kelompok_kelas || 'Umum'}`}</span>
+              <p className="text-[10px] sm:text-[11px] text-slate-500 font-semibold truncate flex items-center space-x-1 sm:space-x-1.5 mt-0.5">
+                <span className="truncate">{role === 'superadmin' ? 'Project Owner Portal' : `Kelompok: ${userData?.kelompok_kelas || 'Umum'}`}</span>
                 <span>•</span>
-                <span className={isMasaTenggang ? 'text-amber-600 font-bold' : 'text-emerald-600 font-bold'}>{statusLabel}</span>
+                <span className={`shrink-0 ${isMasaTenggang ? 'text-amber-600 font-bold' : 'text-emerald-600 font-bold'}`}>{statusLabel}</span>
               </p>
             </div>
           </div>
 
           {/* User Profile & Logout Header */}
-          <div className="flex items-center space-x-2 sm:space-x-3">
+          <div className="flex items-center space-x-1.5 sm:space-x-2.5 shrink-0">
             <span className={`hidden sm:inline-flex items-center px-3 py-1 rounded-full text-[10px] font-extrabold border ${roleBadge.color}`}>
               {roleBadge.label}
             </span>
@@ -197,7 +197,7 @@ export default function AppLayout() {
               onClick={() => setPasswordModalOpen(true)}
               title="Ganti Kata Sandi"
               aria-label="Ganti Kata Sandi"
-              className="p-2.5 rounded-2xl text-slate-400 hover:text-orange-600 hover:bg-orange-50 active:scale-95 transition"
+              className="p-2 sm:p-2.5 rounded-2xl text-slate-400 hover:text-orange-600 hover:bg-orange-50 active:scale-95 transition shrink-0"
             >
               <KeyRound className="w-4 h-4 md:w-5 md:h-5" />
             </button>
@@ -209,7 +209,7 @@ export default function AppLayout() {
               onClick={handleLogoutClick}
               title="Keluar Akun"
               aria-label="Keluar Akun"
-              className="p-2.5 rounded-2xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 active:scale-95 transition"
+              className="p-2 sm:p-2.5 rounded-2xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 active:scale-95 transition shrink-0"
             >
               <LogOut className="w-4 h-4 md:w-5 md:h-5" />
             </button>
@@ -259,7 +259,7 @@ export default function AppLayout() {
         </aside>
 
         {/* Main Content Area (Responsif, ruang bawah disesuaikan untuk BottomNav mobile) */}
-        <main className="flex-1 p-4 md:p-6 pb-32 md:pb-12 max-w-full overflow-x-hidden">
+        <main className="flex-1 p-4 md:p-6 pb-40 md:pb-12 max-w-full overflow-x-hidden">
           {showLanggananBanner && (
             <div className="mb-4 p-3 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/80 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-xs">
               <div className="flex items-center space-x-2 text-amber-950 text-xs font-semibold">
@@ -283,8 +283,8 @@ export default function AppLayout() {
       </div>
 
       {/* 5. Bottom Navigation Bar Mobile (Floating Pill Ramah Jempol di < 768px) */}
-      <nav className="md:hidden fixed bottom-3 left-3 right-3 bg-white/95 backdrop-blur-md border border-orange-200/70 shadow-2xl shadow-orange-950/10 rounded-3xl z-30 px-1.5 py-1.5">
-        <div className="flex items-center justify-around">
+      <nav className="md:hidden fixed bottom-3 left-3 right-3 bg-white/95 backdrop-blur-md border border-orange-200/70 shadow-2xl shadow-orange-950/10 rounded-3xl z-30 px-1 py-1">
+        <div className="flex items-center justify-around gap-0.5">
           {mobileNavItems.map((item) => {
             const Icon = item.icon;
             return (
@@ -292,7 +292,7 @@ export default function AppLayout() {
                 key={item.path}
                 to={item.path}
                 className={({ isActive }) =>
-                  `flex flex-col items-center justify-center py-1 px-1 rounded-2xl text-[10px] font-bold transition min-w-[50px] ${
+                  `flex flex-col items-center justify-center py-1 px-0.5 rounded-2xl text-[9px] font-bold transition flex-1 min-w-0 ${
                     isActive
                       ? 'text-orange-600'
                       : 'text-slate-400 hover:text-slate-600'
@@ -304,7 +304,7 @@ export default function AppLayout() {
                     <div className={`p-1.5 rounded-xl transition ${isActive ? 'bg-orange-100 text-orange-600 shadow-xs' : ''}`}>
                       <Icon className={`w-4 h-4 ${isActive ? 'stroke-[2.5]' : 'stroke-[1.8]'}`} />
                     </div>
-                    <span className="mt-0.5 truncate max-w-[56px] text-[9.5px] font-brand tracking-tight">{item.label}</span>
+                    <span className="mt-0.5 truncate w-full text-center text-[9px] font-brand tracking-tighter leading-none">{item.label}</span>
                   </>
                 )}
               </NavLink>
