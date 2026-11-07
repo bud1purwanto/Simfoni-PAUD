@@ -8,8 +8,18 @@
  *  - Font Google      : stale-while-revalidate.
  *  - /api/* & Firebase: TIDAK pernah di-cache.
  */
-const CACHE = 'simfoni-shell-v1';
-const PRECACHE = ['/', '/index.html', '/manifest.json', '/icons/icon-192.svg', '/icons/icon-512.svg'];
+const CACHE = 'simfoni-shell-v2';
+const PRECACHE = [
+  '/',
+  '/index.html',
+  '/manifest.json',
+  '/icons/icon-192.png',
+  '/icons/icon-512.png',
+  '/apple-touch-icon.png',
+  '/icons/icon-192.svg',
+  '/icons/icon-512.svg',
+  '/favicon.svg'
+];
 const FONT_HOSTS = ['fonts.googleapis.com', 'fonts.gstatic.com'];
 
 self.addEventListener('install', (event) => {

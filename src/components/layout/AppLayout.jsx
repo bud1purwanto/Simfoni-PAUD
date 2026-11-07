@@ -28,6 +28,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import NetworkStatusBanner from './NetworkStatusBanner';
 import DevBadge from './DevBadge';
+import ButtonInstallPWA from '../ui/ButtonInstallPWA';
 import ModalGantiPassword from '../ui/ModalGantiPassword';
 import ModalKonfirmasi from '../ui/ModalKonfirmasi';
 import { sisaHariLangganan } from '../../utils/schoolConfig';
@@ -192,6 +193,9 @@ export default function AppLayout() {
             >
               <KeyRound className="w-4 h-4 md:w-5 md:h-5" />
             </button>
+
+            {/* Tombol Pasang / Download ke PWA */}
+            <ButtonInstallPWA variant="header" />
 
             <button
               onClick={handleLogoutClick}

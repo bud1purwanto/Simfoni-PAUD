@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Lock, Mail, AlertCircle, ArrowRight, User, Rocket } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { getDashboardPath } from '../../components/layout/ProtectedRoute';
+import ButtonInstallPWA from '../../components/ui/ButtonInstallPWA';
 
 export default function Login() {
   const {
@@ -221,6 +222,9 @@ export default function Login() {
               )}
             </button>
           </form>
+
+          {/* Banner Ajakan Pasang PWA di HP */}
+          <ButtonInstallPWA variant="login" />
 
           {setupNeeded && (
             <button
