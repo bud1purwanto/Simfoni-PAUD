@@ -120,7 +120,25 @@ firebase deploy --only firestore:rules,firestore:indexes,storage
 ```
 * Saat deploy `storage.rules` pertama kali, setujui permintaan izin *cross-service rules* (Storage membaca `users` di Firestore).
 * Indeks komposit `attendance`/`journals` (`school_id` + `tanggal`) wajib ada untuk halaman Rekap per bulan, dan `audit_logs` (`school_id` + `timestamp` desc) untuk Riwayat Aktivitas Kepsek.
-* **Setelah deploy rules versi kuota-server & paket dinamis**:
+
+### 4.2b. Skrip Migrasi Otomatis Paket Dinamis & Kuota Murid (Data As-Is)
+Untuk database existing (sekolah lama yang terdaftar sebelum rilis paket dinamis), jalankan skrip migrasi otomatis yang disediakan di folder `scripts/`:
+```bash
+# 1. Uji coba terlebih dahulu (Simulasi Dry-Run tanpa menulis ke DB)
+node scripts/migrate-plans-and-quotas.mjs --dry-run
+
+# 2. Eksekusi migrasi nyata ke Firebase Production
+# Pastikan Service Account key sudah terpasang
+export GOOGLE_APPLICATION_CREDENTIALS="/path/to/serviceAccountKey.json"
+node scripts/migrate-plans-and-quotas.mjs
+```
+Fungsi skrip migrasi ini:
+1. Mengisi koleksi `plans` dengan 4 paket standar (`trial`, `rintisan`, `sahabat`, `mandiri`) jika belum ada.
+2. Memetakan nilai paket legacy (`basic` ➔ `sahabat`, `pro` ➔ `mandiri`).
+3. Menginisialisasi `kuota_murid` sesuai paket langganan.
+4. Menghitung jumlah riil murid dan guru aktif dari database dan mengisinya ke counter `jumlah_murid_aktif` serta `jumlah_guru_aktif` agar transaksi Firestore Rules atomic write berfungsi tanpa kendala.
+
+* **Setelah migrasi atau jika menggunakan UI Admin secara manual**:
   1. Superadmin login dan membuka menu **Paket Langganan** (`/superadmin/paket`) lalu klik **"Muat Paket Bawaan"** bila koleksi `plans` belum diinisialisasi.
   2. Buka **Dashboard Superadmin** sekali agar counter `jumlah_guru_aktif` dan `jumlah_murid_aktif` setiap sekolah terinisialisasi; sebelum itu penambahan guru/murid baru oleh Kepsek/Guru akan ditolak oleh rules.
 
