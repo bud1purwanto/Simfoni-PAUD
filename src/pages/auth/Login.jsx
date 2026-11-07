@@ -109,8 +109,12 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50/80 via-orange-50/40 to-rose-50/30 flex flex-col justify-center py-12 sm:px-6 lg:px-8 px-4">
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-3xl bg-gradient-to-tr from-amber-400 via-orange-500 to-amber-500 text-white shadow-lg shadow-orange-500/25 mb-4 animate-bounce font-brand">
-          <span className="text-3xl">🎶</span>
+        <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-white shadow-xl shadow-orange-500/15 mb-4 animate-bounce p-1 border-2 border-orange-200/80 overflow-hidden">
+          <img
+            src="/icons/logo-kids-final.png"
+            alt="Logo SIMFONI PAUD"
+            className="w-full h-full object-cover rounded-2xl"
+          />
         </div>
         <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight text-slate-900 font-brand">
           SIMFONI PAUD 🌸

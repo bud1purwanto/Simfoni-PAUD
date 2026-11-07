@@ -8,11 +8,13 @@
  *  - Font Google      : stale-while-revalidate.
  *  - /api/* & Firebase: TIDAK pernah di-cache.
  */
-const CACHE = 'simfoni-shell-v2';
+const CACHE = 'simfoni-shell-v3';
 const PRECACHE = [
   '/',
   '/index.html',
   '/manifest.json',
+  '/icons/logo-kids-final.png',
+  '/icons/logo-kids-final.svg',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
   '/apple-touch-icon.png',

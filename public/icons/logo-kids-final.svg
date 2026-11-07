@@ -1,0 +1,159 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Background Gradient Warm Honey Sunset Super Fresh -->
+    <linearGradient id="bgGradClean" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FCD34D"/>
+      <stop offset="35%" stop-color="#FB923C"/>
+      <stop offset="100%" stop-color="#EA580C"/>
+    </linearGradient>
+
+    <!-- Shadow Mewah & Halus -->
+    <filter id="dropShadowClean" x="-10%" y="-10%" width="125%" height="125%">
+      <feDropShadow dx="0" dy="7" stdDeviation="7" flood-opacity="0.22" flood-color="#7C2D12"/>
+    </filter>
+
+    <!-- Gradasi Kulit Ceria Alami -->
+    <linearGradient id="skinGradClean" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFDFC4"/>
+      <stop offset="100%" stop-color="#FAD0AC"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Squircle Background (Standar Ikon iOS & Android Modern) -->
+  <rect width="512" height="512" rx="128" fill="url(#bgGradClean)"/>
+
+  <!-- Halo Cahaya Lingkaran Ganda Lembut di Belakang Kepala -->
+  <circle cx="256" cy="245" r="205" fill="#ffffff" fill-opacity="0.22"/>
+  <circle cx="256" cy="245" r="155" fill="#ffffff" fill-opacity="0.18"/>
+
+  <!-- Ornamen Kilau Ceria Anak Usia Dini -->
+  <g fill="#FEF3C7" opacity="0.95">
+    <!-- Kilau Kiri Atas -->
+    <path d="M75 85 L80 100 L95 105 L80 110 L75 125 L70 110 L55 105 L70 100 Z" />
+    <!-- Kilau Kanan Atas -->
+    <path d="M435 95 L440 108 L453 113 L440 118 L435 131 L430 118 L417 113 L430 108 Z" />
+    <circle cx="256" cy="60" r="9" fill="#FEF3C7" />
+    <circle cx="120" cy="65" r="5" fill="#FEF3C7" opacity="0.7"/>
+    <circle cx="390" cy="70" r="6" fill="#FEF3C7" opacity="0.7"/>
+  </g>
+
+  <!-- ==================== ILUSTRASI KARAKTER UTAMA ==================== -->
+  <g filter="url(#dropShadowClean)">
+
+    <!-- ========== 1. ANAK LAKI-LAKI TK (KIRI) ========== -->
+    <g id="boy-tk">
+      <!-- Baju Seragam Kaos Biru Langit Ceria -->
+      <path d="M85 415 C85 350, 115 335, 180 335 C245 335, 275 350, 275 415 C275 475, 85 475, 85 415 Z" fill="#0284C7"/>
+      <!-- Kerah Baju Kuning Cerah -->
+      <path d="M148 335 Q180 368 212 335 Q180 352 148 335 Z" fill="#FDE047"/>
+
+      <!-- Telinga -->
+      <circle cx="98" cy="250" r="22" fill="url(#skinGradClean)" stroke="#E29578" stroke-width="2.5"/>
+      <circle cx="98" cy="250" r="11" fill="#FFCCD5" opacity="0.6"/>
+
+      <!-- Wajah Bulat Chibi -->
+      <ellipse cx="180" cy="245" rx="82" ry="82" fill="url(#skinGradClean)"/>
+
+      <!-- Pipi Merah Merona (Blush) -->
+      <ellipse cx="124" cy="275" rx="17" ry="11" fill="#FB7185" opacity="0.6"/>
+      <ellipse cx="236" cy="275" rx="17" ry="11" fill="#FB7185" opacity="0.6"/>
+
+      <!-- Mata Bulat Besar Berbinar Ceria -->
+      <ellipse cx="140" cy="237" rx="13" ry="17" fill="#1E293B"/>
+      <circle cx="136" cy="230" r="5.5" fill="#FFFFFF"/>
+      <circle cx="144" cy="241" r="2.5" fill="#FFFFFF"/>
+
+      <ellipse cx="220" cy="237" rx="13" ry="17" fill="#1E293B"/>
+      <circle cx="216" cy="230" r="5.5" fill="#FFFFFF"/>
+      <circle cx="224" cy="241" r="2.5" fill="#FFFFFF"/>
+
+      <!-- Alis Ceria -->
+      <path d="M128 213 Q140 205 152 213" stroke="#451A03" stroke-width="4" stroke-linecap="round" fill="none"/>
+      <path d="M208 213 Q220 205 232 213" stroke="#451A03" stroke-width="4" stroke-linecap="round" fill="none"/>
+
+      <!-- Hidung Mungil -->
+      <ellipse cx="180" cy="257" rx="4" ry="3.5" fill="#D97706" opacity="0.8"/>
+
+      <!-- Senyum Riang Terbuka Lebar -->
+      <path d="M156 271 Q180 307 204 271 Z" fill="#991B1B"/>
+      <path d="M166 287 Q180 303 194 287 Z" fill="#F472B6"/>
+
+      <!-- Rambut Cokelat Tua Berombak Keren -->
+      <path d="M98 235 C88 165, 128 120, 180 120 C232 120, 272 165, 262 235 C252 210, 242 190, 222 190 C202 190, 197 203, 180 190 C163 177, 148 190, 133 190 C113 190, 103 210, 98 235 Z" fill="#3B2314"/>
+
+      <!-- Topi TK Miring Lucu Berwarna Biru & Kuning -->
+      <g transform="translate(128, 90) rotate(-15)">
+        <ellipse cx="32" cy="26" rx="44" ry="15" fill="#0369A1"/>
+        <path d="M0 26 C0 2, 64 2, 64 26 Z" fill="#0284C7"/>
+        <circle cx="32" cy="5" r="6.5" fill="#FDE047"/>
+      </g>
+    </g>
+
+    <!-- ========== 2. ANAK PEREMPUAN TK (KANAN) ========== -->
+    <g id="girl-tk">
+      <!-- Baju Dress Pink Fusia Ceria -->
+      <path d="M237 415 C237 350, 267 335, 332 335 C397 335, 427 350, 427 415 C427 475, 237 475, 237 415 Z" fill="#F43F5E"/>
+      <!-- Kerah Baju Putih Bersih -->
+      <path d="M300 335 Q332 368 364 335 Q332 352 300 335 Z" fill="#FFFFFF"/>
+
+      <!-- Cepol / Kuncir Rambut Kembar Lucu (Twintails) -->
+      <g transform="translate(242, 210)">
+        <circle cx="0" cy="0" r="27" fill="#451A03"/>
+        <ellipse cx="-13" cy="11" rx="11" ry="15" fill="#FB7185"/>
+      </g>
+      <g transform="translate(422, 210)">
+        <circle cx="0" cy="0" r="27" fill="#451A03"/>
+        <ellipse cx="13" cy="11" rx="11" ry="15" fill="#FB7185"/>
+      </g>
+
+      <!-- Telinga -->
+      <circle cx="414" cy="250" r="22" fill="url(#skinGradClean)" stroke="#E29578" stroke-width="2.5"/>
+      <circle cx="414" cy="250" r="11" fill="#FFCCD5" opacity="0.6"/>
+
+      <!-- Wajah Bulat Chibi -->
+      <ellipse cx="332" cy="245" rx="82" ry="82" fill="url(#skinGradClean)"/>
+
+      <!-- Pipi Merona -->
+      <ellipse cx="276" cy="275" rx="17" ry="11" fill="#FB7185" opacity="0.65"/>
+      <ellipse cx="388" cy="275" rx="17" ry="11" fill="#FB7185" opacity="0.65"/>
+
+      <!-- Mata Bulat Berbulu Mata Cantik -->
+      <ellipse cx="292" cy="237" rx="13" ry="17" fill="#1E293B"/>
+      <circle cx="288" cy="230" r="5.5" fill="#FFFFFF"/>
+      <circle cx="296" cy="241" r="2.5" fill="#FFFFFF"/>
+      <!-- Bulu Mata Kiri -->
+      <path d="M281 228 L273 221" stroke="#1E293B" stroke-width="3" stroke-linecap="round"/>
+      <path d="M288 222 L285 214" stroke="#1E293B" stroke-width="3" stroke-linecap="round"/>
+
+      <ellipse cx="372" cy="237" rx="13" ry="17" fill="#1E293B"/>
+      <circle cx="368" cy="230" r="5.5" fill="#FFFFFF"/>
+      <circle cx="376" cy="241" r="2.5" fill="#FFFFFF"/>
+      <!-- Bulu Mata Kanan -->
+      <path d="M383 228 L391 221" stroke="#1E293B" stroke-width="3" stroke-linecap="round"/>
+      <path d="M376 222 L379 214" stroke="#1E293B" stroke-width="3" stroke-linecap="round"/>
+
+      <!-- Alis Ceria -->
+      <path d="M280 213 Q292 205 304 213" stroke="#451A03" stroke-width="4" stroke-linecap="round" fill="none"/>
+      <path d="M360 213 Q372 205 384 213" stroke="#451A03" stroke-width="4" stroke-linecap="round" fill="none"/>
+
+      <!-- Hidung Mungil -->
+      <ellipse cx="332" cy="257" rx="4" ry="3.5" fill="#D97706" opacity="0.8"/>
+
+      <!-- Senyum Manis Terbuka Riang -->
+      <path d="M308 271 Q332 307 356 271 Z" fill="#991B1B"/>
+      <path d="M318 287 Q332 303 346 287 Z" fill="#F472B6"/>
+
+      <!-- Rambut Bob Poni Manis -->
+      <path d="M250 235 C240 165, 280 120, 332 120 C384 120, 424 165, 414 235 C404 195, 394 185, 369 185 C344 185, 339 200, 332 200 C325 200, 320 185, 295 185 C270 185, 260 195, 250 235 Z" fill="#451A03"/>
+
+      <!-- Jepitan Bunga Pink di Rambut Kanan -->
+      <g transform="translate(378, 155)">
+        <circle cx="-7" cy="0" r="8" fill="#F43F5E"/>
+        <circle cx="7" cy="0" r="8" fill="#F43F5E"/>
+        <circle cx="0" cy="-7" r="8" fill="#F43F5E"/>
+        <circle cx="0" cy="7" r="8" fill="#F43F5E"/>
+        <circle cx="0" cy="0" r="6" fill="#FDE047"/>
+      </g>
+    </g>
+  </g>
+</svg>

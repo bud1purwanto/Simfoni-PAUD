@@ -152,9 +152,17 @@ export default function AppLayout() {
                 alt="Logo Sekolah"
                 className="w-10 h-10 rounded-2xl object-contain border border-orange-200 p-0.5 bg-white shadow-sm"
               />
-            ) : (
+            ) : role === 'superadmin' ? (
               <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-400 via-orange-500 to-amber-500 text-white flex items-center justify-center font-bold text-lg shadow-md shadow-orange-500/20 font-brand">
-                {role === 'superadmin' ? '👑' : '🎶'}
+                👑
+              </div>
+            ) : (
+              <div className="w-10 h-10 rounded-2xl border border-orange-200 p-0.5 bg-white shadow-sm overflow-hidden flex items-center justify-center">
+                <img
+                  src="/icons/logo-kids-final.png"
+                  alt="SIMFONI PAUD"
+                  className="w-full h-full object-cover rounded-xl"
+                />
               </div>
             )}
             

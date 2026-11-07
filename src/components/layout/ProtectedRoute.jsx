@@ -10,8 +10,12 @@ export const getDashboardPath = (role) => {
 
 const LoadingScreen = () => (
   <div className="min-h-screen bg-amber-50/30 flex flex-col items-center justify-center p-4">
-    <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-200/60 flex items-center justify-center text-xl animate-pulse mb-3">
-      🎶
+    <div className="w-14 h-14 rounded-2xl bg-white border border-amber-200/80 p-0.5 shadow-sm overflow-hidden flex items-center justify-center animate-pulse mb-3">
+      <img
+        src="/icons/logo-kids-final.png"
+        alt="Memuat SIMFONI PAUD"
+        className="w-full h-full object-cover rounded-xl"
+      />
     </div>
     <p className="text-xs font-semibold text-slate-500 tracking-wider animate-pulse">
       MEMUAT SIMFONI PAUD...
