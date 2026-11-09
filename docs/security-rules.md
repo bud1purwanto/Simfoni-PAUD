@@ -73,6 +73,7 @@ classDiagram
 | **Asesmen Capaian Perkembangan Siswa** | ✅ Ya (kelas sendiri) | ✅ Ya (monitoring rekap) | ✅ Ya |
 | **Supervisi & Evaluasi Kinerja Guru** | ❌ Hanya membaca hasil | ✅ Ya (mengisi instrumen) | ✅ Ya |
 | **Pembersihan Log Audit (Purge/Retention)**| ❌ Dilarang | ❌ Dilarang | ✅ Ya (Manual & Periodik) |
+| **Broadcast Pengumuman Global (`broadcasts`)** | ❌ Read-only | ❌ Read-only | ✅ Ya (CRUD Penuh) |
 | **Akses Lintas Tenant (`school_id` lain)**| ❌ **DIBLOKIR** | ❌ **DIBLOKIR** | ✅ **Global Access** |
 
 ---

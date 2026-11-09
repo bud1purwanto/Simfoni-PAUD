@@ -26,6 +26,8 @@ import { hitungStatusKedatangan, hitungMenitTerlambat, getJamMasuk, getJamPulang
 import { logActivity } from '../../utils/auditLogger';
 import { commitWrite, QUEUED_SUFFIX } from '../../utils/offlineWrite';
 
+import GlobalBroadcastBanner from '../../components/ui/GlobalBroadcastBanner';
+
 export default function DashboardKepsek() {
   const { userData, schoolData } = useAuth();
   const navigate = useNavigate();
@@ -243,6 +245,8 @@ export default function DashboardKepsek() {
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto pb-12">
+      {/* Pengumuman Global dari Superadmin */}
+      <GlobalBroadcastBanner role="kepsek" schoolId={userData?.school_id} />
       
       {/* 1. Header Salam & Identitas Sekolah */}
       <div className="bg-gradient-to-r from-amber-500 via-orange-400 to-amber-600 rounded-3xl p-6 md:p-8 text-white shadow-xl shadow-orange-500/15 relative overflow-hidden">

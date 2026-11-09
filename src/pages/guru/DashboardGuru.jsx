@@ -36,6 +36,8 @@ const sapaan = () => {
   return 'Selamat Malam';
 };
 
+import GlobalBroadcastBanner from '../../components/ui/GlobalBroadcastBanner';
+
 export default function DashboardGuru() {
   const { userData, schoolData } = useAuth();
   const navigate = useNavigate();
@@ -225,6 +227,8 @@ export default function DashboardGuru() {
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto pb-6">
+      {/* Pengumuman Global dari Superadmin */}
+      <GlobalBroadcastBanner role="guru" schoolId={userData?.school_id} />
       
       {/* 1. Header Sambutan Hangat & Ceria Guru PAUD */}
       <div className="bg-gradient-to-r from-amber-400 via-orange-400 to-rose-400 rounded-3xl p-6 md:p-8 text-white shadow-xl shadow-orange-500/15 relative overflow-hidden">

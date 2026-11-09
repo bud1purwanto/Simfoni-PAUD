@@ -36,10 +36,18 @@ import {
   Coins,
   Receipt,
   CircleDollarSign,
-  TrendingDown
+  TrendingDown,
+  Megaphone,
+  FileSpreadsheet,
+  Download,
+  Trash2,
+  Send,
+  CheckCircle,
+  FileText
 } from 'lucide-react';
-import { collection, onSnapshot, query, orderBy, limit, where } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, limit, where, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../config/firebase';
+import * as XLSX from 'xlsx';
 import { useAuth } from '../../context/AuthContext';
 import { formatTanggalIndo, formatJamMenit, getLocalDateString } from '../../utils/formatters';
 import { runAutoRetentionIfDue } from '../../utils/logRetention';
@@ -58,14 +66,37 @@ export default function DashboardSuperadmin() {
   const [plansDb, setPlansDb] = useState({});
   const [loading, setLoading] = useState(true);
 
-  // Filter & Search State untuk Guru, Radar, & Finansial
-  const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'finance' | 'radar' | 'guru' | 'logs'
+  // Filter & Search State untuk Guru, Radar, Finansial, & Akademik
+  const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'finance' | 'academic' | 'broadcast' | 'radar' | 'guru' | 'logs'
   const [searchGuru, setSearchGuru] = useState('');
   const [filterSchoolId, setFilterSchoolId] = useState('all');
   const [filterStatusAkun, setFilterStatusAkun] = useState('all');
   const [searchRadar, setSearchRadar] = useState('');
   const [filterHealthCategory, setFilterHealthCategory] = useState('all'); // 'all' | 'kritis' | 'waspada' | 'prima'
   const [searchBilling, setSearchBilling] = useState('');
+
+  // State Pengumuman Global (Prioritas 4)
+  const [broadcastList, setBroadcastList] = useState([]);
+  const [formBcJudul, setFormBcJudul] = useState('');
+  const [formBcPesan, setFormBcPesan] = useState('');
+  const [formBcTipe, setFormBcTipe] = useState('pengumuman'); // 'pengumuman' | 'info' | 'penting'
+  const [formBcTarget, setFormBcTarget] = useState('all'); // 'all' | 'kepsek' | 'guru'
+  const [formBcLinkUrl, setFormBcLinkUrl] = useState('');
+  const [formBcLinkLabel, setFormBcLinkLabel] = useState('');
+  const [bcSubmitting, setBcSubmitting] = useState(false);
+  const [bcNotification, setBcNotification] = useState(null);
+
+  // State Ekspor Excel (Prioritas 5)
+  const [exportingExcel, setExportingExcel] = useState(false);
+
+  // State Denyut Nadi Akademik 5 Pilar (Prioritas 3)
+  const [academicStats, setAcademicStats] = useState({
+    totalRpph: 0,
+    totalRpphApproved: 0,
+    totalJournals: 0,
+    totalAssessments: 0,
+    totalSupervisions: 0
+  });
 
   const todayStr = getLocalDateString();
 
@@ -104,12 +135,42 @@ export default function DashboardSuperadmin() {
       setTodayAttendance(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
     }, (err) => console.warn('Gagal memuat presensi hari ini:', err));
 
+    // 6. Ambil Broadcast Pengumuman Global (Prioritas 4)
+    const qBc = query(collection(db, 'broadcasts'), orderBy('created_at', 'desc'), limit(10));
+    const unsubBc = onSnapshot(qBc, (snap) => {
+      setBroadcastList(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    }, (err) => console.warn('Gagal memuat broadcasts:', err));
+
+    // 7. Ambil Denyut Nadi Akademik 5 Pilar PAUD Nasional (Prioritas 3)
+    const unsubJournals = onSnapshot(collection(db, 'journals'), (snap) => {
+      setAcademicStats((prev) => ({ ...prev, totalJournals: snap.size }));
+    }, () => {});
+
+    const unsubRpph = onSnapshot(collection(db, 'rpph_submissions'), (snap) => {
+      const allRpph = snap.docs.map((d) => d.data());
+      const approved = allRpph.filter((r) => r.status === 'disetujui').length;
+      setAcademicStats((prev) => ({ ...prev, totalRpph: snap.size, totalRpphApproved: approved }));
+    }, () => {});
+
+    const unsubAssess = onSnapshot(collection(db, 'student_assessments'), (snap) => {
+      setAcademicStats((prev) => ({ ...prev, totalAssessments: snap.size }));
+    }, () => {});
+
+    const unsubSuper = onSnapshot(collection(db, 'teacher_supervisions'), (snap) => {
+      setAcademicStats((prev) => ({ ...prev, totalSupervisions: snap.size }));
+    }, () => {});
+
     return () => {
       unsubSchools();
       unsubUsers();
       unsubPlans();
       unsubLogs();
       unsubAttend();
+      unsubBc();
+      unsubJournals();
+      unsubRpph();
+      unsubAssess();
+      unsubSuper();
     };
   }, [todayStr]);
 
@@ -200,6 +261,204 @@ export default function DashboardSuperadmin() {
     }
     return todayAttendance;
   }, [todayAttendance, isPreview, todayStr]);
+
+  // Efektif Statistik Akademik (dengan mock data jika di preview kosong)
+  const effectiveAcademicStats = useMemo(() => {
+    if (academicStats.totalJournals > 0 || academicStats.totalRpph > 0) {
+      return academicStats;
+    }
+    if (isPreview) {
+      return {
+        totalRpph: 48,
+        totalRpphApproved: 42,
+        totalJournals: 184,
+        totalAssessments: 320,
+        totalSupervisions: 16
+      };
+    }
+    return academicStats;
+  }, [academicStats, isPreview]);
+
+  // Efektif Broadcasts (dengan mock data jika di preview kosong)
+  const effectiveBroadcasts = useMemo(() => {
+    if (broadcastList.length > 0) return broadcastList;
+    if (isPreview) {
+      return [
+        {
+          id: 'mock-bc-1',
+          judul: 'Selamat Memasuki Semester Genap 2026/2027! 🌸',
+          pesan: 'Kepada seluruh Bunda/Bapak Kepala Sekolah dan Rekan Guru PAUD,\nMari kita sambut semester baru dengan semangat dan senyum hangat untuk putra-putri tunas bangsa.',
+          tipe: 'pengumuman',
+          target: 'all',
+          created_at: new Date(),
+          tanggal_teks: 'Hari ini',
+          link_url: 'https://simfoni-paud.web.id',
+          link_label: 'Pedoman Kurikulum Merdeka PAUD',
+          status: 'aktif'
+        }
+      ];
+    }
+    return broadcastList;
+  }, [broadcastList, isPreview]);
+
+  // Handler Kirim Broadcast Baru (Prioritas 4)
+  const handleSendBroadcast = async (e) => {
+    e.preventDefault();
+    if (!formBcJudul.trim() || !formBcPesan.trim()) {
+      setBcNotification({ type: 'error', text: 'Judul dan isi pengumuman wajib diisi.' });
+      return;
+    }
+
+    setBcSubmitting(true);
+    setBcNotification(null);
+    try {
+      const payload = {
+        judul: formBcJudul.trim(),
+        pesan: formBcPesan.trim(),
+        tipe: formBcTipe,
+        target: formBcTarget,
+        link_url: formBcLinkUrl.trim() || null,
+        link_label: formBcLinkLabel.trim() || null,
+        author_id: userData?.uid || 'superadmin',
+        author_nama: userData?.nama || 'Superadmin Pusat',
+        status: 'aktif',
+        created_at: serverTimestamp(),
+        tanggal_teks: formatTanggalIndo(new Date())
+      };
+
+      if (!isPreview) {
+        await addDoc(collection(db, 'broadcasts'), payload);
+      } else {
+        setBroadcastList((prev) => [
+          { id: `local-bc-${Date.now()}`, ...payload, created_at: new Date() },
+          ...prev
+        ]);
+      }
+
+      setBcNotification({ type: 'success', text: 'Pengumuman resmi berhasil disiarkan ke seluruh sekolah mitra!' });
+      setFormBcJudul('');
+      setFormBcPesan('');
+      setFormBcLinkUrl('');
+      setFormBcLinkLabel('');
+    } catch (err) {
+      console.error('Gagal mengirim broadcast:', err);
+      setBcNotification({ type: 'error', text: 'Gagal menyiarkan pengumuman: ' + err.message });
+    } finally {
+      setBcSubmitting(false);
+    }
+  };
+
+  // Handler Hapus/Arsipkan Broadcast (Prioritas 4)
+  const handleDeleteBroadcast = async (bcId) => {
+    try {
+      if (!isPreview) {
+        await deleteDoc(doc(db, 'broadcasts', bcId));
+      } else {
+        setBroadcastList((prev) => prev.filter((b) => b.id !== bcId));
+      }
+      setBcNotification({ type: 'success', text: 'Pengumuman telah ditarik/dihapus dari peredaran.' });
+    } catch (err) {
+      console.error('Gagal menghapus broadcast:', err);
+      setBcNotification({ type: 'error', text: 'Gagal menghapus pengumuman: ' + err.message });
+    }
+  };
+
+  // Handler Ekspor Excel Resmi Laporan Finansial & Operasional SaaS (Prioritas 5)
+  const handleExportExcelMaster = () => {
+    setExportingExcel(true);
+    try {
+      // Sheet 1: Ringkasan Finansial & KPI
+      const kpiData = [
+        ['LAPORAN EKSEKUTIF SAAS SIMFONI PAUD'],
+        ['Tanggal Unduh', formatTanggalIndo(new Date()) + ' ' + formatJamMenit(new Date())],
+        ['Dibuat Oleh', userData?.nama || 'Superadmin Pusat'],
+        [],
+        ['RINGKASAN FINANSIAL PLATFORM (MRR & ARR)'],
+        ['Indikator', 'Nilai (Rupiah)', 'Keterangan'],
+        ['Monthly Recurring Revenue (MRR)', financialStats.mrrTotal, 'Pendapatan langganan bulanan berjalan'],
+        ['Annual Run Rate (ARR)', financialStats.arrTotal, 'Proyeksi pendapatan tahunan (MRR x 12)'],
+        ['Tenant Sekolah Berbayar', financialStats.payingSchools, `Dari total ${effectiveSchools.length} sekolah terdaftar`],
+        ['ARPU (Rata-Rata per Sekolah)', financialStats.arpu, 'Rata-rata kontribusi per sekolah mitra aktif'],
+        [],
+        ['BREAKDOWN OMSET PER TIER PAKET'],
+        ['Nama Paket', 'Tarif Bulanan', 'Jumlah Sekolah', 'Total Omset MRR', 'Pangsa Pasar (%)'],
+        ...financialStats.tierStats.map((t) => [
+          t.nama,
+          t.harga_bulanan,
+          t.sekolahCount,
+          t.totalMrr,
+          financialStats.mrrTotal > 0 ? `${Math.round((t.totalMrr / financialStats.mrrTotal) * 100)}%` : '0%'
+        ]),
+        [],
+        ['DENYUT NADI AKADEMIK 5 PILAR PAUD NASIONAL'],
+        ['Pilar Pembelajaran', 'Akumulasi Nasional', 'Keterangan'],
+        ['Perangkat Ajar (RPPH) Disahkan', effectiveAcademicStats.totalRpphApproved, `Dari total ${effectiveAcademicStats.totalRpph} modul diajukan`],
+        ['Jurnal Pembelajaran KBM Terbit', effectiveAcademicStats.totalJournals, 'Dokumentasi harian guru'],
+        ['Observasi Asesmen Capaian Anak', effectiveAcademicStats.totalAssessments, 'Nilai Agama, Jati Diri, STEAM'],
+        ['Supervisi & Evaluasi Guru', effectiveAcademicStats.totalSupervisions, 'Pembinaan klinis oleh Kepala Sekolah']
+      ];
+
+      // Sheet 2: Master Data Sekolah & Penagihan Invoice
+      const tenantData = [
+        ['DAFTAR TENANT SEKOLAH & JADWAL PENAGIHAN INVOICE'],
+        ['No', 'Nama Sekolah', 'Kota', 'NPSN', 'Paket', 'Tarif Bulanan', 'Kuota Guru', 'Kuota Murid', 'Murid Aktif', 'Health Score', 'Status', 'Jatuh Tempo', 'Sisa Hari', 'Nama Kepala Sekolah', 'Nomor Kontak WA'],
+        ...effectiveSchools.map((s, idx) => {
+          const planInfo = getPlan(s.paket_langganan, plansDb);
+          const kepsek = effectiveUsers.find((u) => u.school_id === s.id && u.role === 'kepsek');
+          const health = tenantHealthList.find((t) => t.school.id === s.id);
+          const sisa = sisaHariLangganan(s);
+
+          return [
+            idx + 1,
+            s.nama_sekolah || '-',
+            s.kota || '-',
+            s.npsn || '-',
+            planInfo.nama,
+            planInfo.harga_bulanan || 0,
+            s.kuota_guru || 5,
+            s.kuota_murid || 'Tanpa Batas',
+            s.jumlah_murid_aktif || 0,
+            health ? `${health.score}% (${health.category.toUpperCase()})` : '-',
+            s.status_langganan === 'nonaktif' ? 'NONAKTIF' : 'AKTIF',
+            s.berlaku_hingga ? formatTanggalIndo(s.berlaku_hingga) : '-',
+            sisa !== null ? `${sisa} Hari` : '-',
+            kepsek?.nama || '-',
+            s.telepon || kepsek?.telepon || kepsek?.no_hp || '-'
+          ];
+        })
+      ];
+
+      // Sheet 3: Direktori Master Guru Se-Indonesia
+      const guruData = [
+        ['DIREKTORI MASTER GURU PAUD SE-INDONESIA'],
+        ['No', 'Nama Lengkap Guru', 'Email Akun', 'Asal Sekolah', 'Kelompok Kelas', 'Status Akun'],
+        ...effectiveUsers.filter((u) => u.role === 'guru').map((g, idx) => [
+          idx + 1,
+          g.nama || '-',
+          g.email || '-',
+          g.nama_sekolah || '-',
+          g.kelompok_kelas || 'Umum',
+          g.status_akun === 'aktif' ? 'AKTIF' : 'NONAKTIF'
+        ])
+      ];
+
+      const wb = XLSX.utils.book_new();
+      const wsKpi = XLSX.utils.aoa_to_sheet(kpiData);
+      const wsTenant = XLSX.utils.aoa_to_sheet(tenantData);
+      const wsGuru = XLSX.utils.aoa_to_sheet(guruData);
+
+      XLSX.utils.book_append_sheet(wb, wsKpi, 'Ringkasan Finansial');
+      XLSX.utils.book_append_sheet(wb, wsTenant, 'Sekolah & Tagihan');
+      XLSX.utils.book_append_sheet(wb, wsGuru, 'Master Guru Nasional');
+
+      const fileName = `SIMFONI_PAUD_Laporan_Eksekutif_${todayStr}.xlsx`;
+      XLSX.writeFile(wb, fileName);
+    } catch (err) {
+      console.error('Gagal mengekspor laporan Excel:', err);
+    } finally {
+      setExportingExcel(false);
+    }
+  };
 
   // Metrik Agregat Utama
   const totalSchools = effectiveSchools.length;
@@ -502,6 +761,17 @@ export default function DashboardSuperadmin() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            {/* Tombol Ekspor Excel Resmi (Prioritas 5) */}
+            <button
+              onClick={handleExportExcelMaster}
+              disabled={exportingExcel}
+              className="px-3.5 py-2.5 bg-emerald-700/80 hover:bg-emerald-700 active:scale-95 text-white font-extrabold text-xs rounded-2xl shadow-sm transition flex items-center space-x-1.5 font-brand border border-emerald-400/30"
+              title="Unduh laporan lengkap multi-sheet Excel (.xlsx)"
+            >
+              <FileSpreadsheet className="w-4 h-4 text-emerald-200" />
+              <span>{exportingExcel ? 'Mengolah Excel...' : 'Ekspor Excel (.xlsx)'}</span>
+            </button>
+
             <button
               onClick={() => navigate('/superadmin/paket')}
               className="px-3.5 py-2.5 bg-white/20 hover:bg-white/30 backdrop-blur-md text-white font-extrabold text-xs rounded-2xl shadow-sm transition flex items-center space-x-1.5 font-brand"
@@ -781,6 +1051,32 @@ export default function DashboardSuperadmin() {
         >
           <Coins className="w-4 h-4 text-emerald-500" />
           <span>Finansial & MRR SaaS ({formatRupiah(financialStats.mrrTotal)})</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('academic')}
+          className={`px-4 py-2.5 rounded-2xl text-xs font-extrabold transition flex items-center space-x-2 shrink-0 ${
+            activeTab === 'academic'
+              ? 'bg-slate-900 text-white shadow-md shadow-slate-900/20'
+              : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+          }`}
+        >
+          <BookOpen className="w-4 h-4 text-blue-500" />
+          <span>Denyut Akademik 5 Pilar ({effectiveAcademicStats.totalJournals} Jurnal)</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('broadcast')}
+          className={`px-4 py-2.5 rounded-2xl text-xs font-extrabold transition flex items-center space-x-2 shrink-0 ${
+            activeTab === 'broadcast'
+              ? 'bg-slate-900 text-white shadow-md shadow-slate-900/20'
+              : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+          }`}
+        >
+          <Megaphone className="w-4 h-4 text-amber-500" />
+          <span>Broadcast Pengumuman Global</span>
         </button>
 
         <button
@@ -1235,6 +1531,341 @@ export default function DashboardSuperadmin() {
                       })}
                   </tbody>
                 </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 3: DENYUT NADI AKADEMIK 5 PILAR PAUD NASIONAL (PRIORITAS 3) */}
+      {activeTab === 'academic' && (
+        <div className="space-y-6">
+          {/* Hero Banner Akademik */}
+          <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 rounded-3xl p-6 md:p-8 text-white shadow-md shadow-blue-500/15 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <div className="inline-flex items-center space-x-2 px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-bold text-blue-100 mb-2">
+                <BookOpen className="w-3.5 h-3.5" />
+                <span>Denyut Nadi Kurikulum Merdeka PAUD Nasional</span>
+              </div>
+              <h2 className="text-2xl font-black font-brand tracking-tight">
+                Akumulasi Aktivitas Pembelajaran 5 Pilar
+              </h2>
+              <p className="text-blue-100 text-xs md:text-sm mt-1 max-w-2xl font-medium">
+                Rekapitulasi nasional pemenuhan standar PAUD: Perangkat Ajar RPPH, Jurnal KBM Guru, Observasi Asesmen Capaian Murid, dan Supervisi Klinis Kepala Sekolah.
+              </p>
+            </div>
+            <div className="bg-white/10 backdrop-blur-md p-3.5 rounded-2xl border border-white/20 text-center shrink-0">
+              <span className="text-xs font-bold text-blue-200 block">Total Jurnal Harian</span>
+              <span className="text-3xl font-black font-brand text-white">{effectiveAcademicStats.totalJournals}</span>
+              <span className="text-[10px] text-blue-200 block">Dokumentasi Terbit</span>
+            </div>
+          </div>
+
+          {/* 4 Pilar Utama Akademik */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Pilar 1: RPPH / Modul Ajar */}
+            <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold">
+                    <BookOpen className="w-5 h-5" />
+                  </div>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-amber-50 text-amber-700 border border-amber-200">
+                    Pilar 1
+                  </span>
+                </div>
+                <div className="text-2xl font-black text-slate-800 font-brand">
+                  {effectiveAcademicStats.totalRpphApproved} <span className="text-sm font-semibold text-slate-400">/ {effectiveAcademicStats.totalRpph} Disahkan</span>
+                </div>
+                <h4 className="text-xs font-bold text-slate-700 mt-1 uppercase tracking-wider">
+                  Modul Ajar / RPPH Mingguan
+                </h4>
+                <p className="text-[11px] text-slate-400 font-medium mt-1">
+                  Rancangan kegiatan bermain-belajar Kurikulum Merdeka yang disahkan Kepala Sekolah.
+                </p>
+              </div>
+              <div className="mt-4 pt-3 border-t border-slate-100 text-[11px] font-bold text-amber-700">
+                Tingkat Validasi: {effectiveAcademicStats.totalRpph > 0 ? Math.round((effectiveAcademicStats.totalRpphApproved / effectiveAcademicStats.totalRpph) * 100) : 0}%
+              </div>
+            </div>
+
+            {/* Pilar 2: Jurnal Pembelajaran KBM */}
+            <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="w-10 h-10 rounded-2xl bg-teal-100 text-teal-700 flex items-center justify-center font-bold">
+                    <CheckSquare className="w-5 h-5" />
+                  </div>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-teal-50 text-teal-700 border border-teal-200">
+                    Pilar 2
+                  </span>
+                </div>
+                <div className="text-2xl font-black text-slate-800 font-brand">
+                  {effectiveAcademicStats.totalJournals} <span className="text-sm font-semibold text-slate-400">Jurnal</span>
+                </div>
+                <h4 className="text-xs font-bold text-slate-700 mt-1 uppercase tracking-wider">
+                  Dokumentasi Jurnal Harian
+                </h4>
+                <p className="text-[11px] text-slate-400 font-medium mt-1">
+                  Catatan kegiatan harian, materi inti, refleksi, serta foto dokumentasi KBM guru.
+                </p>
+              </div>
+              <div className="mt-4 pt-3 border-t border-slate-100 text-[11px] font-bold text-teal-700">
+                Terdistribusi di {effectiveSchools.length} Sekolah
+              </div>
+            </div>
+
+            {/* Pilar 3: Asesmen Capaian Perkembangan Anak */}
+            <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="w-10 h-10 rounded-2xl bg-orange-100 text-orange-700 flex items-center justify-center font-bold">
+                    <Award className="w-5 h-5" />
+                  </div>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-orange-50 text-orange-700 border border-orange-200">
+                    Pilar 3
+                  </span>
+                </div>
+                <div className="text-2xl font-black text-slate-800 font-brand">
+                  {effectiveAcademicStats.totalAssessments} <span className="text-sm font-semibold text-slate-400">Observasi</span>
+                </div>
+                <h4 className="text-xs font-bold text-slate-700 mt-1 uppercase tracking-wider">
+                  Asesmen & Capaian Murid
+                </h4>
+                <p className="text-[11px] text-slate-400 font-medium mt-1">
+                  Catatan ceklis & anekdot 3 elemen (Nilai Agama & Budi Pekerti, Jati Diri, STEAM).
+                </p>
+              </div>
+              <div className="mt-4 pt-3 border-t border-slate-100 text-[11px] font-bold text-orange-700">
+                Untuk {totalMuridNasional} Murid Terdaftar
+              </div>
+            </div>
+
+            {/* Pilar 4: Supervisi Kinerja Guru */}
+            <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="w-10 h-10 rounded-2xl bg-purple-100 text-purple-700 flex items-center justify-center font-bold">
+                    <Users className="w-5 h-5" />
+                  </div>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-purple-50 text-purple-700 border border-purple-200">
+                    Pilar 4
+                  </span>
+                </div>
+                <div className="text-2xl font-black text-slate-800 font-brand">
+                  {effectiveAcademicStats.totalSupervisions} <span className="text-sm font-semibold text-slate-400">Sesi</span>
+                </div>
+                <h4 className="text-xs font-bold text-slate-700 mt-1 uppercase tracking-wider">
+                  Supervisi Klinis Pimpinan
+                </h4>
+                <p className="text-[11px] text-slate-400 font-medium mt-1">
+                  Instrumen telaah kinerja guru oleh Kepala Sekolah untuk penjaminan mutu lembaga.
+                </p>
+              </div>
+              <div className="mt-4 pt-3 border-t border-slate-100 text-[11px] font-bold text-purple-700">
+                Mencakup 100% Guru Terdaftar
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 4: BROADCAST PENGUMUMAN GLOBAL SUPERADMIN (PRIORITAS 4) */}
+      {activeTab === 'broadcast' && (
+        <div className="space-y-6">
+          {bcNotification && (
+            <div className={`p-4 rounded-2xl text-xs font-bold flex items-center space-x-2.5 shadow-sm ${
+              bcNotification.type === 'success'
+                ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                : 'bg-rose-50 text-rose-800 border border-rose-200'
+            }`}>
+              {bcNotification.type === 'success' ? <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" /> : <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />}
+              <span>{bcNotification.text}</span>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Form Siarkan Pengumuman Baru (1 Kolom) */}
+            <div className="bg-white rounded-3xl border border-slate-200/80 p-5 md:p-6 shadow-xs space-y-4">
+              <div className="flex items-center space-x-2">
+                <Megaphone className="w-5 h-5 text-amber-500" />
+                <h3 className="font-extrabold text-slate-800 text-base font-brand">
+                  Siarkan Pengumuman Baru
+                </h3>
+              </div>
+              <p className="text-xs text-slate-500 font-medium">
+                Pesan ini akan otomatis tampil di atas dashboard seluruh Kepala Sekolah dan Guru mitra.
+              </p>
+
+              <form onSubmit={handleSendBroadcast} className="space-y-3 pt-2">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                    Judul Pengumuman *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Contoh: Jadwal Libur Semester Ganjil 🌸"
+                    value={formBcJudul}
+                    onChange={(e) => setFormBcJudul(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                      Tipe / Level
+                    </label>
+                    <select
+                      value={formBcTipe}
+                      onChange={(e) => setFormBcTipe(e.target.value)}
+                      className="w-full px-2.5 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 focus:outline-none"
+                    >
+                      <option value="pengumuman">📢 Pengumuman Biasa</option>
+                      <option value="info">ℹ️ Informasi / Rilis</option>
+                      <option value="penting">⚠️ Penting / Darurat</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                      Target Sasaran
+                    </label>
+                    <select
+                      value={formBcTarget}
+                      onChange={(e) => setFormBcTarget(e.target.value)}
+                      className="w-full px-2.5 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 focus:outline-none"
+                    >
+                      <option value="all">Semua (Kepsek & Guru)</option>
+                      <option value="kepsek">Hanya Kepala Sekolah</option>
+                      <option value="guru">Hanya Guru PAUD</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                    Isi Pengumuman / Pesan *
+                  </label>
+                  <textarea
+                    required
+                    rows={4}
+                    placeholder="Tuliskan isi pengumuman lengkap untuk seluruh mitra..."
+                    value={formBcPesan}
+                    onChange={(e) => setFormBcPesan(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                      Link Eksternal (Opsional)
+                    </label>
+                    <input
+                      type="url"
+                      placeholder="https://..."
+                      value={formBcLinkUrl}
+                      onChange={(e) => setFormBcLinkUrl(e.target.value)}
+                      className="w-full px-2.5 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                      Label Tombol Link
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Contoh: Unduh Surat Edaran"
+                      value={formBcLinkLabel}
+                      onChange={(e) => setFormBcLinkLabel(e.target.value)}
+                      className="w-full px-2.5 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={bcSubmitting}
+                  className="w-full py-2.5 bg-orange-500 hover:bg-orange-600 active:scale-95 text-white font-extrabold text-xs rounded-xl shadow-sm transition flex items-center justify-center space-x-2 font-brand mt-2"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  <span>{bcSubmitting ? 'Menyiarkan...' : 'Siarkan Pengumuman Sekarang'}</span>
+                </button>
+              </form>
+            </div>
+
+            {/* Riwayat Broadcast Aktif (2 Kolom) */}
+            <div className="lg:col-span-2 bg-white rounded-3xl border border-slate-200/80 p-5 md:p-6 shadow-xs space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Megaphone className="w-5 h-5 text-blue-600" />
+                  <h3 className="font-extrabold text-slate-800 text-base font-brand">
+                    Riwayat Pengumuman Pusat ({effectiveBroadcasts.length})
+                  </h3>
+                </div>
+                <span className="text-xs font-bold text-slate-400">
+                  Realtime Sync
+                </span>
+              </div>
+
+              <div className="divide-y divide-slate-100">
+                {effectiveBroadcasts.length === 0 ? (
+                  <p className="text-xs text-slate-400 py-8 text-center font-medium">
+                    Belum ada siaran pengumuman global. Buat siaran pertama di formulir samping!
+                  </p>
+                ) : (
+                  effectiveBroadcasts.map((bc) => (
+                    <div key={bc.id} className="py-4 flex items-start justify-between gap-4">
+                      <div className="space-y-1">
+                        <div className="flex items-center space-x-2">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                            bc.tipe === 'penting'
+                              ? 'bg-rose-100 text-rose-800'
+                              : bc.tipe === 'info'
+                              ? 'bg-blue-100 text-blue-800'
+                              : 'bg-amber-100 text-amber-800'
+                          }`}>
+                            {bc.tipe}
+                          </span>
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600">
+                            Target: {bc.target === 'all' ? 'Semua Pengguna' : bc.target === 'kepsek' ? 'Hanya Kepsek' : 'Hanya Guru'}
+                          </span>
+                          <span className="text-[11px] text-slate-400">
+                            {bc.tanggal_teks || 'Hari ini'}
+                          </span>
+                        </div>
+                        <h4 className="font-extrabold text-slate-800 text-sm font-brand">
+                          {bc.judul}
+                        </h4>
+                        <p className="text-xs text-slate-600 whitespace-pre-line leading-relaxed">
+                          {bc.pesan}
+                        </p>
+                        {bc.link_url && (
+                          <div className="pt-1">
+                            <a
+                              href={bc.link_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-orange-600 font-bold hover:underline inline-flex items-center space-x-1"
+                            >
+                              <span>{bc.link_label || bc.link_url}</span>
+                              <span>→</span>
+                            </a>
+                          </div>
+                        )}
+                      </div>
+
+                      <button
+                        onClick={() => handleDeleteBroadcast(bc.id)}
+                        className="p-2 text-slate-400 hover:text-rose-600 rounded-xl hover:bg-rose-50 transition shrink-0"
+                        title="Tarik / Hapus Siaran"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </div>

@@ -392,6 +392,12 @@ service cloud.firestore {
                 || muridCounterUpdatedFor(resource.data.school_id, studentId)));
     }
 
+    // --- 9c. KOLEKSI GLOBAL BROADCASTS (PENGUMUMAN SUPERADMIN) ---
+    match /broadcasts/{broadcastId} {
+      allow read: if isSignedIn();
+      allow write: if isSuperAdmin();
+    }
+
     // --- 10. ATURAN UNIVERSAL MULTI-TENANT (KOLEKSI BARU DI MASA DEPAN) ---
     // Mengamankan koleksi baru (mis. inventaris, spp_siswa, raport) yang memiliki field
     // 'school_id' tanpa perlu menulis aturan baru. Koleksi inti DIKECUALIKAN agar aturan
@@ -400,7 +406,7 @@ service cloud.firestore {
       function isCoreCollection() {
         return collectionName in ['schools', 'users', 'attendance', 'journals', 'schedules',
                                   'tasks_and_issues', 'audit_logs', 'system_settings',
-                                  'teacher_supervisions', 'plans', 'students'];
+                                  'teacher_supervisions', 'plans', 'students', 'broadcasts'];
       }
 
       allow read: if !isCoreCollection() && (isSuperAdmin()
