@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Lock, Mail, AlertCircle, ArrowRight, User, Rocket } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { getDashboardPath } from '../../components/layout/ProtectedRoute';
+import { getDashboardPath, LoadingScreen } from '../../components/layout/ProtectedRoute';
 import ButtonInstallPWA from '../../components/ui/ButtonInstallPWA';
 
 export default function Login() {
@@ -10,6 +10,7 @@ export default function Login() {
     login,
     currentUser,
     userData,
+    loading: authLoading,
     isSuspended,
     authError,
     clearAuthError,
@@ -105,6 +106,12 @@ export default function Login() {
       setLoading(false);
     }
   };
+
+  // Jangan tampilkan form login jika sesi auth sedang diperiksa atau pengguna sudah login
+  // untuk mencegah tampilan login meloncat/flicker sebelum redirect ke dashboard.
+  if (authLoading || (currentUser && userData)) {
+    return <LoadingScreen />;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50/80 via-orange-50/40 to-rose-50/30 flex flex-col justify-center py-12 sm:px-6 lg:px-8 px-4">

@@ -1,7 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
-import ProtectedRoute from './components/layout/ProtectedRoute';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import ProtectedRoute, { getDashboardPath, LoadingScreen } from './components/layout/ProtectedRoute';
 import AppLayout from './components/layout/AppLayout';
 import FeatureGate from './components/layout/FeatureGate';
 import Login from './pages/auth/Login';
@@ -44,13 +44,32 @@ import AsesmenSiswaGuru from './pages/guru/AsesmenSiswaGuru';
 // Modul Supervisi Kinerja Guru (Pilar 5)
 import SupervisiKinerja from './pages/kepsek/SupervisiKinerja';
 
+/**
+ * Pengarah Root Rute Cerdas & Mulus
+ * Menghilangkan loncatan (flicker) ke halaman login saat pengguna sudah memiliki sesi aktif.
+ */
+function RootRedirect() {
+  const { currentUser, userData, loading, isSuspended } = useAuth();
+
+  if (loading) return <LoadingScreen />;
+
+  if (currentUser && userData) {
+    if (isSuspended && userData.role !== 'superadmin') {
+      return <Navigate to="/suspended" replace />;
+    }
+    return <Navigate to={getDashboardPath(userData.role)} replace />;
+  }
+
+  return <Navigate to="/login" replace />;
+}
+
 export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
         <Routes>
           {/* Public Routes */}
-          <Route path="/" element={<Navigate to="/login" replace />} />
+          <Route path="/" element={<RootRedirect />} />
           <Route path="/login" element={<Login />} />
           <Route path="/suspended" element={<SuspendedSchool />} />
 

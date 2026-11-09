@@ -8,7 +8,7 @@ export const getDashboardPath = (role) => {
   return '/guru/dashboard';
 };
 
-const LoadingScreen = () => (
+export const LoadingScreen = () => (
   <div className="min-h-screen bg-amber-50/30 flex flex-col items-center justify-center p-4">
     <div className="w-14 h-14 rounded-2xl bg-white border border-amber-200/80 p-0.5 shadow-sm overflow-hidden flex items-center justify-center animate-pulse mb-3">
       <img
