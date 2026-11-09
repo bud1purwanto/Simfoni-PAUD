@@ -25,7 +25,13 @@ import {
   Filter,
   RefreshCw,
   Award,
-  BookOpen
+  BookOpen,
+  HeartPulse,
+  MessageCircle,
+  Radio,
+  Flame,
+  PhoneCall,
+  AlertCircle
 } from 'lucide-react';
 import { collection, onSnapshot, query, orderBy, limit, where } from 'firebase/firestore';
 import { db } from '../../config/firebase';
@@ -47,11 +53,13 @@ export default function DashboardSuperadmin() {
   const [plansDb, setPlansDb] = useState({});
   const [loading, setLoading] = useState(true);
 
-  // Filter & Search State untuk Guru
-  const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'guru' | 'logs'
+  // Filter & Search State untuk Guru & Radar
+  const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'radar' | 'guru' | 'logs'
   const [searchGuru, setSearchGuru] = useState('');
   const [filterSchoolId, setFilterSchoolId] = useState('all');
   const [filterStatusAkun, setFilterStatusAkun] = useState('all');
+  const [searchRadar, setSearchRadar] = useState('');
+  const [filterHealthCategory, setFilterHealthCategory] = useState('all'); // 'all' | 'kritis' | 'waspada' | 'prima'
 
   const todayStr = getLocalDateString();
 
@@ -109,23 +117,101 @@ export default function DashboardSuperadmin() {
     if (userData?.uid) runAutoRetentionIfDue(userData);
   }, [userData?.uid]);
 
+  // Mock Data otomatis HANYA jika berada di route /dev/preview tanpa login Firebase
+  const isPreview = typeof window !== 'undefined' && window.location.pathname.includes('/dev/preview');
+
+  const effectiveSchools = useMemo(() => {
+    if (schools.length > 0) return schools;
+    if (isPreview) {
+      return [
+        {
+          id: 'mock-school-1',
+          nama_sekolah: 'TK Ngabar Mandiri',
+          kota: 'Pasuruan',
+          npsn: '20512345',
+          paket_langganan: 'sahabat',
+          status_langganan: 'aktif',
+          berlaku_hingga: '2027-11-06',
+          kuota_guru: 6,
+          kuota_murid: 60,
+          jumlah_murid_aktif: 0,
+          telepon: '081234567890'
+        },
+        {
+          id: 'mock-school-2',
+          nama_sekolah: 'PAUD Tunas Harapan Bangsa',
+          kota: 'Surabaya',
+          npsn: '20598765',
+          paket_langganan: 'mandiri',
+          status_langganan: 'aktif',
+          berlaku_hingga: '2027-12-31',
+          kuota_guru: 12,
+          kuota_murid: 0,
+          jumlah_murid_aktif: 35,
+          telepon: '085712345678'
+        },
+        {
+          id: 'mock-school-3',
+          nama_sekolah: 'TK Melati Indah',
+          kota: 'Malang',
+          npsn: '20534567',
+          paket_langganan: 'rintisan',
+          status_langganan: 'aktif',
+          berlaku_hingga: '2026-11-14',
+          kuota_guru: 3,
+          kuota_murid: 25,
+          jumlah_murid_aktif: 8,
+          telepon: ''
+        }
+      ];
+    }
+    return schools;
+  }, [schools, isPreview]);
+
+  const effectiveUsers = useMemo(() => {
+    if (users.length > 0) return users;
+    if (isPreview) {
+      return [
+        { id: 'u1', nama: 'Bunda Hj. Siti Khadijah', role: 'kepsek', school_id: 'mock-school-1', status_akun: 'aktif' },
+        { id: 'u2', nama: 'Ibu Fatimah Zahra, S.Pd', role: 'guru', school_id: 'mock-school-1', status_akun: 'aktif', kelompok_kelas: 'Kelompok A' },
+        { id: 'u3', nama: 'Bunda Rina Marlina, M.Pd', role: 'kepsek', school_id: 'mock-school-2', status_akun: 'aktif' },
+        { id: 'u4', nama: 'Ibu Dewi Sartika, S.Pd', role: 'guru', school_id: 'mock-school-2', status_akun: 'aktif', kelompok_kelas: 'Kelompok B' },
+        { id: 'u5', nama: 'Ibu R.A. Kartini, S.Pd', role: 'guru', school_id: 'mock-school-2', status_akun: 'aktif', kelompok_kelas: 'Kelompok Bermain' },
+        { id: 'u6', nama: 'Bunda Nurul Hidayah', role: 'kepsek', school_id: 'mock-school-3', status_akun: 'aktif' },
+        { id: 'u7', nama: 'Ibu Aisyah Humaira, S.Pd', role: 'guru', school_id: 'mock-school-3', status_akun: 'aktif', kelompok_kelas: 'Kelompok A' },
+      ];
+    }
+    return users;
+  }, [users, isPreview]);
+
+  const effectiveAttendance = useMemo(() => {
+    if (todayAttendance.length > 0) return todayAttendance;
+    if (isPreview) {
+      return [
+        { id: 'a1', school_id: 'mock-school-2', status: 'hadir', tanggal: todayStr },
+        { id: 'a2', school_id: 'mock-school-2', status: 'hadir', tanggal: todayStr },
+      ];
+    }
+    return todayAttendance;
+  }, [todayAttendance, isPreview, todayStr]);
+
   // Metrik Agregat Utama
-  const totalSchools = schools.length;
-  const activeSchools = schools.filter((s) => s.status_langganan !== 'nonaktif' && !isLanggananKedaluwarsa(s)).length;
-  const suspendedSchools = schools.length - activeSchools;
-  const totalKepsek = users.filter((u) => u.role === 'kepsek').length;
-  const totalGuru = users.filter((u) => u.role === 'guru').length;
-  const activeGuru = users.filter((u) => u.role === 'guru' && u.status_akun === 'aktif').length;
+  const totalSchools = effectiveSchools.length;
+  const activeSchools = effectiveSchools.filter((s) => s.status_langganan !== 'nonaktif' && !isLanggananKedaluwarsa(s)).length;
+  const suspendedSchools = effectiveSchools.length - activeSchools;
+  const totalKepsek = effectiveUsers.filter((u) => u.role === 'kepsek').length;
+  const totalGuru = effectiveUsers.filter((u) => u.role === 'guru').length;
+  const activeGuru = effectiveUsers.filter((u) => u.role === 'guru' && u.status_akun === 'aktif').length;
 
   // Agregat Murid Nasional
-  const totalMuridNasional = schools.reduce((acc, s) => acc + (s.jumlah_murid_aktif || 0), 0);
+  const totalMuridNasional = effectiveSchools.reduce((acc, s) => acc + (s.jumlah_murid_aktif || 0), 0);
 
   // Estimasi Presensi Hari Ini
-  const totalHadirHariIni = todayAttendance.filter((a) => a.status === 'hadir').length;
-  const totalTerlambatHariIni = todayAttendance.filter((a) => a.status === 'hadir' && a.terlambat).length;
+  const totalHadirHariIni = effectiveAttendance.filter((a) => a.status === 'hadir').length;
+  const totalTerlambatHariIni = effectiveAttendance.filter((a) => a.status === 'hadir' && a.terlambat).length;
 
   // Estimasi Storage (Akumulasi dari field estimasi_storage_mb atau total_foto_terunggah * 0.25 MB)
-  const totalStorageMb = schools.reduce((acc, s) => {
+  const totalStorageMb = effectiveSchools.reduce((acc, s) => {
     const mb = s.estimasi_storage_mb || (s.total_foto_terunggah ? s.total_foto_terunggah * 0.25 : 0);
     return acc + mb;
   }, 0);
@@ -137,16 +223,16 @@ export default function DashboardSuperadmin() {
   // Distribusi Paket Langganan
   const planDistribution = useMemo(() => {
     const dist = {};
-    schools.forEach((s) => {
+    effectiveSchools.forEach((s) => {
       const pId = s.paket_langganan || 'trial';
       const pName = getPlan(pId, plansDb).nama;
       dist[pName] = (dist[pName] || 0) + 1;
     });
     return dist;
-  }, [schools, plansDb]);
+  }, [effectiveSchools, plansDb]);
 
   // Deteksi Sekolah yang Masa Langganannya Berakhir dalam 30 Hari
-  const expiringSchools = schools
+  const expiringSchools = effectiveSchools
     .filter((s) => {
       const sisa = sisaHariLangganan(s);
       return sisa !== null && sisa <= 30;
@@ -156,7 +242,7 @@ export default function DashboardSuperadmin() {
   // Filter Data Guru se-Nasional
   const filteredGuruList = useMemo(() => {
     const q = searchGuru.toLowerCase().trim();
-    return users.filter((u) => {
+    return effectiveUsers.filter((u) => {
       if (u.role !== 'guru') return false;
       if (filterSchoolId !== 'all' && u.school_id !== filterSchoolId) return false;
       if (filterStatusAkun !== 'all' && u.status_akun !== filterStatusAkun) return false;
@@ -169,7 +255,133 @@ export default function DashboardSuperadmin() {
       }
       return true;
     });
-  }, [users, searchGuru, filterSchoolId, filterStatusAkun]);
+  }, [effectiveUsers, searchGuru, filterSchoolId, filterStatusAkun]);
+
+  // Kalkulasi Skor Kesehatan Tenant & Anti-Churn Health Score (Prioritas 1)
+  const tenantHealthList = useMemo(() => {
+    return effectiveSchools.map((s) => {
+      const activeTeachers = effectiveUsers.filter(
+        (u) => u.school_id === s.id && u.role === 'guru' && u.status_akun === 'aktif'
+      );
+      const kepsekUser = effectiveUsers.find(
+        (u) => u.school_id === s.id && u.role === 'kepsek'
+      );
+      const hadirHariIni = effectiveAttendance.filter(
+        (a) => a.school_id === s.id && a.status === 'hadir'
+      ).length;
+
+      const totalActiveGuru = activeTeachers.length;
+      let attendanceScore = 0;
+      if (totalActiveGuru > 0) {
+        attendanceScore = Math.round(Math.min(1, hadirHariIni / totalActiveGuru) * 35);
+      }
+
+      let guruScore = 0;
+      if (totalActiveGuru >= 2) guruScore = 25;
+      else if (totalActiveGuru === 1) guruScore = 15;
+
+      const muridAktif = s.jumlah_murid_aktif || 0;
+      let muridScore = 0;
+      if (muridAktif >= 15) muridScore = 25;
+      else if (muridAktif > 0) muridScore = Math.min(25, Math.round((muridAktif / 15) * 20));
+
+      const isSuspended = s.status_langganan === 'nonaktif';
+      const isExpired = isLanggananKedaluwarsa(s);
+      const sisa = sisaHariLangganan(s);
+
+      let langgananScore = 0;
+      if (isSuspended || isExpired) {
+        langgananScore = 0;
+      } else if (sisa !== null && sisa <= 7) {
+        langgananScore = 5;
+      } else if (sisa !== null && sisa <= 14) {
+        langgananScore = 10;
+      } else {
+        langgananScore = 15;
+      }
+
+      const totalScore = Math.min(100, attendanceScore + guruScore + muridScore + langgananScore);
+
+      let category = 'prima'; // 'prima' | 'waspada' | 'kritis'
+      if (totalScore < 50) category = 'kritis';
+      else if (totalScore < 80) category = 'waspada';
+
+      const issues = [];
+      if (totalActiveGuru === 0) issues.push('Belum ada guru aktif terdaftar');
+      if (muridAktif === 0) issues.push('Belum ada murid aktif diinput');
+      if (totalActiveGuru > 0 && hadirHariIni === 0) issues.push('Belum ada presensi guru hadir hari ini');
+      if (isExpired) issues.push('Masa langganan kedaluwarsa');
+      else if (sisa !== null && sisa <= 7) issues.push(`Langganan berakhir dalam ${sisa} hari`);
+      if (isSuspended) issues.push('Tenant sekolah dinonaktifkan');
+
+      // Siapkan tautan WhatsApp Kepala Sekolah
+      const phoneRaw = s.telepon || (kepsekUser ? kepsekUser.telepon || kepsekUser.no_hp : '');
+      let waLink = null;
+      let cleanPhone = null;
+      if (phoneRaw) {
+        cleanPhone = phoneRaw.replace(/\D/g, '');
+        if (cleanPhone.startsWith('0')) cleanPhone = '62' + cleanPhone.slice(1);
+        else if (cleanPhone.startsWith('8')) cleanPhone = '62' + cleanPhone;
+
+        const issuesStr = issues.length > 0 
+          ? issues.map((i) => `• ${i}`).join('\n')
+          : '• Evaluasi kesiapan operasional harian';
+
+        const kepsekGreeting = kepsekUser?.nama ? `Bunda/Bapak ${kepsekUser.nama}` : 'Bunda/Bapak Kepala Sekolah';
+        const templateWa = `Halo ${kepsekGreeting} (${s.nama_sekolah}),\n\nSalam hangat dari Tim Eksekutif SIMFONI PAUD. 🌸\nKami sedang memantau kelancaran operasional portal sekolah Bunda/Bapak.\n\nCatatan pendampingan sistem:\n${issuesStr}\n\nApakah ada kendala teknis atau pengoperasian aplikasi yang bisa kami bantu fasilitasi? Kami siap mendampingi. Terima kasih banyak! 🙏✨`;
+        
+        waLink = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(templateWa)}`;
+      }
+
+      return {
+        school: s,
+        kepsekUser,
+        score: totalScore,
+        category,
+        attendanceScore,
+        guruScore,
+        muridScore,
+        langgananScore,
+        totalActiveGuru,
+        hadirHariIni,
+        muridAktif,
+        issues,
+        sisaHari: sisa,
+        isSuspended,
+        isExpired,
+        waLink,
+        phoneRaw,
+        cleanPhone
+      };
+    });
+  }, [schools, users, todayAttendance]);
+
+  // Ringkasan Agregat Radar Keaktifan
+  const healthSummary = useMemo(() => {
+    const prima = tenantHealthList.filter((t) => t.category === 'prima').length;
+    const waspada = tenantHealthList.filter((t) => t.category === 'waspada').length;
+    const kritis = tenantHealthList.filter((t) => t.category === 'kritis').length;
+    const avgScore = tenantHealthList.length > 0 
+      ? Math.round(tenantHealthList.reduce((acc, t) => acc + t.score, 0) / tenantHealthList.length)
+      : 0;
+    return { prima, waspada, kritis, avgScore };
+  }, [tenantHealthList]);
+
+  // Filter List untuk Tab Radar Anti-Churn
+  const filteredRadarList = useMemo(() => {
+    const q = searchRadar.toLowerCase().trim();
+    return tenantHealthList.filter((item) => {
+      if (filterHealthCategory !== 'all' && item.category !== filterHealthCategory) return false;
+      if (q) {
+        const matchNama = (item.school.nama_sekolah || '').toLowerCase().includes(q);
+        const matchKota = (item.school.kota || '').toLowerCase().includes(q);
+        const matchNpsn = (item.school.npsn || '').toLowerCase().includes(q);
+        const matchKepsek = (item.kepsekUser?.nama || '').toLowerCase().includes(q);
+        return matchNama || matchKota || matchNpsn || matchKepsek;
+      }
+      return true;
+    }).sort((a, b) => a.score - b.score); // Prioritaskan skor terendah (kritis) paling atas
+  }, [tenantHealthList, searchRadar, filterHealthCategory]);
 
   return (
     <div className="space-y-6 pb-20 md:pb-6">
@@ -393,6 +605,53 @@ export default function DashboardSuperadmin() {
         </div>
       )}
 
+      {/* RADAR KEAKTIFAN & HEALTH SCORE BANNER (ANTI-CHURN TRACKER) */}
+      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 rounded-3xl p-5 text-white border border-slate-700/80 shadow-md">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center space-x-3.5">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-rose-500 to-orange-500 flex items-center justify-center text-white shadow-md shadow-orange-500/20 shrink-0">
+              <HeartPulse className="w-6 h-6 animate-pulse" />
+            </div>
+            <div>
+              <div className="flex items-center space-x-2">
+                <h3 className="font-extrabold text-white text-base font-brand tracking-tight">
+                  Radar Keaktifan Tenant & Skor Anti-Churn
+                </h3>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-orange-500/20 text-orange-300 border border-orange-500/30">
+                  AI Retention
+                </span>
+              </div>
+              <p className="text-slate-300 text-xs mt-0.5 font-medium">
+                Deteksi otomatis sekolah pasif, pantau utilisasi guru/murid, dan hubungi Bunda Kepsek via WhatsApp.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center space-x-2 bg-slate-800/80 border border-slate-700 rounded-2xl px-3 py-2 text-xs">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+              <span className="font-bold text-slate-300">{healthSummary.prima} Prima</span>
+            </div>
+            <div className="flex items-center space-x-2 bg-slate-800/80 border border-slate-700 rounded-2xl px-3 py-2 text-xs">
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
+              <span className="font-bold text-slate-300">{healthSummary.waspada} Waspada</span>
+            </div>
+            <div className="flex items-center space-x-2 bg-slate-800/80 border border-slate-700 rounded-2xl px-3 py-2 text-xs">
+              <span className="w-2.5 h-2.5 rounded-full bg-rose-400 animate-ping"></span>
+              <span className="font-bold text-rose-300">{healthSummary.kritis} Butuh Pendampingan</span>
+            </div>
+
+            <button
+              onClick={() => setActiveTab('radar')}
+              className="px-3.5 py-2 bg-orange-500 hover:bg-orange-600 text-white font-extrabold text-xs rounded-2xl shadow-sm transition flex items-center space-x-1.5 font-brand active:scale-95"
+            >
+              <Radio className="w-3.5 h-3.5" />
+              <span>Buka Radar Lengkap</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* TABS KONTROL EKSEKUTIF (OVERKILL NAVIGATION) */}
       <div className="flex items-center space-x-2 border-b border-slate-200 pb-2 overflow-x-auto scrollbar-thin">
         <button
@@ -406,6 +665,22 @@ export default function DashboardSuperadmin() {
         >
           <School className="w-4 h-4" />
           <span>Tenant & Presensi Hari Ini</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('radar')}
+          className={`px-4 py-2.5 rounded-2xl text-xs font-extrabold transition flex items-center space-x-2 shrink-0 ${
+            activeTab === 'radar'
+              ? 'bg-slate-900 text-white shadow-md shadow-slate-900/20'
+              : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+          }`}
+        >
+          <HeartPulse className="w-4 h-4 text-rose-500" />
+          <span>Radar Keaktifan ({healthSummary.kritis > 0 ? `${healthSummary.kritis} Butuh Pendampingan` : 'KBM Sehat'})</span>
+          {healthSummary.kritis > 0 && (
+            <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+          )}
         </button>
 
         <button
@@ -466,30 +741,32 @@ export default function DashboardSuperadmin() {
                     <th className="py-3 px-4 text-center">Kuota Guru</th>
                     <th className="py-3 px-4 text-center">Kuota Murid</th>
                     <th className="py-3 px-4 text-center">Status</th>
+                    <th className="py-3 px-4 text-center">Health Score</th>
                     <th className="py-3 px-4 text-center">Masa Berlaku</th>
                     <th className="py-3 px-4 text-right">Aksi</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium">
-                  {loading ? (
+                  {(loading && !isPreview) ? (
                     <tr>
-                      <td colSpan={8} className="py-8 text-center text-slate-400">
+                      <td colSpan={9} className="py-8 text-center text-slate-400">
                         Memuat data sekolah mitra...
                       </td>
                     </tr>
-                  ) : schools.length === 0 ? (
+                  ) : effectiveSchools.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="py-8 text-center text-slate-400">
+                      <td colSpan={9} className="py-8 text-center text-slate-400">
                         Belum ada sekolah mitra terdaftar.
                       </td>
                     </tr>
                   ) : (
-                    schools.slice(0, 8).map((s) => {
-                      const teachersInSchool = users.filter(
+                    effectiveSchools.slice(0, 8).map((s) => {
+                      const teachersInSchool = effectiveUsers.filter(
                         (u) => u.school_id === s.id && u.role === 'guru' && u.status_akun === 'aktif'
                       );
                       const isSuspended = s.status_langganan === 'nonaktif';
                       const planInfo = getPlan(s.paket_langganan, plansDb);
+                      const health = tenantHealthList.find((t) => t.school.id === s.id);
 
                       return (
                         <tr key={s.id} className="hover:bg-slate-50/80 transition">
@@ -539,16 +816,52 @@ export default function DashboardSuperadmin() {
                               {isSuspended ? 'NONAKTIF' : 'AKTIF'}
                             </span>
                           </td>
+                          <td className="py-3.5 px-4 text-center">
+                            {health ? (
+                              <button
+                                onClick={() => {
+                                  setSearchRadar(s.nama_sekolah);
+                                  setActiveTab('radar');
+                                }}
+                                className={`inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold border transition shadow-2xs ${
+                                  health.category === 'prima'
+                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                                    : health.category === 'waspada'
+                                    ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
+                                    : 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100 animate-pulse'
+                                }`}
+                                title={health.issues.join(', ') || 'KBM Berjalan Lancar'}
+                              >
+                                <HeartPulse className="w-3 h-3" />
+                                <span>{health.score}% {health.category.toUpperCase()}</span>
+                              </button>
+                            ) : (
+                              <span className="text-slate-300">-</span>
+                            )}
+                          </td>
                           <td className="py-3.5 px-4 text-center text-slate-600">
                             {s.berlaku_hingga ? formatTanggalIndo(s.berlaku_hingga) : '-'}
                           </td>
                           <td className="py-3.5 px-4 text-right">
-                            <button
-                              onClick={() => navigate('/superadmin/sekolah')}
-                              className="px-3 py-1 bg-slate-100 hover:bg-orange-100 hover:text-orange-700 font-bold rounded-xl transition text-[11px]"
-                            >
-                              Kelola
-                            </button>
+                            <div className="flex items-center justify-end space-x-1.5">
+                              {health?.waLink && (
+                                <a
+                                  href={health.waLink}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="p-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl transition border border-emerald-200 shadow-2xs"
+                                  title="Hubungi WhatsApp Kepala Sekolah"
+                                >
+                                  <MessageCircle className="w-3.5 h-3.5" />
+                                </a>
+                              )}
+                              <button
+                                onClick={() => navigate('/superadmin/sekolah')}
+                                className="px-3 py-1 bg-slate-100 hover:bg-orange-100 hover:text-orange-700 font-bold rounded-xl transition text-[11px]"
+                              >
+                                Kelola
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );
@@ -558,6 +871,303 @@ export default function DashboardSuperadmin() {
               </table>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* TAB RADAR KEAKTIFAN TENANT & ANTI-CHURN SCORE (PRIORITAS 1) */}
+      {activeTab === 'radar' && (
+        <div className="space-y-6">
+          <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xs p-5 md:p-6 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h3 className="font-extrabold text-slate-800 text-base font-brand flex items-center space-x-2">
+                  <HeartPulse className="w-5 h-5 text-rose-500" />
+                  <span>Radar Keaktifan & Health Score Tenant ({filteredRadarList.length} Sekolah)</span>
+                </h3>
+                <p className="text-xs text-slate-500 font-medium">
+                  Sistem monitoring proaktif untuk mendeteksi dini sekolah yang butuh pendampingan KBM dan mencegah churn.
+                </p>
+              </div>
+
+              {/* Bilah Pencarian Sekolah */}
+              <div className="relative w-full sm:w-72">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Cari sekolah, kota, NPSN, kepsek..."
+                  value={searchRadar}
+                  onChange={(e) => setSearchRadar(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2 rounded-2xl border border-slate-200 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition"
+                />
+              </div>
+            </div>
+
+            {/* Filter Kategori Kesehatan */}
+            <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100 text-xs">
+              <span className="font-bold text-slate-500 text-[11px]">Filter Kategori:</span>
+              <button
+                type="button"
+                onClick={() => setFilterHealthCategory('all')}
+                className={`px-3 py-1.5 rounded-xl font-bold transition ${
+                  filterHealthCategory === 'all'
+                    ? 'bg-slate-900 text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                Semua ({tenantHealthList.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilterHealthCategory('kritis')}
+                className={`px-3 py-1.5 rounded-xl font-bold transition flex items-center space-x-1.5 ${
+                  filterHealthCategory === 'kritis'
+                    ? 'bg-rose-600 text-white shadow-xs'
+                    : 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200/60'
+                }`}
+              >
+                <span className="w-2 h-2 rounded-full bg-rose-400 animate-ping"></span>
+                <span>Butuh Pendampingan ({healthSummary.kritis})</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilterHealthCategory('waspada')}
+                className={`px-3 py-1.5 rounded-xl font-bold transition flex items-center space-x-1.5 ${
+                  filterHealthCategory === 'waspada'
+                    ? 'bg-amber-600 text-white shadow-xs'
+                    : 'bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200/60'
+                }`}
+              >
+                <span className="w-2 h-2 rounded-full bg-amber-400"></span>
+                <span>Perlu Dipantau ({healthSummary.waspada})</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilterHealthCategory('prima')}
+                className={`px-3 py-1.5 rounded-xl font-bold transition flex items-center space-x-1.5 ${
+                  filterHealthCategory === 'prima'
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200/60'
+                }`}
+              >
+                <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+                <span>Prima & Aktif ({healthSummary.prima})</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Grid Kartu Radar Tenant */}
+          {filteredRadarList.length === 0 ? (
+            <div className="bg-white rounded-3xl border border-slate-200/80 p-12 text-center text-slate-400">
+              <HeartPulse className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+              <p className="text-sm font-bold">Tidak ada tenant sekolah pada kategori ini.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {filteredRadarList.map((item) => {
+                const { school: s, kepsekUser, score, category, issues, attendanceScore, guruScore, muridScore, langgananScore, totalActiveGuru, hadirHariIni, muridAktif, sisaHari, isExpired, isSuspended, waLink, phoneRaw } = item;
+                const planInfo = getPlan(s.paket_langganan, plansDb);
+
+                return (
+                  <div
+                    key={s.id}
+                    className={`bg-white rounded-3xl border p-5 shadow-xs transition hover:shadow-md flex flex-col justify-between space-y-4 ${
+                      category === 'kritis'
+                        ? 'border-rose-200 bg-gradient-to-b from-white to-rose-50/20'
+                        : category === 'waspada'
+                        ? 'border-amber-200 bg-gradient-to-b from-white to-amber-50/20'
+                        : 'border-emerald-200 bg-gradient-to-b from-white to-emerald-50/20'
+                    }`}
+                  >
+                    {/* Header Kartu */}
+                    <div>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center space-x-3">
+                          {s.logo_url ? (
+                            <img
+                              src={s.logo_url}
+                              alt="Logo"
+                              className="w-12 h-12 rounded-2xl object-contain border border-slate-200 shrink-0"
+                            />
+                          ) : (
+                            <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-base shrink-0">
+                              {s.nama_sekolah?.charAt(0) || 'S'}
+                            </div>
+                          )}
+                          <div>
+                            <h4 className="font-extrabold text-slate-800 text-sm font-brand leading-snug">
+                              {s.nama_sekolah}
+                            </h4>
+                            <div className="text-[11px] text-slate-500 font-medium flex items-center space-x-2 mt-0.5">
+                              <span>{s.kota || 'Indonesia'}</span>
+                              <span>•</span>
+                              <span className="font-mono text-[10px]">NPSN: {s.npsn || '-'}</span>
+                            </div>
+                            <div className="mt-1 flex items-center space-x-1.5">
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-amber-50 text-amber-700 border border-amber-200/60">
+                                {planInfo.nama}
+                              </span>
+                              <span
+                                className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
+                                  isSuspended
+                                    ? 'bg-rose-100 text-rose-800'
+                                    : 'bg-emerald-100 text-emerald-800'
+                                }`}
+                              >
+                                {isSuspended ? 'NONAKTIF' : 'AKTIF'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Health Score Pill */}
+                        <div
+                          className={`flex flex-col items-center justify-center p-2.5 rounded-2xl border text-center shrink-0 min-w-[76px] ${
+                            category === 'prima'
+                              ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
+                              : category === 'waspada'
+                              ? 'bg-amber-50 border-amber-300 text-amber-800'
+                              : 'bg-rose-50 border-rose-300 text-rose-800 animate-pulse'
+                          }`}
+                        >
+                          <span className="text-xl font-black font-brand leading-none">{score}%</span>
+                          <span className="text-[9px] font-extrabold uppercase tracking-wider mt-1">
+                            {category === 'prima' ? 'PRIMA' : category === 'waspada' ? 'WASPADA' : 'KRITIS'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* 4 Pilar Evaluasi KBM */}
+                      <div className="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-slate-100 text-xs">
+                        <div className="bg-slate-50/80 rounded-xl p-2 border border-slate-100">
+                          <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 mb-1">
+                            <span>Presensi Guru</span>
+                            <span className="font-extrabold text-slate-800">{hadirHariIni}/{totalActiveGuru}</span>
+                          </div>
+                          <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
+                            <div
+                              className="bg-teal-500 h-full rounded-full transition-all"
+                              style={{ width: `${(attendanceScore / 35) * 100}%` }}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="bg-slate-50/80 rounded-xl p-2 border border-slate-100">
+                          <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 mb-1">
+                            <span>Guru Aktif</span>
+                            <span className="font-extrabold text-slate-800">{totalActiveGuru} Guru</span>
+                          </div>
+                          <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
+                            <div
+                              className="bg-emerald-500 h-full rounded-full transition-all"
+                              style={{ width: `${(guruScore / 25) * 100}%` }}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="bg-slate-50/80 rounded-xl p-2 border border-slate-100">
+                          <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 mb-1">
+                            <span>Murid Aktif</span>
+                            <span className="font-extrabold text-slate-800">{muridAktif} Anak</span>
+                          </div>
+                          <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
+                            <div
+                              className="bg-orange-500 h-full rounded-full transition-all"
+                              style={{ width: `${(muridScore / 25) * 100}%` }}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="bg-slate-50/80 rounded-xl p-2 border border-slate-100">
+                          <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 mb-1">
+                            <span>Masa Aktif</span>
+                            <span className="font-extrabold text-slate-800">
+                              {sisaHari !== null ? `${sisaHari} hr` : 'Aktif'}
+                            </span>
+                          </div>
+                          <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
+                            <div
+                              className="bg-blue-500 h-full rounded-full transition-all"
+                              style={{ width: `${(langgananScore / 15) * 100}%` }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Catatan Isu / Diagnosa Otomatis */}
+                      <div className="mt-3">
+                        {issues.length > 0 ? (
+                          <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200/80 text-rose-800 text-[11px] space-y-1">
+                            <div className="font-bold flex items-center space-x-1">
+                              <AlertCircle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                              <span>Catatan Pendampingan Sistem:</span>
+                            </div>
+                            <ul className="list-disc list-inside font-medium pl-1 text-[10px] space-y-0.5">
+                              {issues.map((iss, idx) => (
+                                <li key={idx}>{iss}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        ) : (
+                          <div className="p-2 rounded-xl bg-emerald-50 border border-emerald-200/80 text-emerald-800 text-[11px] font-bold flex items-center space-x-1.5">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                            <span>KBM dan data sekolah berjalan lancar tanpa kendala.</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Footer Kartu & Tombol Aksi Cepat */}
+                    <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div className="text-[11px] text-slate-500 font-medium">
+                        Kepsek: <strong className="text-slate-800">{kepsekUser?.nama || 'Belum Dibuat'}</strong>
+                        {phoneRaw && <span className="ml-1 text-slate-400">({phoneRaw})</span>}
+                      </div>
+
+                      <div className="flex items-center space-x-1.5 shrink-0">
+                        {waLink ? (
+                          <a
+                            href={waLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[11px] rounded-xl shadow-xs transition flex items-center space-x-1.5"
+                          >
+                            <MessageCircle className="w-3.5 h-3.5" />
+                            <span>Hubungi Kepsek (WA)</span>
+                          </a>
+                        ) : (
+                          <button
+                            onClick={() => navigate('/superadmin/sekolah')}
+                            className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-[11px] rounded-xl transition flex items-center space-x-1"
+                            title="Lengkapi nomor kontak sekolah"
+                          >
+                            <PhoneCall className="w-3 h-3 text-slate-400" />
+                            <span>Input No. HP</span>
+                          </button>
+                        )}
+
+                        <button
+                          onClick={() => {
+                            setFilterSchoolId(s.id);
+                            setActiveTab('guru');
+                          }}
+                          className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[11px] rounded-xl transition"
+                        >
+                          Guru ({totalActiveGuru})
+                        </button>
+
+                        <button
+                          onClick={() => navigate('/superadmin/sekolah')}
+                          className="px-2.5 py-1.5 bg-slate-100 hover:bg-orange-100 hover:text-orange-700 font-bold text-[11px] rounded-xl transition"
+                        >
+                          Kelola
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
