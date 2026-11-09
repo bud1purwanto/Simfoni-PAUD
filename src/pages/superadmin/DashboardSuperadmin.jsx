@@ -31,7 +31,12 @@ import {
   Radio,
   Flame,
   PhoneCall,
-  AlertCircle
+  AlertCircle,
+  Wallet,
+  Coins,
+  Receipt,
+  CircleDollarSign,
+  TrendingDown
 } from 'lucide-react';
 import { collection, onSnapshot, query, orderBy, limit, where } from 'firebase/firestore';
 import { db } from '../../config/firebase';
@@ -53,13 +58,14 @@ export default function DashboardSuperadmin() {
   const [plansDb, setPlansDb] = useState({});
   const [loading, setLoading] = useState(true);
 
-  // Filter & Search State untuk Guru & Radar
-  const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'radar' | 'guru' | 'logs'
+  // Filter & Search State untuk Guru, Radar, & Finansial
+  const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'finance' | 'radar' | 'guru' | 'logs'
   const [searchGuru, setSearchGuru] = useState('');
   const [filterSchoolId, setFilterSchoolId] = useState('all');
   const [filterStatusAkun, setFilterStatusAkun] = useState('all');
   const [searchRadar, setSearchRadar] = useState('');
   const [filterHealthCategory, setFilterHealthCategory] = useState('all'); // 'all' | 'kritis' | 'waspada' | 'prima'
+  const [searchBilling, setSearchBilling] = useState('');
 
   const todayStr = getLocalDateString();
 
@@ -257,6 +263,99 @@ export default function DashboardSuperadmin() {
     });
   }, [effectiveUsers, searchGuru, filterSchoolId, filterStatusAkun]);
 
+  // Kalkulasi Finansial SaaS: MRR, ARR, Billing Forecast & Revenue per Tier (Prioritas 2)
+  const financialStats = useMemo(() => {
+    let mrrTotal = 0;
+    const tierStats = {}; // { planId: { name, price, count, totalMrr } }
+
+    effectiveSchools.forEach((s) => {
+      const isSuspended = s.status_langganan === 'nonaktif';
+      const isExpired = isLanggananKedaluwarsa(s);
+      const planInfo = getPlan(s.paket_langganan, plansDb);
+      const price = Number(planInfo.harga_bulanan) || 0;
+
+      if (!tierStats[planInfo.id]) {
+        tierStats[planInfo.id] = {
+          id: planInfo.id,
+          nama: planInfo.nama,
+          harga_bulanan: price,
+          sekolahCount: 0,
+          totalMrr: 0,
+          color: planInfo.id === 'mandiri' ? 'text-purple-600 bg-purple-50 border-purple-200' :
+                 planInfo.id === 'sahabat' ? 'text-amber-600 bg-amber-50 border-amber-200' :
+                 planInfo.id === 'rintisan' ? 'text-emerald-600 bg-emerald-50 border-emerald-200' :
+                 'text-slate-600 bg-slate-50 border-slate-200'
+        };
+      }
+
+      tierStats[planInfo.id].sekolahCount += 1;
+
+      // Hanya hitung MRR jika sekolah aktif dan belum kedaluwarsa
+      if (!isSuspended && !isExpired && price > 0) {
+        mrrTotal += price;
+        tierStats[planInfo.id].totalMrr += price;
+      }
+    });
+
+    const arrTotal = mrrTotal * 12;
+    const payingSchools = effectiveSchools.filter((s) => {
+      const isSuspended = s.status_langganan === 'nonaktif';
+      const isExpired = isLanggananKedaluwarsa(s);
+      const planInfo = getPlan(s.paket_langganan, plansDb);
+      return !isSuspended && !isExpired && (Number(planInfo.harga_bulanan) || 0) > 0;
+    }).length;
+
+    const arpu = payingSchools > 0 ? Math.round(mrrTotal / payingSchools) : 0; // Average Revenue Per User
+
+    // Daftar Jadwal Invoice & Perpanjangan (Next Billing)
+    const billingList = effectiveSchools
+      .filter((s) => s.status_langganan !== 'nonaktif')
+      .map((s) => {
+        const sisa = sisaHariLangganan(s);
+        const planInfo = getPlan(s.paket_langganan, plansDb);
+        const price = Number(planInfo.harga_bulanan) || 0;
+        const kepsekUser = effectiveUsers.find((u) => u.school_id === s.id && u.role === 'kepsek');
+        const phoneRaw = s.telepon || (kepsekUser ? kepsekUser.telepon || kepsekUser.no_hp : '');
+
+        let waBillingLink = null;
+        if (phoneRaw && price > 0) {
+          let clean = phoneRaw.replace(/\D/g, '');
+          if (clean.startsWith('0')) clean = '62' + clean.slice(1);
+          else if (clean.startsWith('8')) clean = '62' + clean;
+
+          const kepsekGreeting = kepsekUser?.nama ? `Bunda/Bapak ${kepsekUser.nama}` : 'Bunda/Bapak Kepala Sekolah';
+          const tglJatuhTempo = s.berlaku_hingga ? formatTanggalIndo(s.berlaku_hingga) : 'Segera';
+          const msg = `Halo ${kepsekGreeting} (${s.nama_sekolah}),\n\nSalam hangat dari Billing SIMFONI PAUD. 🌸\nKami menginformasikan bahwa masa aktif ${planInfo.nama} sekolah Bunda/Bapak akan jatuh tempo pada ${tglJatuhTempo}.\n\nNominal Perpanjangan: ${formatRupiah(price)} / bulan\n\nApakah ingin kami proseskan tagihan resmi (invoice) dan perpanjangan otomatisnya? Silakan konfirmasi ya Bunda/Bapak. Terima kasih! 🙏✨`;
+          waBillingLink = `https://wa.me/${clean}?text=${encodeURIComponent(msg)}`;
+        }
+
+        return {
+          school: s,
+          kepsekUser,
+          planInfo,
+          price,
+          sisaHari: sisa,
+          isExpired: isLanggananKedaluwarsa(s),
+          waBillingLink,
+          phoneRaw
+        };
+      })
+      .sort((a, b) => {
+        if (a.sisaHari === null) return 1;
+        if (b.sisaHari === null) return -1;
+        return a.sisaHari - b.sisaHari;
+      });
+
+    return {
+      mrrTotal,
+      arrTotal,
+      payingSchools,
+      arpu,
+      tierStats: Object.values(tierStats),
+      billingList
+    };
+  }, [effectiveSchools, plansDb, effectiveUsers]);
+
   // Kalkulasi Skor Kesehatan Tenant & Anti-Churn Health Score (Prioritas 1)
   const tenantHealthList = useMemo(() => {
     return effectiveSchools.map((s) => {
@@ -423,6 +522,25 @@ export default function DashboardSuperadmin() {
 
       {/* METRIK GLOBAL SAAS (6 KARTU STATISTIK EKSEKUTIF) */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4">
+        {/* Estimasi MRR Finansial SaaS (Prioritas 2) */}
+        <div 
+          onClick={() => setActiveTab('finance')}
+          className="bg-gradient-to-br from-emerald-500 to-teal-700 text-white rounded-3xl p-4 shadow-sm shadow-emerald-500/20 flex flex-col justify-between cursor-pointer hover:scale-[1.02] transition active:scale-95"
+        >
+          <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md text-white flex items-center justify-center font-bold mb-2">
+            <Coins className="w-5 h-5 text-emerald-100" />
+          </div>
+          <div>
+            <div className="text-xl md:text-2xl font-black text-white font-brand">
+              {formatRupiah(financialStats.mrrTotal)}
+            </div>
+            <div className="text-[11px] text-emerald-100 font-bold flex items-center justify-between">
+              <span>MRR Bulanan</span>
+              <span className="text-[9px] bg-white/20 px-1.5 py-0.5 rounded-md">Buka →</span>
+            </div>
+          </div>
+        </div>
+
         {/* Total Sekolah Mitra */}
         <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs flex flex-col justify-between">
           <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold mb-2">
@@ -449,21 +567,6 @@ export default function DashboardSuperadmin() {
             </div>
             <div className="text-[11px] text-slate-500 font-bold">
               Guru ({activeGuru} Aktif)
-            </div>
-          </div>
-        </div>
-
-        {/* Total Kepala Sekolah */}
-        <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs flex flex-col justify-between">
-          <div className="w-10 h-10 rounded-2xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold mb-2">
-            <Building2 className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="text-2xl font-black text-slate-800 font-brand">
-              {totalKepsek}
-            </div>
-            <div className="text-[11px] text-slate-500 font-bold">
-              Kepala Sekolah
             </div>
           </div>
         </div>
@@ -669,6 +772,19 @@ export default function DashboardSuperadmin() {
 
         <button
           type="button"
+          onClick={() => setActiveTab('finance')}
+          className={`px-4 py-2.5 rounded-2xl text-xs font-extrabold transition flex items-center space-x-2 shrink-0 ${
+            activeTab === 'finance'
+              ? 'bg-slate-900 text-white shadow-md shadow-slate-900/20'
+              : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+          }`}
+        >
+          <Coins className="w-4 h-4 text-emerald-500" />
+          <span>Finansial & MRR SaaS ({formatRupiah(financialStats.mrrTotal)})</span>
+        </button>
+
+        <button
+          type="button"
           onClick={() => setActiveTab('radar')}
           className={`px-4 py-2.5 rounded-2xl text-xs font-extrabold transition flex items-center space-x-2 shrink-0 ${
             activeTab === 'radar'
@@ -869,6 +985,257 @@ export default function DashboardSuperadmin() {
                   )}
                 </tbody>
               </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 2: FINANSIAL & MRR SAAS (PRIORITAS 2) */}
+      {activeTab === 'finance' && (
+        <div className="space-y-6">
+          {/* 4 Kartu KPI Keuangan SaaS */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Monthly Recurring Revenue */}
+            <div className="bg-gradient-to-br from-emerald-600 to-teal-700 text-white rounded-3xl p-5 shadow-sm shadow-emerald-500/20 flex flex-col justify-between">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-bold text-emerald-100 uppercase tracking-wider">Monthly Recurring Revenue</span>
+                <div className="w-9 h-9 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white">
+                  <Coins className="w-5 h-5 text-emerald-100" />
+                </div>
+              </div>
+              <div>
+                <div className="text-3xl font-black font-brand text-white">
+                  {formatRupiah(financialStats.mrrTotal)}
+                </div>
+                <div className="text-[11px] text-emerald-100 font-medium mt-1">
+                  Omset rutin bulanan dari tenant aktif berbayar
+                </div>
+              </div>
+            </div>
+
+            {/* Annual Run Rate */}
+            <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs flex flex-col justify-between">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-extrabold text-slate-500 uppercase tracking-wider">Annual Run Rate (ARR)</span>
+                <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold">
+                  <TrendingUp className="w-5 h-5" />
+                </div>
+              </div>
+              <div>
+                <div className="text-3xl font-black font-brand text-slate-800">
+                  {formatRupiah(financialStats.arrTotal)}
+                </div>
+                <div className="text-[11px] text-slate-400 font-medium mt-1">
+                  Proyeksi pendapatan tahunan platform (MRR × 12)
+                </div>
+              </div>
+            </div>
+
+            {/* Paying Schools / Tenant Berbayar */}
+            <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs flex flex-col justify-between">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-extrabold text-slate-500 uppercase tracking-wider">Tenant Berbayar</span>
+                <div className="w-9 h-9 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center font-bold">
+                  <Wallet className="w-5 h-5" />
+                </div>
+              </div>
+              <div>
+                <div className="text-3xl font-black font-brand text-slate-800">
+                  {financialStats.payingSchools} <span className="text-sm font-semibold text-slate-400">/ {effectiveSchools.length} Sekolah</span>
+                </div>
+                <div className="text-[11px] text-slate-400 font-medium mt-1">
+                  {effectiveSchools.length - financialStats.payingSchools} Sekolah Uji Coba (Trial)
+                </div>
+              </div>
+            </div>
+
+            {/* ARPU (Average Revenue Per User/School) */}
+            <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs flex flex-col justify-between">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-extrabold text-slate-500 uppercase tracking-wider">Rata-Rata per Tenant (ARPU)</span>
+                <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold">
+                  <Receipt className="w-5 h-5" />
+                </div>
+              </div>
+              <div>
+                <div className="text-3xl font-black font-brand text-slate-800">
+                  {formatRupiah(financialStats.arpu)}
+                </div>
+                <div className="text-[11px] text-slate-400 font-medium mt-1">
+                  Rata-rata kontribusi per sekolah mitra aktif
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Breakdown Revenue per Tier & Tindakan Perpanjangan Invoice */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Kolom Kiri: Breakdown Omset per Tier Paket (1 Kolom) */}
+            <div className="bg-white rounded-3xl border border-slate-200/80 p-5 md:p-6 shadow-xs space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <CircleDollarSign className="w-5 h-5 text-emerald-600" />
+                  <h3 className="font-extrabold text-slate-800 text-base font-brand">
+                    Omset per Tier Paket
+                  </h3>
+                </div>
+                <span className="text-xs font-bold text-slate-400">
+                  {financialStats.tierStats.length} Tier
+                </span>
+              </div>
+
+              <div className="space-y-3 pt-2">
+                {financialStats.tierStats.map((tier) => {
+                  const sharePct = financialStats.mrrTotal > 0
+                    ? Math.round((tier.totalMrr / financialStats.mrrTotal) * 100)
+                    : 0;
+                  return (
+                    <div key={tier.id} className="p-3.5 rounded-2xl border border-slate-100 bg-slate-50/60 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="font-extrabold text-slate-800 text-xs">
+                            {tier.nama}
+                          </div>
+                          <div className="text-[11px] text-slate-500">
+                            {formatRupiah(tier.harga_bulanan)} / bln • {tier.sekolahCount} Sekolah
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-black text-slate-900 text-xs font-brand">
+                            {formatRupiah(tier.totalMrr)}
+                          </div>
+                          <div className="text-[10px] font-bold text-emerald-600">
+                            {sharePct}% Share
+                          </div>
+                        </div>
+                      </div>
+                      <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
+                        <div
+                          className="bg-emerald-500 h-full rounded-full transition-all"
+                          style={{ width: `${Math.max(2, sharePct)}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200/60 text-[11px] text-amber-800 font-medium">
+                💡 <span className="font-bold">Potensi Upsell:</span> Meng-upgrade sekolah paket <em>Sahabat</em> ke paket <em>Mandiri Plus</em> akan mendongkrak MRR sebesar +Rp 124.000 per sekolah/bulan!
+              </div>
+            </div>
+
+            {/* Kolom Kanan: Jadwal Tagihan & Kirim Invoice WA (2 Kolom) */}
+            <div className="lg:col-span-2 bg-white rounded-3xl border border-slate-200/80 p-5 md:p-6 shadow-xs space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h3 className="font-extrabold text-slate-800 text-base font-brand flex items-center space-x-2">
+                    <Receipt className="w-5 h-5 text-blue-600" />
+                    <span>Jadwal Penagihan & Perpanjangan Langganan ({financialStats.billingList.length})</span>
+                  </h3>
+                  <p className="text-xs text-slate-500 font-medium">
+                    Pantau tanggal jatuh tempo dan kirimkan pengingat perpanjangan via WhatsApp dengan 1 klik.
+                  </p>
+                </div>
+
+                {/* Search Box Tagihan */}
+                <div className="relative w-full sm:w-64">
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    placeholder="Cari sekolah, kepsek..."
+                    value={searchBilling}
+                    onChange={(e) => setSearchBilling(e.target.value)}
+                    className="w-full pl-8 pr-3 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition"
+                  />
+                </div>
+              </div>
+
+              {/* Tabel Jadwal Invoice */}
+              <div className="overflow-x-auto border border-slate-100 rounded-2xl">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider border-b border-slate-100">
+                    <tr>
+                      <th className="py-3 px-4">Nama Sekolah</th>
+                      <th className="py-3 px-4">Paket</th>
+                      <th className="py-3 px-4 text-right">Tarif / Bln</th>
+                      <th className="py-3 px-4 text-center">Jatuh Tempo</th>
+                      <th className="py-3 px-4 text-center">Sisa Hari</th>
+                      <th className="py-3 px-4 text-right">Aksi Penagihan</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 font-medium">
+                    {financialStats.billingList
+                      .filter((b) => {
+                        if (!searchBilling.trim()) return true;
+                        const q = searchBilling.toLowerCase();
+                        return (
+                          (b.school.nama_sekolah || '').toLowerCase().includes(q) ||
+                          (b.kepsekUser?.nama || '').toLowerCase().includes(q)
+                        );
+                      })
+                      .map((b) => {
+                        const isDueSoon = b.sisaHari !== null && b.sisaHari <= 14;
+                        const isExpired = b.isExpired;
+
+                        return (
+                          <tr key={b.school.id} className="hover:bg-slate-50/80 transition">
+                            <td className="py-3.5 px-4 font-bold text-slate-800">
+                              <div>{b.school.nama_sekolah}</div>
+                              <div className="text-[10px] text-slate-400 font-normal">
+                                Kepsek: {b.kepsekUser?.nama || 'Belum Ada'} {b.phoneRaw ? `(${b.phoneRaw})` : ''}
+                              </div>
+                            </td>
+                            <td className="py-3.5 px-4">
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-amber-50 text-amber-700 border border-amber-200/60">
+                                {b.planInfo.nama}
+                              </span>
+                            </td>
+                            <td className="py-3.5 px-4 text-right font-bold text-slate-900 font-mono">
+                              {b.price > 0 ? formatRupiah(b.price) : <span className="text-slate-400">Gratis (Trial)</span>}
+                            </td>
+                            <td className="py-3.5 px-4 text-center text-slate-600">
+                              {b.school.berlaku_hingga ? formatTanggalIndo(b.school.berlaku_hingga) : '-'}
+                            </td>
+                            <td className="py-3.5 px-4 text-center">
+                              <span
+                                className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                                  isExpired
+                                    ? 'bg-rose-100 text-rose-800 animate-pulse'
+                                    : isDueSoon
+                                    ? 'bg-amber-100 text-amber-800'
+                                    : 'bg-slate-100 text-slate-700'
+                                }`}
+                              >
+                                {isExpired ? 'KEDALUWARSA' : b.sisaHari !== null ? `${b.sisaHari} Hari Lagi` : 'Aktif'}
+                              </span>
+                            </td>
+                            <td className="py-3.5 px-4 text-right">
+                              {b.waBillingLink ? (
+                                <a
+                                  href={b.waBillingLink}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[11px] rounded-xl shadow-xs transition active:scale-95"
+                                >
+                                  <MessageCircle className="w-3.5 h-3.5" />
+                                  <span>Kirim Invoice WA</span>
+                                </a>
+                              ) : (
+                                <button
+                                  onClick={() => navigate('/superadmin/sekolah')}
+                                  className="px-2.5 py-1 bg-slate-100 hover:bg-orange-100 hover:text-orange-700 font-bold rounded-xl transition text-[11px]"
+                                >
+                                  Kelola
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
